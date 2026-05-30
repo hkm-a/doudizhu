@@ -252,15 +252,23 @@ class Room(object):
         IOLoop.current().add_callback(self.restart)
 
     async def save_shot_round(self):
-        for player in self.players:
-            if not player.socket:
+        for active_player in self.players:
+            if not active_player or not active_player.socket:
                 continue
-            robot = self.has_robot()
-            await player.socket.insert(Record(round={
-                'left': {player.seat: player.hand_pokers for player in self.players},
-                'round': self.shot_round,
+
+            record = Record(round={
+                'left': {
+                    room_player.seat: list(room_player.hand_pokers)
+                    for room_player in self.players
+                    if room_player
+                },
+                'round': [list(shot) for shot in self.shot_round],
                 'lord': self.landlord.seat,
-            }, robot=robot))
+            }, robot=self.has_robot())
+            try:
+                await active_player.socket.insert(record)
+            except Exception:
+                logging.exception('Room[%d] failed to save shot round', self.room_id)
             break
 
     @property

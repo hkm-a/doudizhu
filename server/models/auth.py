@@ -29,6 +29,6 @@ class Record(Base):
     __tablename__ = 'record'
     __table_args__ = {'mysql_collate': 'utf8mb4_general_ci'}
     id = Column(Integer, primary_key=True)
-    round = Column(JSON, default={})
+    round = Column(JSON, default=dict)
     robot = Column(SMALLINT, default=1)
     last_modified = Column(TIMESTAMP, default=datetime.now, onupdate=datetime.now)
