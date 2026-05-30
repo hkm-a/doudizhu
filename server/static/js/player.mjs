@@ -33,6 +33,15 @@ export class Player {
     initUI(sx, sy) {
         this.uiHead = this.game.add.sprite(sx, sy, 'btn', 'icon_default.png');
         this.uiHead.anchor.set(0.5, 1);
+        this.uiReady = this.game.add.text(sx, sy + 8, '已准备', {
+            font: "20px Arial",
+            fill: "#ffd86b",
+            align: "center",
+            stroke: "#1f2933",
+            strokeThickness: 4
+        });
+        this.uiReady.anchor.set(0.5, 0);
+        this.uiReady.kill();
     }
 
     updateInfo(uid, name) {
@@ -78,6 +87,18 @@ export class Player {
     setLandlord() {
         this.isLandlord = true;
         this.uiHead.frameName = 'icon_landlord.png';
+    }
+
+    setReady(isReady) {
+        if (!this.uiReady) {
+            return;
+        }
+
+        if (isReady) {
+            this.uiReady.revive();
+        } else {
+            this.uiReady.kill();
+        }
     }
 
     say(str) {

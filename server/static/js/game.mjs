@@ -42,9 +42,9 @@ class Observer {
     unsubscribe(key, cb) {
         const subscribers = this.subscribers;
         if (subscribers.hasOwnProperty(key)) {
-            const index = subscribers.indexOf(cb);
+            const index = subscribers[key].indexOf(cb);
             if (index > -1) {
-                subscribers.splice(index, 1);
+                subscribers[key].splice(index, 1);
             }
         }
     }
@@ -218,19 +218,29 @@ export class Game {
                         let info_2 = syncInfo[(i + 2) % 3];
                         this.players[1].updateInfo(info_1.uid, info_1.name);
                         this.players[2].updateInfo(info_2.uid, info_2.name);
+                        this.players[0].setReady(syncInfo[i].ready);
+                        this.players[1].setReady(info_1.ready);
+                        this.players[2].setReady(info_2.ready);
+                        observer.set('ready', Boolean(syncInfo[i].ready));
                         break;
                     }
                 }
                 break;
             case Protocol.RSP_READY:
-                // TODO: 显示玩家已准备状态
-                if (packet['uid'] === this.players[0].uid) {
-                    observer.set('ready', true);
+                const readySeat = this.uidToSeat(packet['uid']);
+                if (readySeat >= 0) {
+                    this.players[readySeat].setReady(packet['ready']);
+                }
+                if (readySeat === 0) {
+                    observer.set('ready', Boolean(packet['ready']));
                 }
                 break;
             case Protocol.RSP_DEAL_POKER: {
                 const playerId = packet['uid'];
                 const pokers = packet['pokers'];
+                this.players.forEach(function (player) {
+                    player.setReady(false);
+                });
                 this.dealPoker(pokers);
                 this.whoseTurn = this.uidToSeat(playerId);
                 this.startCallScore();
@@ -280,6 +290,9 @@ export class Game {
                 function gameOver() {
                     alert(that.players[that.whoseTurn].isLandlord ? "地主赢" : "农民赢");
                     observer.set('ready', false);
+                    that.players.forEach(function (player) {
+                        player.setReady(false);
+                    });
                     this.cleanWorld();
                 }
 
@@ -300,6 +313,7 @@ export class Game {
         this.players.forEach(function (player) {
             player.cleanPokers();
             // player.uiLeftPoker.kill();
+            player.isLandlord = false;
             player.uiHead.frameName = 'icon_farmer.png';
         });
         for (let i = 0; i < this.tablePoker.length; i++) {
