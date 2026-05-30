@@ -18,6 +18,16 @@ class IndexHandler(RequestHandler):
         self.render('poker.html')
 
 
+class HealthHandler(RestfulHandler):
+
+    async def get(self):
+        self.write({
+            'status': 'ok',
+            'service': 'doudizhu',
+            'robots': self.application.allow_robot,
+        })
+
+
 class LoginHandler(RestfulHandler, JwtMixin):
     required_fields = ('name',)
 

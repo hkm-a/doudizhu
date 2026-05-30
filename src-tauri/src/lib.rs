@@ -14,6 +14,7 @@ use tauri::{Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 const BACKEND_URL: &str = "http://127.0.0.1:8081/";
 const BACKEND_HOST: &str = "127.0.0.1:8081";
 const BACKEND_PORT: &str = "8081";
+const HEALTH_PATH: &str = "/healthz";
 const DATABASE_URI: &str = "mysql+aiomysql://ddz:ddz@127.0.0.1:3306/ddz";
 
 #[derive(Clone, Default)]
@@ -167,7 +168,7 @@ fn is_backend_ready() -> bool {
     let _ = stream.set_write_timeout(Some(Duration::from_millis(500)));
 
     if stream
-        .write_all(b"GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+        .write_all(format!("GET {HEALTH_PATH} HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n").as_bytes())
         .is_err()
     {
         return false;

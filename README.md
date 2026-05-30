@@ -8,6 +8,7 @@
 - 前端：React 17 + Phaser
 - 桌面端：Tauri 2 + Rust
 - 实时通信：WebSocket `/ws`
+- 健康检查：HTTP `/healthz`
 - 游戏逻辑：房间、准备、发牌、抢地主、出牌、结算
 - 机器人：默认使用 svzdev 原启发式策略，已预留 DouZero 策略适配层
 
