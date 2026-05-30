@@ -20,6 +20,7 @@ const DEFAULT_DATABASE_URI: &str = "mysql+aiomysql://ddz:ddz@127.0.0.1:3306/ddz"
 struct BackendConfig {
     url: String,
     host: String,
+    http_host: String,
     port: String,
     health_path: String,
     database_uri: String,
@@ -38,6 +39,7 @@ impl BackendConfig {
             .ok()
             .or_else(|| host_from_http_url(&url))
             .unwrap_or_else(|| format!("127.0.0.1:{port}"));
+        let http_host = host_from_http_url(&url).unwrap_or_else(|| host.clone());
         let health_path =
             env::var("DOUDIZHU_BACKEND_HEALTH_PATH").unwrap_or_else(|_| "/healthz".to_string());
         let database_uri = env::var("DOUDIZHU_DATABASE_URI")
@@ -47,6 +49,7 @@ impl BackendConfig {
         Self {
             url,
             host,
+            http_host,
             port,
             health_path,
             database_uri,
@@ -291,8 +294,8 @@ fn is_backend_ready(config: &BackendConfig) -> bool {
     if stream
         .write_all(
             format!(
-                "GET {} HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
-                config.health_path
+                "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
+                config.health_path, config.http_host
             )
             .as_bytes(),
         )
@@ -309,6 +312,32 @@ fn is_backend_ready(config: &BackendConfig) -> bool {
     };
 
     response[..size].starts_with(b"HTTP/1.1 200") || response[..size].starts_with(b"HTTP/1.0 200")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{host_from_http_url, port_from_http_url};
+
+    #[test]
+    fn extracts_host_from_http_url() {
+        assert_eq!(
+            host_from_http_url("http://127.0.0.1:8081/table"),
+            Some("127.0.0.1:8081".to_string())
+        );
+    }
+
+    #[test]
+    fn extracts_port_from_http_url() {
+        assert_eq!(
+            port_from_http_url("http://localhost:8082/"),
+            Some("8082".to_string())
+        );
+    }
+
+    #[test]
+    fn ignores_urls_without_explicit_port() {
+        assert_eq!(port_from_http_url("http://localhost/"), None);
+    }
 }
 
 fn report_startup_status(window: &tauri::WebviewWindow, message: &str) {
