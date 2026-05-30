@@ -82,7 +82,6 @@ export class Game {
         this.players[0].updateInfo(window.playerInfo.uid, window.playerInfo.name);
         const protocol = location.protocol.startsWith("https") ? "wss://" : "ws://";
         this.socket = new Socket(protocol + location.host + "/ws");
-        this.connectSocket();
 
         const width = this.game.world.width;
         const height = this.game.world.height;
@@ -104,6 +103,7 @@ export class Game {
         });
         this.connectionText.anchor.set(0.5, 0);
         this.connectionText.visible = false;
+        this.connectSocket();
 
         // 创建准备按钮
         const that = this;

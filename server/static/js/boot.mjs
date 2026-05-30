@@ -21,6 +21,27 @@ function http(method, url, payload, callback) {
     xhr.send(JSON.stringify(payload));
 }
 
+const SETTINGS_KEY = 'doudizhu.settings';
+
+function loadSettings() {
+    try {
+        return {
+            soundEnabled: true,
+            ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')
+        };
+    } catch (error) {
+        return {soundEnabled: true};
+    }
+}
+
+function saveSettings(settings) {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function applySoundSetting(game) {
+    game.sound.mute = !loadSettings().soundEnabled;
+}
+
 export class Boot {
     preload() {
         this.load.image('preloaderBar', 'static/i/preload.png');
@@ -83,6 +104,7 @@ export class Preloader {
     }
 
     create() {
+        applySoundSetting(this.game);
         const that = this;
         get('/userinfo', {}, function (status, response) {
             if (status === 200) {
@@ -105,6 +127,7 @@ export class Preloader {
 
 export class MainMenu {
     create() {
+        applySoundSetting(this.game);
         this.stage.backgroundColor = '#182d3b';
         let bg = this.game.add.sprite(this.game.width / 2, 0, 'bg');
         bg.anchor.set(0.5, 0);
@@ -120,6 +143,14 @@ export class MainMenu {
         let setting = this.game.add.button(this.game.world.width / 2, this.game.world.height * 3 / 4, 'btn', this.gotoSetting, this, 'setting.png', 'setting.png', 'setting.png');
         setting.anchor.set(0.5);
         this.game.world.add(setting);
+
+        this.settings = loadSettings();
+        this.settingText = this.game.add.text(this.game.world.width / 2, this.game.world.height * 3 / 4 + 74, this.soundLabel(), {
+            font: "22px Arial",
+            fill: "#fff4cf",
+            align: "center"
+        });
+        this.settingText.anchor.set(0.5, 0);
 
         let style = {font: "28px Arial", fill: "#fff", align: "right"};
         let text = this.game.add.text(this.game.world.width - 4, 4, "欢迎回来 " + window.playerInfo.name, style);
@@ -140,10 +171,14 @@ export class MainMenu {
     }
 
     gotoSetting() {
-        let style = {font: "22px Arial", fill: "#fff", align: "center"};
-        let text = this.game.add.text(0, 0, "hei hei hei hei", style);
-        let tween = this.game.add.tween(text).to({x: 600, y: 450}, 2000, "Linear", true);
-        tween.onComplete.add(Phaser.Text.prototype.destroy, text);
+        this.settings.soundEnabled = !this.settings.soundEnabled;
+        saveSettings(this.settings);
+        applySoundSetting(this.game);
+        this.settingText.text = this.soundLabel();
+    }
+
+    soundLabel() {
+        return this.settings.soundEnabled ? '声音：开' : '声音：关';
     }
 }
 
