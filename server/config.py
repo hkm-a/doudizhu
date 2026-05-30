@@ -6,11 +6,28 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 TEMPLATE_ROOT = os.path.join(BASE_DIR, 'templates')
 
-DEBUG = os.getenv('TORNADO_DEBUG') == 'True'
+def env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.lower() in {'1', 'true', 'yes', 'on'}
+
+
+def env_int(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
+DEBUG = env_bool('TORNADO_DEBUG')
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'fiDSpuZ7QFe8fm0XP9Jb7ZIPNsOegkHYtgKSd4I83Hs=')
 
-PORT = os.getenv('PORT', 8080)
+PORT = env_int('PORT', 8080)
 
 WECHAT_CONFIG = {
     'appid': os.getenv('APPID'),
@@ -20,6 +37,7 @@ WECHAT_CONFIG = {
 }
 
 DATABASE_URI = os.getenv('DATABASE_URI', 'mysql+aiomysql://root:123456@127.0.0.1:3306/ddz')
+SQL_ECHO = env_bool('SQL_ECHO')
 
 LOGGING = {
     'version': 1,

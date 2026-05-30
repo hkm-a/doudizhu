@@ -6,10 +6,10 @@ from sqlalchemy.sql import Select
 
 __all__ = ('AlchemyMixin', 'Base')
 
-from config import DATABASE_URI
+from config import DATABASE_URI, SQL_ECHO
 
 Base = declarative_base()
-engine = create_async_engine(DATABASE_URI, echo=True)
+engine = create_async_engine(DATABASE_URI, echo=SQL_ECHO, pool_pre_ping=True)
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 

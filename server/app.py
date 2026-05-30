@@ -1,5 +1,7 @@
 import asyncio
+import logging
 import logging.config
+import signal
 from concurrent.futures import ThreadPoolExecutor
 
 import tornado.locks
@@ -14,6 +16,7 @@ from api.wx import WechatConfig, WechatHandler
 from config import DEBUG, LOGGING, PORT, SECRET_KEY, TEMPLATE_ROOT, STATIC_ROOT, STATIC_URL
 
 logging.config.dictConfig(LOGGING)
+logger = logging.getLogger(__name__)
 
 
 class Application(tornado.web.Application):
@@ -46,8 +49,17 @@ class Application(tornado.web.Application):
 async def main():
     app = Application()
     app.listen(PORT)
-    logging.info(f'server on http://127.0.0.1:{PORT}')
-    await asyncio.Event().wait()
+    stop_event = asyncio.Event()
+    loop = asyncio.get_running_loop()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, stop_event.set)
+
+    logger.info('server on http://127.0.0.1:%s', PORT)
+    await stop_event.wait()
+    logger.info('server stopping')
+
+    app.executor.shutdown(wait=False, cancel_futures=True)
 
 
 if __name__ == '__main__':
