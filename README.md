@@ -42,6 +42,14 @@ export DOUZERO_MODEL_DIR=/absolute/path/to/douzero/baselines/douzero_ADP
 mysql --user=root -p < schema.sql
 ```
 
+准备本地配置：
+
+```bash
+cp .env.example .env
+```
+
+默认配置使用 `ddz` / `ddz` 连接本机 MySQL，并监听 `8081` 端口。需要改数据库、端口、DouZero 模型目录或 WeChat 参数时，编辑 `.env` 即可。
+
 安装后端依赖：
 
 ```bash
@@ -60,7 +68,7 @@ pip install -r requirements-ai.txt
 
 ```bash
 cd server
-PYTHONPATH=. DATABASE_URI=mysql+aiomysql://ddz:ddz@127.0.0.1:3306/ddz PORT=8081 python3 app.py
+PYTHONPATH=. python3 app.py
 ```
 
 前端开发：

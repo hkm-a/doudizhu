@@ -1,4 +1,5 @@
 *.log
+.env
 .vite/
 node_modules/
 client/node_modules/
