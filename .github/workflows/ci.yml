@@ -1,0 +1,174 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend checks
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install backend dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Compile backend
+        run: python -m compileall -q server
+
+      - name: Run backend smoke checks
+        env:
+          PYTHONPATH: server
+        run: |
+          python - <<'PY'
+          import asyncio
+
+          from api.game.globalvar import GlobalVar
+          from api.game.player import Player
+          from api.game.room import Room
+          from api.game.timer import Timer
+          from api.game.views import parse_bool
+          from models import Record
+          from tornado.web import HTTPError
+
+          async def check_timer():
+              fired = asyncio.Event()
+              timer = Timer(fired.set, timeout=1)
+              timer.start_timing(1)
+              await asyncio.wait_for(fired.wait(), timeout=3)
+
+          async def check_missing_room_join():
+              class ProbePlayer(Player):
+                  def __init__(self):
+                      super().__init__(1, 'probe')
+                      self.errors = []
+
+                  def write_error(self, reason):
+                      self.errors.append(reason)
+
+              GlobalVar.__waiting_rooms__.clear()
+              GlobalVar.__playing_rooms__.clear()
+              player = ProbePlayer()
+              await player.on_message(1005, {'room': 999, 'level': 1})
+              assert player.errors == ['Room[999] Not Found'], player.errors
+              assert player.room is None
+              assert GlobalVar.__waiting_rooms__ == {}
+
+          async def check_record_snapshot():
+              class Socket:
+                  def __init__(self):
+                      self.saved = None
+
+                  async def insert(self, record):
+                      self.saved = record.round
+
+              room = Room(1)
+              players = [Player(i + 1, f'p{i + 1}') for i in range(3)]
+              for seat, player in enumerate(players):
+                  player.seat = seat
+                  player.room = room
+                  player._hand_pokers = [seat + 1]
+              players[0].socket = Socket()
+              players[1].landlord = 1
+              room.players = players
+              room.shot_round = [[1], [], [2, 3]]
+              await room.save_shot_round()
+              room.shot_round[0].append(99)
+              players[1]._hand_pokers.append(88)
+              saved = players[0].socket.saved
+              assert saved['round'] == [[1], [], [2, 3]], saved
+              assert saved['left'][1] == [2], saved
+              assert saved['lord'] == 1, saved
+
+          def check_parse_bool():
+              for value in (True, 1, '1', 'true', 'yes', 'on', ' TRUE '):
+                  assert parse_bool(value) is True, value
+              for value in (False, 0, '0', 'false', 'no', 'off', ' FALSE '):
+                  assert parse_bool(value) is False, value
+              for value in ('', 'maybe', 2, object()):
+                  try:
+                      parse_bool(value)
+                  except HTTPError as error:
+                      assert error.status_code == 400
+                  else:
+                      raise AssertionError(value)
+
+          async def main():
+              assert GlobalVar.find_room(999, 1, True) is None
+              quick = GlobalVar.find_room(-1, 1, True)
+              assert quick.room_id == 1
+              assert Player(1, 'probe').allow_robot is False
+              assert Record.__table__.c.round.default.arg(None) == {}
+              check_parse_bool()
+              await check_timer()
+              await check_missing_room_join()
+              await check_record_snapshot()
+
+          asyncio.run(main())
+          PY
+
+  web:
+    name: Web build
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install web dependencies
+        run: npm ci
+
+      - name: Build web client
+        run: npm run build
+
+  desktop:
+    name: Desktop Rust tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install desktop dependencies
+        run: npm ci
+
+      - name: Run Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
