@@ -1,0 +1,5 @@
+-r requirements.txt
+
+# Optional strong robot AI. Enable with DOUZERO_ENABLED=1 after installing
+# pretrained checkpoints in DOUZERO_MODEL_DIR.
+douzero==1.1.0

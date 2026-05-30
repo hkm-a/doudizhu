@@ -1,0 +1,32 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "doudizhu",
+  "version": "0.1.0",
+  "identifier": "com.local.doudizhu",
+  "build": {
+    "beforeDevCommand": "",
+    "beforeBuildCommand": "",
+    "frontendDist": "dist",
+    "devUrl": "http://127.0.0.1:8081/"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["deb"],
+    "resources": {
+      "../server": "server",
+      "../requirements.txt": "requirements.txt",
+      "../schema.sql": "schema.sql"
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "doudizhu-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tauri desktop shell for the svzdev/doudizhu based project.",
+  "scripts": {
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "desktop:server": "cd server && PYTHONPATH=. DATABASE_URI='mysql+aiomysql://ddz:ddz@127.0.0.1:3306/ddz' PORT=8081 python3 app.py"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.2"
+  }
+}
