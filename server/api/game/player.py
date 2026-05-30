@@ -5,6 +5,8 @@ import logging
 from enum import IntEnum
 from typing import TYPE_CHECKING, List, Optional, Dict, Any
 
+from tornado.ioloop import IOLoop
+
 from .protocol import Protocol as Pt
 from .rule import rule
 
@@ -121,12 +123,15 @@ class Player(object):
         if not self.is_left():
             return
         if self.state == State.CALL_SCORE:
-            self.on_message(Pt.REQ_CALL_SCORE, {'rob': 0})
+            self.to_server(Pt.REQ_CALL_SCORE, {'rob': 0})
         elif self.state == State.PLAYING:
             if not self.room.last_shot_poker or self.room.last_shot_seat == self.seat:
-                self.on_message(Pt.REQ_SHOT_POKER, rule.find_best_shot(self.hand_pokers))
+                self.to_server(Pt.REQ_SHOT_POKER, {'pokers': rule.find_best_shot(self.hand_pokers)})
             else:
-                self.on_message(Pt.REQ_SHOT_POKER, {'pokers': []})
+                self.to_server(Pt.REQ_SHOT_POKER, {'pokers': []})
+
+    def to_server(self, code: int, packet: Dict[str, Any]):
+        IOLoop.current().add_callback(self.on_message, code, packet)
 
     def handle_leave(self, code: int, packet: Dict[str, Any]):
         from .globalvar import GlobalVar

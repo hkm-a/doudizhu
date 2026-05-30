@@ -29,9 +29,10 @@ class Timer(object):
         self._is_running = False
 
     def _on_time(self):
-        if self._is_running:
+        if not self._is_running:
             return
         if time.time() - self._last_time >= self._timeout:
+            self._is_running = False
             self._callback()
         else:
             IOLoop.current().call_later(1, self._on_time)
