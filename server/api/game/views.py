@@ -31,11 +31,11 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
 
     @property
     def uid(self) -> int:
-        return self.player.uid
+        return self.player.uid if self.player else 0
 
     @property
     def room(self) -> Optional[Room]:
-        return self.player.room
+        return self.player.room if self.player else None
 
     @property
     def allow_robot(self) -> bool:
@@ -69,8 +69,11 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
         await self.player.on_message(code, packet)
 
     def on_close(self):
-        self.player.on_disconnect()
-        logging.info('SOCKET[%s] CLOSED[%s %s]', self.player.uid, self.close_code, self.close_reason)
+        if self.player:
+            self.player.on_disconnect()
+            logging.info('SOCKET[%s] CLOSED[%s %s]', self.player.uid, self.close_code, self.close_reason)
+        else:
+            logging.info('SOCKET[anonymous] CLOSED[%s %s]', self.close_code, self.close_reason)
 
     def check_origin(self, origin: str) -> bool:
         return True
@@ -89,7 +92,7 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
             future = self.ws_connection.write_message(message, binary=binary)
             logging.info('RSP[%d]: %s', self.uid, message)
         except WebSocketClosedError:
-            logging.error('WebSockedClosed[%s][%s]', self.uid, message)
+            logging.error('WebSocketClosed[%s][%s]', self.uid, message)
 
     @staticmethod
     def decode_message(message):

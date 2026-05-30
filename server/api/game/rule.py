@@ -3,6 +3,8 @@ import logging
 from collections import Counter, defaultdict
 from typing import Dict, List, Tuple, Iterable, Optional
 
+from config import STATIC_ROOT
+
 '''
 # A 2 3 4 5 6 7 8 9 0 J Q K w W
 '''
@@ -360,7 +362,7 @@ class Rule(object):
         return hand_cards
 
 
-with open('static/rule.json', 'r') as f:
+with open(f'{STATIC_ROOT}/rule.json', 'r') as f:
     rule = Rule(json.load(f))
     # from random import sample
     # print(rule._find_best_shot([c for c in 'KKKKwW']))
