@@ -1,4 +1,5 @@
 use std::{
+    env,
     fs::{self, OpenOptions},
     io::{Read, Write},
     net::{Shutdown, TcpStream, ToSocketAddrs},
@@ -12,11 +13,80 @@ use std::{
 use serde_json::json;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
-const BACKEND_URL: &str = "http://127.0.0.1:8081/";
-const BACKEND_HOST: &str = "127.0.0.1:8081";
-const BACKEND_PORT: &str = "8081";
-const HEALTH_PATH: &str = "/healthz";
-const DATABASE_URI: &str = "mysql+aiomysql://ddz:ddz@127.0.0.1:3306/ddz";
+const DEFAULT_BACKEND_PORT: &str = "8081";
+const DEFAULT_DATABASE_URI: &str = "mysql+aiomysql://ddz:ddz@127.0.0.1:3306/ddz";
+
+#[derive(Clone)]
+struct BackendConfig {
+    url: String,
+    host: String,
+    port: String,
+    health_path: String,
+    database_uri: String,
+}
+
+impl BackendConfig {
+    fn from_env() -> Self {
+        let url_from_env = env::var("DOUDIZHU_BACKEND_URL").ok();
+        let port = env::var("DOUDIZHU_BACKEND_PORT")
+            .or_else(|_| env::var("PORT"))
+            .ok()
+            .or_else(|| url_from_env.as_deref().and_then(port_from_http_url))
+            .unwrap_or_else(|| DEFAULT_BACKEND_PORT.to_string());
+        let url = url_from_env.unwrap_or_else(|| format!("http://127.0.0.1:{port}/"));
+        let host = env::var("DOUDIZHU_BACKEND_HOST")
+            .ok()
+            .or_else(|| host_from_http_url(&url))
+            .unwrap_or_else(|| format!("127.0.0.1:{port}"));
+        let health_path =
+            env::var("DOUDIZHU_BACKEND_HEALTH_PATH").unwrap_or_else(|_| "/healthz".to_string());
+        let database_uri = env::var("DOUDIZHU_DATABASE_URI")
+            .or_else(|_| env::var("DATABASE_URI"))
+            .unwrap_or_else(|_| DEFAULT_DATABASE_URI.to_string());
+
+        Self {
+            url,
+            host,
+            port,
+            health_path,
+            database_uri,
+        }
+    }
+}
+
+fn host_from_http_url(url: &str) -> Option<String> {
+    let authority = url.split_once("://")?.1.split('/').next()?;
+    if authority.is_empty() {
+        return None;
+    }
+
+    Some(authority.to_string())
+}
+
+fn port_from_http_url(url: &str) -> Option<String> {
+    let authority = host_from_http_url(url)?;
+    let port = authority.rsplit_once(':')?.1;
+    if port.chars().all(|character| character.is_ascii_digit()) {
+        Some(port.to_string())
+    } else {
+        None
+    }
+}
+
+#[derive(Clone)]
+struct DesktopState {
+    backend: BackendProcess,
+    config: BackendConfig,
+}
+
+impl Default for DesktopState {
+    fn default() -> Self {
+        Self {
+            backend: BackendProcess::default(),
+            config: BackendConfig::from_env(),
+        }
+    }
+}
 
 #[derive(Clone, Default)]
 struct BackendProcess {
@@ -24,8 +94,13 @@ struct BackendProcess {
 }
 
 impl BackendProcess {
-    fn start_if_needed(&self, server_dir: &Path, log_path: &Path) -> Result<(), String> {
-        if is_backend_ready() {
+    fn start_if_needed(
+        &self,
+        config: &BackendConfig,
+        server_dir: &Path,
+        log_path: &Path,
+    ) -> Result<(), String> {
+        if is_backend_ready(config) {
             return Ok(());
         }
 
@@ -45,27 +120,32 @@ impl BackendProcess {
             .arg("app.py")
             .current_dir(server_dir)
             .env("PYTHONPATH", server_dir)
-            .env("DATABASE_URI", DATABASE_URI)
-            .env("PORT", BACKEND_PORT)
+            .env("DATABASE_URI", &config.database_uri)
+            .env("PORT", &config.port)
             .stdin(Stdio::null())
             .stdout(Stdio::from(stdout))
             .stderr(Stdio::from(stderr))
             .spawn()
-            .map_err(|error| format!("failed to start backend: {error}; log: {}", log_path.display()))?;
+            .map_err(|error| {
+                format!(
+                    "failed to start backend: {error}; log: {}",
+                    log_path.display()
+                )
+            })?;
 
         *self
             .child
             .lock()
             .map_err(|_| "backend process lock poisoned".to_string())? = Some(child);
 
-        match wait_for_backend(Duration::from_secs(12)) {
+        match wait_for_backend(config, Duration::from_secs(12)) {
             Ok(()) => Ok(()),
-                Err(error) => {
-                    self.stop();
-                    Err(format!("{error}; log: {}", log_path.display()))
-                }
+            Err(error) => {
+                self.stop();
+                Err(format!("{error}; log: {}", log_path.display()))
             }
         }
+    }
 
     fn stop(&self) {
         let Ok(mut child) = self.child.lock() else {
@@ -80,47 +160,26 @@ impl BackendProcess {
 }
 
 pub fn run() {
-    let backend = BackendProcess::default();
+    let state = DesktopState::default();
 
     tauri::Builder::default()
-        .manage(backend.clone())
+        .manage(state.clone())
+        .invoke_handler(tauri::generate_handler![retry_backend])
         .setup(move |app| {
-            let server_dir = find_server_dir(app)?;
-            let backend_log_path = app.path().app_log_dir()?.join("backend.log");
-            let window = WebviewWindowBuilder::new(
-                app,
-                "main",
-                WebviewUrl::App("index.html".into()),
-            )
-            .title("欢乐斗地主")
-            .inner_size(1280.0, 800.0)
-            .min_inner_size(1024.0, 680.0)
-            .build()?;
+            let window =
+                WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+                    .title("欢乐斗地主")
+                    .inner_size(1280.0, 800.0)
+                    .min_inner_size(1024.0, 680.0)
+                    .build()?;
 
-            let startup_window = window.clone();
-            let backend = app.state::<BackendProcess>().inner().clone();
-            let startup_backend = backend.clone();
-            thread::spawn(move || {
-                report_startup_status(&startup_window, "正在检查本地后端服务...");
-                match startup_backend.start_if_needed(&server_dir, &backend_log_path) {
-                    Ok(()) => {
-                        report_startup_status(&startup_window, "后端已就绪，正在进入牌桌...");
-                        if let Err(error) = startup_window.navigate(
-                            BACKEND_URL.parse().expect("valid backend url"),
-                        ) {
-                            report_startup_error(
-                                &startup_window,
-                                &format!("无法打开游戏页面：{error}"),
-                            );
-                        }
-                    }
-                    Err(error) => report_startup_error(&startup_window, &error),
-                }
-            });
+            let app_handle = app.handle().clone();
+            let startup_state = app.state::<DesktopState>().inner().clone();
+            start_backend_async(app_handle, window.clone(), startup_state.clone());
 
             window.on_window_event(move |event| {
                 if matches!(event, WindowEvent::Destroyed) {
-                    backend.stop();
+                    startup_state.backend.stop();
                 }
             });
 
@@ -130,7 +189,54 @@ pub fn run() {
         .expect("error while running Tauri application");
 }
 
-fn find_server_dir(app: &tauri::App) -> Result<PathBuf, Box<dyn std::error::Error>> {
+#[tauri::command]
+fn retry_backend(
+    app: tauri::AppHandle,
+    window: tauri::WebviewWindow,
+    state: tauri::State<'_, DesktopState>,
+) {
+    start_backend_async(app, window, state.inner().clone());
+}
+
+fn start_backend_async(app: tauri::AppHandle, window: tauri::WebviewWindow, state: DesktopState) {
+    thread::spawn(move || {
+        report_startup_status(&window, "正在检查本地后端服务...");
+
+        let server_dir = match find_server_dir(&app) {
+            Ok(server_dir) => server_dir,
+            Err(error) => {
+                report_startup_error(&window, &error.to_string());
+                return;
+            }
+        };
+        let backend_log_path = match app.path().app_log_dir() {
+            Ok(path) => path.join("backend.log"),
+            Err(error) => {
+                report_startup_error(&window, &format!("无法定位日志目录：{error}"));
+                return;
+            }
+        };
+
+        match state
+            .backend
+            .start_if_needed(&state.config, &server_dir, &backend_log_path)
+        {
+            Ok(()) => {
+                report_startup_status(&window, "后端已就绪，正在进入牌桌...");
+                let Ok(url) = state.config.url.parse() else {
+                    report_startup_error(&window, &format!("后端地址无效：{}", state.config.url));
+                    return;
+                };
+                if let Err(error) = window.navigate(url) {
+                    report_startup_error(&window, &format!("无法打开游戏页面：{error}"));
+                }
+            }
+            Err(error) => report_startup_error(&window, &error),
+        }
+    });
+}
+
+fn find_server_dir(app: &tauri::AppHandle) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let resource_server = app.path().resource_dir()?.join("server");
     if resource_server.join("app.py").is_file() {
         return Ok(resource_server);
@@ -144,16 +250,16 @@ fn find_server_dir(app: &tauri::App) -> Result<PathBuf, Box<dyn std::error::Erro
     Err("server/app.py was not found in resources or project root".into())
 }
 
-fn wait_for_backend(timeout: Duration) -> Result<(), String> {
+fn wait_for_backend(config: &BackendConfig, timeout: Duration) -> Result<(), String> {
     let deadline = Instant::now() + timeout;
     while Instant::now() < deadline {
-        if is_backend_ready() {
+        if is_backend_ready(config) {
             return Ok(());
         }
         thread::sleep(Duration::from_millis(250));
     }
 
-    Err(format!("backend did not become ready at {BACKEND_URL}"))
+    Err(format!("backend did not become ready at {}", config.url))
 }
 
 fn python_executable(server_dir: &Path) -> PathBuf {
@@ -165,11 +271,13 @@ fn python_executable(server_dir: &Path) -> PathBuf {
     PathBuf::from("python3")
 }
 
-fn is_backend_ready() -> bool {
-    let Some(address) = BACKEND_HOST
+fn is_backend_ready(config: &BackendConfig) -> bool {
+    let Some(address) = config
+        .host
         .to_socket_addrs()
         .ok()
-        .and_then(|mut addresses| addresses.next()) else {
+        .and_then(|mut addresses| addresses.next())
+    else {
         return false;
     };
 
@@ -181,7 +289,13 @@ fn is_backend_ready() -> bool {
     let _ = stream.set_write_timeout(Some(Duration::from_millis(500)));
 
     if stream
-        .write_all(format!("GET {HEALTH_PATH} HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n").as_bytes())
+        .write_all(
+            format!(
+                "GET {} HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+                config.health_path
+            )
+            .as_bytes(),
+        )
         .is_err()
     {
         return false;
@@ -211,5 +325,7 @@ fn update_startup_page(window: &tauri::WebviewWindow, state: &str, message: &str
         "message": message,
     })
     .to_string();
-    let _ = window.eval(format!("window.__setStartupState && window.__setStartupState({payload});"));
+    let _ = window.eval(format!(
+        "window.__setStartupState && window.__setStartupState({payload});"
+    ));
 }

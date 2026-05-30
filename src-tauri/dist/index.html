@@ -89,6 +89,36 @@
         font-size: 0.9rem;
       }
 
+      .actions {
+        min-height: 2.5rem;
+      }
+
+      button {
+        background: #f0c94f;
+        border: 0;
+        border-radius: 6px;
+        color: #1b1b18;
+        cursor: pointer;
+        display: none;
+        font: inherit;
+        font-weight: 650;
+        min-width: 8rem;
+        padding: 0.7rem 1rem;
+      }
+
+      button:hover {
+        background: #ffdc6d;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.7;
+      }
+
+      .status[data-state="error"] + .actions button {
+        display: inline-block;
+      }
+
       @keyframes pulse {
         0%, 100% { opacity: 0.45; transform: scale(0.88); }
         50% { opacity: 1; transform: scale(1.08); }
@@ -104,16 +134,39 @@
         <span class="dot"></span>
         <span id="message">正在启动...</span>
       </div>
+      <div class="actions">
+        <button id="retry" type="button">重试启动</button>
+      </div>
       <p class="hint">如果长时间停留，请确认 MySQL 和 Python 依赖；失败时会显示后端日志位置。</p>
     </main>
     <script>
       const statusEl = document.getElementById('status');
       const messageEl = document.getElementById('message');
+      const retryButton = document.getElementById('retry');
 
       window.__setStartupState = ({ state, message }) => {
         statusEl.dataset.state = state || 'ready';
         messageEl.textContent = message || '正在启动...';
+        retryButton.disabled = false;
       };
+
+      retryButton.addEventListener('click', async () => {
+        retryButton.disabled = true;
+        statusEl.dataset.state = 'ready';
+        messageEl.textContent = '正在重新启动...';
+
+        const invoke = window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke;
+        if (!invoke) {
+          window.__setStartupState({ state: 'error', message: '当前环境无法调用桌面端重试命令。' });
+          return;
+        }
+
+        try {
+          await invoke('retry_backend');
+        } catch (error) {
+          window.__setStartupState({ state: 'error', message: `重试命令失败：${error}` });
+        }
+      });
     </script>
   </body>
 </html>

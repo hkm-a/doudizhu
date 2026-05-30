@@ -87,7 +87,7 @@ http://127.0.0.1:8081
 
 ## 桌面端
 
-当前 Tauri 桌面端会先显示内置启动页，再进入 `http://127.0.0.1:8081/`。启动时如果该端口没有服务，桌面端会尝试使用系统 `python3` 自动拉起 `server/app.py`；如果端口已有服务，则直接复用现有后端。后端启动失败时，启动页会保留错误信息，方便定位 MySQL、Python 依赖或端口占用问题。
+当前 Tauri 桌面端会先显示内置启动页，再进入 `http://127.0.0.1:8081/`。启动时如果该端口没有服务，桌面端会尝试使用系统 `python3` 自动拉起 `server/app.py`；如果端口已有服务，则直接复用现有后端。后端启动失败时，启动页会保留错误信息和重试按钮，方便在启动 MySQL、安装 Python 依赖或释放端口后直接重试。
 
 仍需提前准备：
 
@@ -113,6 +113,22 @@ npm run desktop:server
 ```bash
 npm run tauri:dev
 ```
+
+桌面端启动参数可用环境变量覆盖：
+
+```bash
+DOUDIZHU_BACKEND_PORT=8082 npm run tauri:dev
+DOUDIZHU_BACKEND_URL=http://127.0.0.1:8082/ npm run tauri:dev
+DOUDIZHU_DATABASE_URI=mysql+aiomysql://ddz:ddz@127.0.0.1:3306/ddz npm run tauri:dev
+```
+
+可用变量包括：
+
+- `DOUDIZHU_BACKEND_PORT`：自动拉起后端时写入 `PORT`，默认 `8081`。
+- `DOUDIZHU_BACKEND_URL`：桌面端进入游戏时打开的地址，默认按端口生成；如果地址里包含端口，桌面端会自动用于健康检查和后端启动端口。
+- `DOUDIZHU_BACKEND_HOST`：健康检查连接地址，默认从 `DOUDIZHU_BACKEND_URL` 推导，或使用 `127.0.0.1:<port>`。
+- `DOUDIZHU_BACKEND_HEALTH_PATH`：健康检查路径，默认 `/healthz`。
+- `DOUDIZHU_DATABASE_URI`：自动拉起后端时写入 `DATABASE_URI`。
 
 构建 Ubuntu/Debian 安装包：
 
