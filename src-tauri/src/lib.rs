@@ -1,4 +1,5 @@
 use std::{
+    fs::{self, OpenOptions},
     io::{Read, Write},
     net::{Shutdown, TcpStream, ToSocketAddrs},
     path::{Path, PathBuf},
@@ -23,10 +24,21 @@ struct BackendProcess {
 }
 
 impl BackendProcess {
-    fn start_if_needed(&self, server_dir: &Path) -> Result<(), String> {
+    fn start_if_needed(&self, server_dir: &Path, log_path: &Path) -> Result<(), String> {
         if is_backend_ready() {
             return Ok(());
         }
+
+        fs::create_dir_all(log_path.parent().unwrap_or_else(|| Path::new(".")))
+            .map_err(|error| format!("failed to create log directory: {error}"))?;
+        let stdout = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(log_path)
+            .map_err(|error| format!("failed to open backend log: {error}"))?;
+        let stderr = stdout
+            .try_clone()
+            .map_err(|error| format!("failed to prepare backend log: {error}"))?;
 
         let python = python_executable(server_dir);
         let child = Command::new(python)
@@ -36,10 +48,10 @@ impl BackendProcess {
             .env("DATABASE_URI", DATABASE_URI)
             .env("PORT", BACKEND_PORT)
             .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
+            .stdout(Stdio::from(stdout))
+            .stderr(Stdio::from(stderr))
             .spawn()
-            .map_err(|error| format!("failed to start backend: {error}"))?;
+            .map_err(|error| format!("failed to start backend: {error}; log: {}", log_path.display()))?;
 
         *self
             .child
@@ -48,12 +60,12 @@ impl BackendProcess {
 
         match wait_for_backend(Duration::from_secs(12)) {
             Ok(()) => Ok(()),
-            Err(error) => {
-                self.stop();
-                Err(error)
+                Err(error) => {
+                    self.stop();
+                    Err(format!("{error}; log: {}", log_path.display()))
+                }
             }
         }
-    }
 
     fn stop(&self) {
         let Ok(mut child) = self.child.lock() else {
@@ -74,6 +86,7 @@ pub fn run() {
         .manage(backend.clone())
         .setup(move |app| {
             let server_dir = find_server_dir(app)?;
+            let backend_log_path = app.path().app_log_dir()?.join("backend.log");
             let window = WebviewWindowBuilder::new(
                 app,
                 "main",
@@ -89,7 +102,7 @@ pub fn run() {
             let startup_backend = backend.clone();
             thread::spawn(move || {
                 report_startup_status(&startup_window, "正在检查本地后端服务...");
-                match startup_backend.start_if_needed(&server_dir) {
+                match startup_backend.start_if_needed(&server_dir, &backend_log_path) {
                     Ok(()) => {
                         report_startup_status(&startup_window, "后端已就绪，正在进入牌桌...");
                         if let Err(error) = startup_window.navigate(
