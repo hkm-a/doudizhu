@@ -1,5 +1,6 @@
 use std::{
-    net::{TcpStream, ToSocketAddrs},
+    io::{Read, Write},
+    net::{Shutdown, TcpStream, ToSocketAddrs},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     sync::{Arc, Mutex},
@@ -7,6 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use serde_json::json;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 const BACKEND_URL: &str = "http://127.0.0.1:8081/";
@@ -71,19 +73,37 @@ pub fn run() {
         .manage(backend.clone())
         .setup(move |app| {
             let server_dir = find_server_dir(app)?;
-            backend.start_if_needed(&server_dir).map_err(std::io::Error::other)?;
-
             let window = WebviewWindowBuilder::new(
                 app,
                 "main",
-                WebviewUrl::External(BACKEND_URL.parse().expect("valid backend url")),
+                WebviewUrl::App("index.html".into()),
             )
             .title("欢乐斗地主")
             .inner_size(1280.0, 800.0)
             .min_inner_size(1024.0, 680.0)
             .build()?;
 
+            let startup_window = window.clone();
             let backend = app.state::<BackendProcess>().inner().clone();
+            let startup_backend = backend.clone();
+            thread::spawn(move || {
+                report_startup_status(&startup_window, "正在检查本地后端服务...");
+                match startup_backend.start_if_needed(&server_dir) {
+                    Ok(()) => {
+                        report_startup_status(&startup_window, "后端已就绪，正在进入牌桌...");
+                        if let Err(error) = startup_window.navigate(
+                            BACKEND_URL.parse().expect("valid backend url"),
+                        ) {
+                            report_startup_error(
+                                &startup_window,
+                                &format!("无法打开游戏页面：{error}"),
+                            );
+                        }
+                    }
+                    Err(error) => report_startup_error(&startup_window, &error),
+                }
+            });
+
             window.on_window_event(move |event| {
                 if matches!(event, WindowEvent::Destroyed) {
                     backend.stop();
@@ -132,10 +152,50 @@ fn python_executable(server_dir: &Path) -> PathBuf {
 }
 
 fn is_backend_ready() -> bool {
-    BACKEND_HOST
+    let Some(address) = BACKEND_HOST
         .to_socket_addrs()
         .ok()
-        .and_then(|mut addresses| addresses.next())
-        .and_then(|address| TcpStream::connect_timeout(&address, Duration::from_millis(200)).ok())
-        .is_some()
+        .and_then(|mut addresses| addresses.next()) else {
+        return false;
+    };
+
+    let Ok(mut stream) = TcpStream::connect_timeout(&address, Duration::from_millis(300)) else {
+        return false;
+    };
+
+    let _ = stream.set_read_timeout(Some(Duration::from_millis(500)));
+    let _ = stream.set_write_timeout(Some(Duration::from_millis(500)));
+
+    if stream
+        .write_all(b"GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+        .is_err()
+    {
+        return false;
+    }
+
+    let _ = stream.shutdown(Shutdown::Write);
+
+    let mut response = [0_u8; 64];
+    let Ok(size) = stream.read(&mut response) else {
+        return false;
+    };
+
+    response[..size].starts_with(b"HTTP/1.1 200") || response[..size].starts_with(b"HTTP/1.0 200")
+}
+
+fn report_startup_status(window: &tauri::WebviewWindow, message: &str) {
+    update_startup_page(window, "ready", message);
+}
+
+fn report_startup_error(window: &tauri::WebviewWindow, message: &str) {
+    update_startup_page(window, "error", message);
+}
+
+fn update_startup_page(window: &tauri::WebviewWindow, state: &str, message: &str) {
+    let payload = json!({
+        "state": state,
+        "message": message,
+    })
+    .to_string();
+    let _ = window.eval(format!("window.__setStartupState && window.__setStartupState({payload});"));
 }
