@@ -11,7 +11,7 @@ import uvloop
 from tornado.process import cpu_count
 
 from api.auth import HealthHandler, IndexHandler, LoginHandler, UserInfoHandler
-from api.game.views import SocketHandler
+from api.game.views import AdminHandler, SocketHandler
 from api.wx import WechatConfig, WechatHandler
 from config import DEBUG, LOGGING, PORT, SECRET_KEY, TEMPLATE_ROOT, STATIC_ROOT, STATIC_URL
 
@@ -38,6 +38,7 @@ class Application(tornado.web.Application):
             ('/healthz', HealthHandler),
             ('/login', LoginHandler),
             ('/userinfo', UserInfoHandler),
+            ('/admin', AdminHandler),
             ('/ws', SocketHandler),
             ('/social/config', WechatConfig),
             ('/social/index', WechatHandler),

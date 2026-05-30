@@ -1,9 +1,10 @@
 import json
 import logging
+from http import HTTPStatus
 from typing import Optional, Any, Dict, List, Union
 
 from tornado.escape import json_decode
-from tornado.web import authenticated
+from tornado.web import authenticated, HTTPError
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
 
 from api.base import RestfulHandler, JwtMixin
@@ -12,6 +13,25 @@ from .globalvar import GlobalVar
 from .player import Player
 from .protocol import Protocol
 from .room import Room
+
+
+def parse_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+
+    if isinstance(value, int):
+        if value in (0, 1):
+            return bool(value)
+        raise HTTPError(HTTPStatus.BAD_REQUEST, reason='allow_robot must be a boolean value')
+
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {'1', 'true', 'yes', 'on'}:
+            return True
+        if normalized in {'0', 'false', 'no', 'off'}:
+            return False
+
+    raise HTTPError(HTTPStatus.BAD_REQUEST, reason='allow_robot must be a boolean value')
 
 
 class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
@@ -120,5 +140,10 @@ class AdminHandler(RestfulHandler):
         if self.current_user['uid'] != 1:
             self.send_error(403, reason='Forbidden')
             return
-        self.application.allow_robot = bool(self.get_body_argument('allow_robot'))
+        if self.request.headers.get('Content-Type', '').startswith('application/json'):
+            allow_robot = self.get_json_data()['allow_robot']
+        else:
+            allow_robot = self.get_body_argument('allow_robot')
+
+        self.application.allow_robot = parse_bool(allow_robot)
         self.write({'allow_robot': self.application.allow_robot})

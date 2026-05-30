@@ -71,6 +71,15 @@ cd server
 PYTHONPATH=. python3 app.py
 ```
 
+管理员可以查看或切换机器人补位开关。接口需要管理员登录态，当前本地默认以 `uid=1` 作为管理员：
+
+```bash
+curl http://127.0.0.1:8081/admin
+curl -X POST http://127.0.0.1:8081/admin \
+  -H 'Content-Type: application/json' \
+  -d '{"allow_robot": false}'
+```
+
 前端开发：
 
 ```bash
