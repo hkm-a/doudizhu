@@ -11,22 +11,24 @@ from tornado.web import RequestHandler, HTTPError
 from config import SECRET_KEY
 from models.base import AlchemyMixin
 
+JWT_ALGORITHM = 'HS256'
+
 
 class JwtMixin(object):
 
     @staticmethod
     def jwt_encode(payload: Dict[str, Union[str, int]]) -> str:
         expires = datetime.utcnow() + timedelta(seconds=3600)
-        return jwt.encode({'exp': expires, **payload}, SECRET_KEY, algorithm='HS256')
+        return jwt.encode({'exp': expires, **payload}, SECRET_KEY, algorithm=JWT_ALGORITHM)
 
     @staticmethod
     def jwt_decode(token) -> Optional[Dict[str, Union[str, int]]]:
         if not token:
             return None
         try:
-            return jwt.decode(token, SECRET_KEY)
+            return jwt.decode(token, SECRET_KEY, algorithms=[JWT_ALGORITHM])
         except jwt.PyJWTError as e:
-            logging.error('JWT', e)
+            logging.warning('JWT decode failed: %s', e)
             return None
 
     @staticmethod
