@@ -8,7 +8,7 @@ import './Login.css'
 
 const post = function (url, data, callback) {
 	let xhr = new XMLHttpRequest();
-	xhr.open('POST', 'http://127.0.0.1:8080' + url, true);
+	xhr.open('POST', url, true);
 	xhr.setRequestHeader('Content-type', 'application/json');
 	// xhr.setRequestHeader('X-Csrftoken', cookie("_xsrf"));
 	xhr.onreadystatechange = function () {
