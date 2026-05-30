@@ -1,4 +1,4 @@
-﻿import Phaser from "phaser";
+import Phaser from "phaser";
 
 let PG = {
     music: null,
@@ -51,7 +51,6 @@ class MenuScene extends Phaser.Scene {
         let bg = this.add.sprite(this.game.config.width / 2, 0, 'bg');
         bg.setOrigin(0.5, 0);
 
-        const self = this;
         let aiRoom = this.add.sprite(this.game.config.width / 2, this.game.config.height / 4, 'ui', 'quick.png');
         aiRoom.setInteractive().on('pointerup', () => this.gotoAiRoom());
 

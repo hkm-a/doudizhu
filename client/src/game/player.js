@@ -72,7 +72,7 @@ class Player {
     };
 
     onHint(btn) {
-        if (this.hintPoker.length == 0) {
+        if (this.hintPoker.length === 0) {
             this.hintPoker = this.lastTurnPoker;
         } else {
             this.pokerUnSelected(this.hintPoker);
@@ -81,8 +81,8 @@ class Player {
             }
         }
         let bigger = this.hint(this.hintPoker);
-        if (bigger.length == 0) {
-            if (this.hintPoker == this.lastTurnPoker) {
+        if (bigger.length === 0) {
+            if (this.hintPoker === this.lastTurnPoker) {
                 this.say("没有能大过的牌");
             } else {
                 this.pokerUnSelected(this.hintPoker);
@@ -94,7 +94,7 @@ class Player {
     };
 
     onShot(btn) {
-        if (this.hintPoker.length == 0) {
+        if (this.hintPoker.length === 0) {
             return;
         }
         let code = this.canPlay(this.game.isLastShotPlayer() ? [] : this.game.tablePoker, this.hintPoker);
@@ -129,11 +129,11 @@ class Player {
             return '出牌不合法';
         }
         let cardsB = Poker.toCards(lastTurnPoker);
-        if (cardsB.length == 0) {
+        if (cardsB.length === 0) {
             return '';
         }
         let valueB = Rule.cardsValue(cardsB);
-        if (valueA[0] != valueB[0] && valueA[1] < 1000) {
+        if (valueA[0] !== valueB[0] && valueA[1] < 1000) {
             return '出牌类型跟上家不一致';
         }
 
@@ -192,7 +192,6 @@ class Player {
 
     arrangePoker() {
         let count = this.pokerInHand.length;
-        let gap = Math.min(this.game.world.width / count, PW * 0.44);
         for (let i = 0; i < count; i++) {
             let pid = this.pokerInHand[i];
             let p = this.findAPoker(pid);

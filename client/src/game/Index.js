@@ -5,11 +5,6 @@ import GameScene from "./game"
 
 
 class Game extends React.Component {
-
-    constructor(props) {
-        super(props);
-    }
-
     render() {
         const config = {
             type: Phaser.AUTO,

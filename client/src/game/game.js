@@ -205,8 +205,6 @@ class GameScene extends Phaser.Scene {
                 break;
             case Protocol.SER_GAME_OVER:
                 let winner = packet[1];
-                let coin = packet[2];
-
                 let loserASeat = this.uidToSeat(packet[3][0]);
                 this.players[loserASeat].replacePoker(packet[3], 1);
                 this.players[loserASeat].reDealPoker();
@@ -234,6 +232,7 @@ class GameScene extends Phaser.Scene {
                 break;
             case Protocol.SER_RESTART:
                 this.restart();
+                break;
             default:
                 console.log("UNKNOWN PACKET:", packet)
         }

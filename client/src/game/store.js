@@ -89,7 +89,7 @@ const pokerInHand = function (state, action) {
 
         case SER_SHOT_POKER:
             return state.map((pokerInHand, index) => {
-                if (action.seat == index) {
+                if (action.seat === index) {
                     return pokerInHand.filter(poker => action.pokers.indexOf(poker) !== -1)
                 }
                 return pokerInHand
