@@ -1,5 +1,5 @@
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
 from .player import Player
 from .room import Room
@@ -46,12 +46,15 @@ class GlobalVar(object):
         return room
 
     @classmethod
-    def find_room(cls, room_id: int, level: int, allow_robot: bool) -> Room:
+    def find_room(cls, room_id: int, level: int, allow_robot: bool) -> Optional[Room]:
         if room_id in cls.__waiting_rooms__:
             return cls.__waiting_rooms__[room_id]
 
         if room_id in cls.__playing_rooms__:
             return cls.__playing_rooms__[room_id]
+
+        if room_id != -1:
+            return None
 
         for _, room in cls.__waiting_rooms__.items():
             if room.level != level or room.has_robot():

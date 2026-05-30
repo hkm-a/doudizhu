@@ -159,6 +159,9 @@ class Player(object):
         if code == Pt.REQ_JOIN_ROOM:
             room_id, level = packet.get('room', -1), packet.get('level', 1)
             room = GlobalVar.find_room(room_id, level, self.allow_robot)
+            if room is None:
+                self.write_error('Room[%s] Not Found' % room_id)
+                return
 
             self.state = State.WAITING
             if self.join_room(room):
@@ -271,6 +274,8 @@ class Player(object):
 
     @property
     def allow_robot(self) -> bool:
+        if not self.socket:
+            return False
         return self.socket.allow_robot
 
     def join_room(self, room: Room):
