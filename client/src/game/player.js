@@ -21,13 +21,16 @@ class Player {
 
 
     cleanPokers() {
-        let length = this.pokerInHand.length;
+        const length = this.pokerInHand.length;
         for (let i = 0; i < length; i++) {
-            let pid = this.pokerInHand[i];
-            let p = this.findAPoker(pid);
-            p.kill();
+            const pid = this.pokerInHand[i];
+            const p = this.findAPoker(pid);
+            if (p) {
+                p.kill();
+            }
         }
         this.pokerInHand = [];
+        this._pokerPic = {};
     }
 
     setLandlord() {
@@ -223,6 +226,10 @@ class Player {
     removeAllPoker() {
         for (let i = 0; i < this.pokerInHand.length; i++) {
             const pid = this.pokerInHand[i];
+            const p = this.findAPoker(pid);
+            if (p) {
+                p.kill();
+            }
             delete this._pokerPic[pid];
         }
         this.pokerInHand = [];

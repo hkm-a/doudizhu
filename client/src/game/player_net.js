@@ -51,7 +51,7 @@ PG.NetPlayer.prototype.replacePoker = function (pokers, start) {
     for (var i = 0; i < length; i++) {
         this.pokerInHand[i] = pokers[start + i];
         this._pokerPic[i].id = pokers[start + i];
-        this._pokerPic[i].frame = pokers[start + i];
+        this._pokerPic[i].frame = pokers[start + i] - 1;
     }
 };
 
@@ -81,9 +81,13 @@ PG.NetPlayer.prototype.cleanPokers = function () {
     for (var i = 0; i < length; i++) {
         var pid = this.pokerInHand[i];
         var p = this.findAPoker(pid);
-        p.kill();
+        if (p) {
+            p.kill();
         }
+    }
     this.pokerInHand = [];
+    this._pokerPic = [];
+    this.updateLeftPoker();
 }
 
 PG.NetPlayer.prototype.dealPokerAnim = function (p, i) {

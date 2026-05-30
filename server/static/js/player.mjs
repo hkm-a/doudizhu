@@ -54,14 +54,16 @@ export class Player {
     }
 
     cleanPokers() {
-
-        let length = this.pokerInHand.length;
+        const length = this.pokerInHand.length;
         for (let i = 0; i < length; i++) {
-            let pid = this.pokerInHand[i];
-            let p = this.findAPoker(pid);
-            p.kill();
+            const pid = this.pokerInHand[i];
+            const p = this.findAPoker(pid);
+            if (p) {
+                p.kill();
+            }
         }
         this.pokerInHand = [];
+        this._pokerPic = {};
     }
 
     initShotLayer() {
@@ -301,12 +303,16 @@ export class Player {
     }
 
     removeAllPoker() {
-        let length = this.pokerInHand.length;
+        const length = this.pokerInHand.length;
         for (let i = 0; i < length; i++) {
-            this.pokerInHand.splice(i, 1);
+            const pid = this.pokerInHand[i];
+            const p = this.findAPoker(pid);
+            if (p) {
+                p.kill();
+            }
             delete this._pokerPic[pid];
         }
-        console.log('Error: REMOVE POKER ', pid);
+        this.pokerInHand = [];
     }
 
     findAPoker(pid) {
@@ -393,7 +399,7 @@ export class NetPlayer extends Player {
         for (let i = 0; i < length; i++) {
             this.pokerInHand[i] = pokers[start + i];
             this._pokerPic[i].id = pokers[start + i];
-            this._pokerPic[i].frame = pokers[start + i];
+            this._pokerPic[i].frame = pokers[start + i] - 1;
         }
     }
 
@@ -422,9 +428,13 @@ export class NetPlayer extends Player {
         for (let i = 0; i < length; i++) {
             const pid = this.pokerInHand[i];
             const p = this.findAPoker(pid);
-            p.kill();
+            if (p) {
+                p.kill();
+            }
         }
         this.pokerInHand = [];
+        this._pokerPic = [];
+        this.updateLeftPoker();
     }
 
     dealPokerAnim(p, i) {
