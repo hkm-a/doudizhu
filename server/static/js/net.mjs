@@ -154,35 +154,73 @@ function pretty_log(tag, packet) {
 
 export class Socket {
     constructor(url) {
-        this.websocket = new WebSocket(url);
-        this.websocket.binaryType = "arraybuffer";
+        this.url = url;
+        this.websocket = null;
     }
+
     connect(onopen, onmessage, onerror) {
-        this.websocket.onopen = function (evt) {
+        this.close();
+
+        const websocket = new WebSocket(this.url);
+        websocket.binaryType = "arraybuffer";
+        this.websocket = websocket;
+
+        let reportedClose = false;
+        const reportClose = () => {
+            if (reportedClose || this.websocket !== websocket) {
+                return;
+            }
+
+            reportedClose = true;
+            this.websocket = null;
+            onerror();
+        };
+
+        websocket.onopen = function () {
             console.log("CONNECTED");
             onopen();
         };
 
-        this.websocket.onerror = function (evt) {
-            console.log("CONNECT ERROR: " + evt.data);
-            this.websocket = null;
-            onerror();
+        websocket.onerror = function () {
+            console.log("CONNECT ERROR");
+            reportClose();
         };
 
-        this.websocket.onclose = function (evt) {
+        websocket.onclose = function () {
             console.log("DISCONNECTED");
-            this.websocket = null;
-            onerror();
+            reportClose();
         };
 
-        this.websocket.onmessage = function (evt) {
+        websocket.onmessage = function (evt) {
             const packet = JSON.parse(evt.data);
             pretty_log("RSP", packet);
             onmessage(packet);
         };
     }
 
+    close() {
+        if (!this.websocket) {
+            return;
+        }
+
+        const websocket = this.websocket;
+        this.websocket = null;
+        websocket.onopen = null;
+        websocket.onmessage = null;
+        websocket.onerror = null;
+        websocket.onclose = null;
+
+        if (websocket.readyState === WebSocket.OPEN || websocket.readyState === WebSocket.CONNECTING) {
+            websocket.close();
+        }
+    }
+
     send (packet) {
+        if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+            console.log("SKIP SEND: socket is not connected");
+            return;
+        }
+
         pretty_log("REQ", packet);
         this.websocket.send(JSON.stringify(packet));
     }

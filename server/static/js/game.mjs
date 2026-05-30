@@ -62,6 +62,10 @@ export class Game {
         this.lastShotPlayer = null;
 
         this.whoseTurn = 0;
+
+        this.reconnectTimer = null;
+        this.reconnectDelay = 1000;
+        this.connectionText = null;
     }
 
     init(baseScore) {
@@ -78,7 +82,7 @@ export class Game {
         this.players[0].updateInfo(window.playerInfo.uid, window.playerInfo.name);
         const protocol = location.protocol.startsWith("https") ? "wss://" : "ws://";
         this.socket = new Socket(protocol + location.host + "/ws");
-        this.socket.connect(this.onopen.bind(this), this.onmessage.bind(this), this.onerror.bind(this));
+        this.connectSocket();
 
         const width = this.game.world.width;
         const height = this.game.world.height;
@@ -92,6 +96,14 @@ export class Game {
         observer.subscribe('room', function (room) {
             titleBar.text = `房间号:${room.id} 底分: ${room.origin} 倍数: ${room.multiple}`;
         });
+
+        this.connectionText = this.game.add.text(width / 2, 32, '', {
+            font: "18px",
+            fill: "#ffd86b",
+            align: "center"
+        });
+        this.connectionText.anchor.set(0.5, 0);
+        this.connectionText.visible = false;
 
         // 创建准备按钮
         const that = this;
@@ -148,13 +160,43 @@ export class Game {
 
     onopen() {
         console.log('socket onopen');
+        this.reconnectDelay = 1000;
+        this.setConnectionText('');
         this.socket.send([Protocol.REQ_ROOM_LIST, {}]);
         this.socket.send([Protocol.REQ_JOIN_ROOM, {"room": -1, "level": observer.get('baseScore')}]);
     }
 
     onerror() {
-        console.log('socket onerror, try reconnect.');
+        console.log('socket onerror, schedule reconnect.');
+        this.scheduleReconnect();
+    }
+
+    connectSocket() {
+        this.setConnectionText('正在连接牌桌...');
         this.socket.connect(this.onopen.bind(this), this.onmessage.bind(this), this.onerror.bind(this));
+    }
+
+    scheduleReconnect() {
+        if (this.reconnectTimer) {
+            return;
+        }
+
+        const delay = this.reconnectDelay;
+        this.setConnectionText(`连接已断开，${Math.ceil(delay / 1000)} 秒后重连...`);
+        this.reconnectTimer = this.game.time.events.add(delay, function () {
+            this.reconnectTimer = null;
+            this.reconnectDelay = Math.min(this.reconnectDelay * 2, 8000);
+            this.connectSocket();
+        }, this);
+    }
+
+    setConnectionText(message) {
+        if (!this.connectionText) {
+            return;
+        }
+
+        this.connectionText.text = message;
+        this.connectionText.visible = Boolean(message);
     }
 
     send_message(request) {
