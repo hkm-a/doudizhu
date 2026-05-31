@@ -99,6 +99,45 @@ class RuleBasedPolicyTest(unittest.TestCase):
         self.assertEqual(policy.choose_rob(PlayerStub([54, 53, 2])), 0)
         self.assertEqual(policy.choose_rob(PlayerStub([54, 53, 2, 15])), 1)
 
+    def test_shot_uses_best_shot_when_opening_round(self):
+        policy = RuleBasedPolicy()
+        player = PlayerStub([3, 4], seat=0)
+        room = RoomStub()
+        room.players = [player]
+
+        self.assertEqual(policy.choose_shot(player, room), [3])
+
+    def test_shot_passes_for_ally_with_few_cards_left(self):
+        policy = RuleBasedPolicy()
+        player = PlayerStub([4, 5, 6, 7, 8, 9], seat=1, landlord=0)
+        ally = PlayerStub([3, 10, 11], seat=0, landlord=0)
+        room = RoomStub()
+        room.players = [ally, player]
+        room.last_shot_seat = 0
+        room.last_shot_poker = [3]
+
+        self.assertEqual(policy.choose_shot(player, room), [])
+
+    def test_shot_treats_missing_last_shot_player_as_opponent(self):
+        policy = RuleBasedPolicy()
+        player = PlayerStub([4, 5], seat=1, landlord=0)
+        room = RoomStub()
+        room.players = [None, player]
+        room.last_shot_seat = 0
+        room.last_shot_poker = [3]
+
+        self.assertEqual(policy.choose_shot(player, room), [4])
+
+    def test_shot_treats_out_of_range_last_shot_seat_as_opponent(self):
+        policy = RuleBasedPolicy()
+        player = PlayerStub([4, 5], seat=1, landlord=0)
+        room = RoomStub()
+        room.players = [player]
+        room.last_shot_seat = 4
+        room.last_shot_poker = [3]
+
+        self.assertEqual(policy.choose_shot(player, room), [4])
+
 
 if __name__ == '__main__':
     unittest.main()

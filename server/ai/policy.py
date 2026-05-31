@@ -34,8 +34,9 @@ class RuleBasedPolicy:
         if not room.last_shot_poker or room.last_shot_seat == player.seat:
             return rule.find_best_shot(player.hand_pokers)
 
-        ally = room.players[room.last_shot_seat].landlord == player.landlord
-        left_pokers = len(room.players[room.last_shot_seat].hand_pokers)
+        last_player = self._last_shot_player(room)
+        ally = bool(last_player and last_player.landlord == player.landlord)
+        left_pokers = len(last_player.hand_pokers) if last_player else 17
         if ally and left_pokers <= 4 and len(player.hand_pokers) - len(room.last_shot_poker) > 4:
             return []
 
@@ -43,6 +44,12 @@ class RuleBasedPolicy:
         if 53 in pokers and 54 in pokers and left_pokers > 10:
             return []
         return pokers
+
+    @staticmethod
+    def _last_shot_player(room: Room) -> Optional[Player]:
+        if 0 <= room.last_shot_seat < len(room.players):
+            return room.players[room.last_shot_seat]
+        return None
 
 
 @dataclass(frozen=True)
