@@ -370,7 +370,7 @@ class Room(object):
     @property
     def landlord(self):
         for player in self.players:
-            if player.landlord == 1:
+            if player and player.landlord == 1:
                 return player
         return None
 

@@ -47,11 +47,12 @@ class RoomStub:
 
 
 class WaitingRoomStub:
-    def __init__(self, is_ready=False):
+    def __init__(self, is_ready=False, deal_result=True):
         self.players = []
         self.broadcasts = []
         self.deals = 0
         self._is_ready = is_ready
+        self.deal_result = deal_result
 
     def broadcast(self, packet):
         self.broadcasts.append(packet)
@@ -61,6 +62,7 @@ class WaitingRoomStub:
 
     def on_deal_poker(self):
         self.deals += 1
+        return self.deal_result
 
 
 class LeaveRoomStub:
@@ -229,6 +231,20 @@ class PlayerHandleWaitingTest(unittest.TestCase):
         player.handle_waiting(Pt.REQ_READY, {'ready': 1})
 
         self.assertEqual(player.state, State.CALL_SCORE)
+        self.assertEqual(room.broadcasts, [[Pt.RSP_READY, {'uid': 1, 'ready': 1}]])
+        self.assertEqual(room.deals, 1)
+
+    def test_failed_deal_keeps_players_waiting(self):
+        player, room = make_waiting_player(WaitingRoomStub(is_ready=True, deal_result=False))
+        other = Player(2, 'other')
+        other.state = State.WAITING
+        room.players.append(other)
+
+        player.handle_waiting(Pt.REQ_READY, {'ready': 1})
+
+        self.assertEqual(player.ready, 1)
+        self.assertEqual(player.state, State.WAITING)
+        self.assertEqual(other.state, State.WAITING)
         self.assertEqual(room.broadcasts, [[Pt.RSP_READY, {'uid': 1, 'ready': 1}]])
         self.assertEqual(room.deals, 1)
 

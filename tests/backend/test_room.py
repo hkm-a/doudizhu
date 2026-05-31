@@ -297,6 +297,14 @@ class RoomScoringTest(unittest.TestCase):
         self.assertEqual(room.get_point(players[1], players[1]), 150)
         self.assertEqual(room.get_point(players[1], players[2]), 150)
 
+    def test_landlord_lookup_skips_empty_seats(self):
+        room = Room(1)
+        players = [PlayerStub(1, 0), PlayerStub(3, 2, landlord=1)]
+        room.players = [None, players[0], players[1]]
+
+        self.assertIs(room.landlord, players[1])
+        self.assertEqual(room.get_point(players[1], players[0]), -150)
+
     def test_landlord_spring_when_farmers_never_play_cards(self):
         room, players = self.make_room()
         room.shot_round = [[3], [], [], [4]]

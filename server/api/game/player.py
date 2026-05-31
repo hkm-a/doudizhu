@@ -187,8 +187,8 @@ class Player(object):
 
             self.ready = ready
             if self.room.is_ready():
-                self.change_state(State.CALL_SCORE)
-                self.room.on_deal_poker()
+                if self.room.on_deal_poker():
+                    self.change_state(State.CALL_SCORE)
         else:
             self.write_error('STATE[%s]' % self.state)
 
