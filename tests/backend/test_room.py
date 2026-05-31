@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from api.game.room import Room
 
@@ -12,6 +13,7 @@ class PlayerStub:
         self.ready = 1
         self.left = 0
         self.restarts = 0
+        self.timeouts = 0
         self.timeout = 20
         self.hand_pokers = []
 
@@ -27,6 +29,9 @@ class PlayerStub:
         self.rob = -1
         self.landlord = 0
         self.hand_pokers = []
+
+    def on_timeout(self):
+        self.timeouts += 1
 
 
 class TimerStub:
@@ -136,6 +141,32 @@ class RoomRestartTest(unittest.TestCase):
         self.assertEqual(room.shot_round, [])
         self.assertEqual(room._multiple_details['bomb'], 1)
         self.assertTrue(room.timer.stopped)
+
+
+class RoomTimeoutTest(unittest.TestCase):
+    def test_timeout_delegates_to_current_turn_player(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        players = [PlayerStub(1, 0), PlayerStub(2, 1), PlayerStub(3, 2)]
+        room.players = players
+        room.whose_turn = 1
+
+        room.on_timeout()
+
+        self.assertEqual([player.timeouts for player in players], [0, 1, 0])
+        self.assertFalse(room.timer.stopped)
+
+    def test_timeout_without_turn_player_stops_timer_instead_of_crashing(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        room.players = [PlayerStub(1, 0), None, PlayerStub(3, 2)]
+        room.whose_turn = 1
+
+        with patch('api.game.room.logging') as logging:
+            room.on_timeout()
+
+        self.assertTrue(room.timer.stopped)
+        logging.warning.assert_called_once_with('Room[%d] timeout without turn player', 1)
 
 
 class RoomRobTest(unittest.TestCase):

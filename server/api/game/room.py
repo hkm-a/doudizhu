@@ -133,7 +133,12 @@ class Room(object):
             self.robot_no += 1
 
     def on_timeout(self):
-        self.turn_player.on_timeout()
+        player = self.turn_player
+        if player is None:
+            logging.warning('Room[%d] timeout without turn player', self.room_id)
+            self.timer.stop_timing()
+            return
+        player.on_timeout()
 
     def on_join(self, target: Player):
         if self._on_join(target):
