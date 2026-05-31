@@ -148,6 +148,11 @@ class Room(object):
         return False
 
     def on_rob(self, target: Player) -> bool:
+        if not self.is_full():
+            logging.warning('Room[%d] rob skipped because room is not full', self.room_id)
+            self.timer.stop_timing()
+            return False
+
         if target.rob == 1:
             self._multiple_details['rob'] *= 2
 

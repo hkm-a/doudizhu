@@ -256,6 +256,22 @@ class RoomRobTest(unittest.TestCase):
         self.assertEqual(room.timer.started, [20])
         self.assertEqual([player.landlord for player in players], [0, 0, 0])
 
+    def test_rob_skips_incomplete_room_instead_of_crashing(self):
+        room, players = self.make_room()
+        room.players = [players[0], None, players[2]]
+        players[0].rob = 1
+
+        with patch('api.game.room.logging') as logging:
+            is_end = room.on_rob(players[0])
+
+        self.assertFalse(is_end)
+        self.assertEqual(room._multiple_details['rob'], 1)
+        self.assertEqual(room.whose_turn, 0)
+        self.assertEqual(room.timer.started, [])
+        self.assertTrue(room.timer.stopped)
+        self.assertEqual([players[0].landlord, players[2].landlord], [0, 0])
+        logging.warning.assert_called_once_with('Room[%d] rob skipped because room is not full', 1)
+
     def test_all_players_decline_assigns_original_landlord_seat(self):
         room, players = self.make_room()
         room.whose_turn = 2
