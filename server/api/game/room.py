@@ -167,6 +167,11 @@ class Room(object):
         return True
 
     def on_deal_poker(self):
+        if not self.is_full():
+            logging.warning('Room[%d] deal skipped because room is not full', self.room_id)
+            self.timer.stop_timing()
+            return False
+
         try:
             from .dealer import generate_pokers
             self.pokers = generate_pokers(self.allow_robot)
@@ -191,6 +196,7 @@ class Room(object):
             if not player.is_left():
                 player.write_message(response)
             logging.info('ROOM[%s] DEAL[%s]', self.room_id, response)
+        return True
 
     def on_shot(self, seat: int, pokers: List[int]) -> str:
         if pokers:

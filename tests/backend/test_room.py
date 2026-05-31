@@ -43,6 +43,7 @@ class TimerStub:
     def __init__(self):
         self.started = []
         self.stopped = False
+        self.timeout = 20
 
     def start_timing(self, timeout):
         self.started.append(timeout)
@@ -197,6 +198,40 @@ class RoomTurnTest(unittest.TestCase):
 
         self.assertEqual(room.timer.started, [])
         self.assertTrue(room.timer.stopped)
+
+
+class RoomDealTest(unittest.TestCase):
+    def test_deal_skips_incomplete_room_instead_of_crashing(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        room.players = [PlayerStub(1, 0), None, PlayerStub(3, 2)]
+
+        with patch('api.game.room.logging') as logging:
+            is_dealt = room.on_deal_poker()
+
+        self.assertFalse(is_dealt)
+        self.assertEqual(room.pokers, [])
+        self.assertEqual(room.timer.started, [])
+        self.assertTrue(room.timer.stopped)
+        self.assertEqual(room.players[0].hand_pokers, [])
+        self.assertEqual(room.players[2].hand_pokers, [])
+        logging.warning.assert_called_once_with('Room[%d] deal skipped because room is not full', 1)
+
+    def test_deal_distributes_cards_and_starts_landlord_timer(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        room.players = [PlayerStub(1, 0), PlayerStub(2, 1), PlayerStub(3, 2)]
+        room.landlord_seat = 1
+
+        with patch('api.game.room.random.shuffle'), patch('api.game.room.logging'):
+            is_dealt = room.on_deal_poker()
+
+        self.assertTrue(is_dealt)
+        self.assertEqual(room.whose_turn, 1)
+        self.assertEqual(room.timer.started, [20])
+        self.assertEqual([len(player.hand_pokers) for player in room.players], [17, 17, 17])
+        self.assertEqual(room.pokers, [52, 53, 54])
+        self.assertEqual([len(player.messages) for player in room.players], [1, 1, 1])
 
 
 class RoomRobTest(unittest.TestCase):
