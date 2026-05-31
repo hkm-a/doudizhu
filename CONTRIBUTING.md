@@ -14,8 +14,9 @@
 后端：
 
 ```bash
-cp .env.example .env
-docker compose up -d mysql
+npm install
+npm run dev:setup
+npm run dev:db
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -25,9 +26,7 @@ npm run verify:backend
 前端：
 
 ```bash
-cd client
-npm install
-cd ..
+npm --prefix client install
 npm run verify:web
 ```
 

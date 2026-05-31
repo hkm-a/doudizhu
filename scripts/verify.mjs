@@ -47,6 +47,12 @@ const commands = {
   ],
   config: [
     {
+      label: 'Validate development setup script',
+      command: process.execPath,
+      args: ['--check', 'scripts/setup-dev.mjs'],
+      cwd: root,
+    },
+    {
       label: 'Check local development config',
       command: process.execPath,
       args: ['scripts/verify-config.mjs'],

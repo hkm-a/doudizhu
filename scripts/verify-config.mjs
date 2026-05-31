@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 const env = parseEnv(readFileSync('.env.example', 'utf8'));
+const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
 const compose = readFileSync('compose.yml', 'utf8');
 const schema = readFileSync('schema.sql', 'utf8');
 
@@ -21,6 +22,19 @@ const expectedEnv = {
 
 for (const [key, value] of Object.entries(expectedEnv)) {
   assertEqual(env[key], value, `.env.example ${key}`);
+}
+
+const expectedScripts = {
+  'dev:setup': 'node scripts/setup-dev.mjs',
+  'dev:db': 'docker compose up -d mysql',
+  'dev:db:down': 'docker compose down',
+  'dev:server': 'cd server && PYTHONPATH=. python3 app.py',
+  'dev:web': 'npm --prefix client start',
+  'verify:config': 'node scripts/verify.mjs config',
+};
+
+for (const [key, value] of Object.entries(expectedScripts)) {
+  assertEqual(packageJson.scripts?.[key], value, `package.json scripts.${key}`);
 }
 
 for (const required of [

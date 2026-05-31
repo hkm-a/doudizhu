@@ -62,13 +62,13 @@ export DOUZERO_MODEL_DIR=/absolute/path/to/douzero/baselines/douzero_ADP
 ```bash
 git clone https://github.com/hkm-a/doudizhu.git
 cd doudizhu
-cp .env.example .env
-docker compose up -d mysql
+npm install
+npm run dev:setup
+npm run dev:db
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cd server
-PYTHONPATH=. python3 app.py
+npm run dev:server
 ```
 
 然后打开：
@@ -82,13 +82,13 @@ http://127.0.0.1:8081
 准备数据库：
 
 ```bash
-docker compose up -d mysql
+npm run dev:db
 ```
 
 准备本地配置：
 
 ```bash
-cp .env.example .env
+npm run dev:setup
 ```
 
 默认配置使用 `ddz` / `ddz` 连接本机 MySQL，并监听 `8081` 端口。需要改数据库、端口、DouZero 模型目录或 WeChat 参数时，编辑 `.env` 即可。
@@ -116,8 +116,7 @@ pip install -r requirements-ai.txt
 启动后端：
 
 ```bash
-cd server
-PYTHONPATH=. python3 app.py
+npm run dev:server
 ```
 
 管理员可以查看或切换机器人补位开关。接口需要管理员登录态，当前本地默认以 `uid=1` 作为管理员：
@@ -132,9 +131,8 @@ curl -X POST http://127.0.0.1:8081/admin \
 前端开发：
 
 ```bash
-cd client
-npm install
-npm start
+npm --prefix client install
+npm run dev:web
 ```
 
 也可以先使用后端静态页面访问：

@@ -24,6 +24,9 @@ jobs:
       - name: Validate configuration script
         run: node --check scripts/verify-config.mjs
 
+      - name: Validate development setup script
+        run: node --check scripts/setup-dev.mjs
+
       - name: Run configuration checks
         run: npm run verify:config
 
