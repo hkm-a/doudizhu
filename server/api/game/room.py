@@ -340,9 +340,15 @@ class Room(object):
         return False
 
     def go_next_turn(self):
-        self.whose_turn += 1
-        if self.whose_turn == 3:
-            self.whose_turn = 0
+        for _ in range(3):
+            self.whose_turn += 1
+            if self.whose_turn == 3:
+                self.whose_turn = 0
+            if self.turn_player:
+                break
+        else:
+            self.timer.stop_timing()
+            return
         self.timer.start_timing(self.turn_player.timeout)
 
     def go_prev_turn(self):

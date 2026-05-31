@@ -174,6 +174,31 @@ class RoomTimeoutTest(unittest.TestCase):
         logging.warning.assert_called_once_with('Room[%d] timeout without turn player', 1)
 
 
+class RoomTurnTest(unittest.TestCase):
+    def test_next_turn_skips_empty_seats(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        room.players = [PlayerStub(1, 0), None, PlayerStub(3, 2)]
+        room.whose_turn = 0
+
+        room.go_next_turn()
+
+        self.assertEqual(room.whose_turn, 2)
+        self.assertEqual(room.timer.started, [20])
+        self.assertFalse(room.timer.stopped)
+
+    def test_next_turn_stops_timer_when_no_players_remain(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        room.players = [None, None, None]
+        room.whose_turn = 0
+
+        room.go_next_turn()
+
+        self.assertEqual(room.timer.started, [])
+        self.assertTrue(room.timer.stopped)
+
+
 class RoomRobTest(unittest.TestCase):
     def make_room(self):
         room = Room(1)
