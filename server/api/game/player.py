@@ -20,7 +20,8 @@ logger = logging.getLogger(__file__)
 def shot_turn(func):
     @functools.wraps(func)
     async def wrapper(player, *args, **kwargs):
-        if player.room and player.room.whose_turn == player.seat:
+        room = player.room
+        if room and room.whose_turn == player.seat and room.turn_player is player:
             return await func(player, *args, **kwargs)
         else:
             player.write_error('TURN ERROR')

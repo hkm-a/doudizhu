@@ -39,6 +39,12 @@ class RoomStub:
     def go_next_turn(self):
         self.next_turns += 1
 
+    @property
+    def turn_player(self):
+        if 0 <= self.whose_turn < len(self.players):
+            return self.players[self.whose_turn]
+        return None
+
     def on_game_over(self, winner):
         self.game_over_winner = winner
 
@@ -96,6 +102,12 @@ class CallScoreRoomStub:
     def on_rob(self, player):
         self.on_rob_calls.append(player)
         return self._is_end
+
+    @property
+    def turn_player(self):
+        if 0 <= self.whose_turn < len(self.players):
+            return self.players[self.whose_turn]
+        return None
 
     @property
     def landlord(self):
@@ -415,6 +427,20 @@ class PlayerHandlePlayingTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(player.hand_pokers, [3, 4])
         self.assertEqual(room.shots, [])
         self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'Poker does not exist'}]])
+
+    async def test_rejects_stale_player_object_even_when_seat_matches_turn(self):
+        player, room = make_player([3, 4])
+        replacement = Player(2, 'replacement')
+        replacement.seat = 0
+        replacement.state = State.PLAYING
+        room.players = [replacement]
+
+        await player.handle_playing(Pt.REQ_SHOT_POKER, {'pokers': [3]})
+
+        self.assertEqual(player.hand_pokers, [3, 4])
+        self.assertEqual(room.shots, [])
+        self.assertEqual(room.broadcasts, [])
+        self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'TURN ERROR'}]])
 
     async def test_rejects_missing_poker_list_without_mutating_room(self):
         player, room = make_player([3, 4])
