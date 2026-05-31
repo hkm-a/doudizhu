@@ -196,6 +196,23 @@ src-tauri/target/release/bundle/deb/doudizhu_0.1.0_amd64.deb
 
 构建后的安装包会包含 `server/`、`requirements.txt` 和 `schema.sql` 作为资源文件。后续还需要继续把 Python 运行时、依赖安装和数据库初始化做成完整的桌面端生命周期。
 
+## 质量门禁
+
+提交前可以运行统一验证命令：
+
+```bash
+npm run verify
+```
+
+它会依次执行后端编译、后端 smoke、前端构建、桌面 Rust 测试和 Git 空白检查。也可以按模块运行：
+
+```bash
+npm run verify:backend
+npm run verify:web
+npm run verify:desktop
+npm run verify:format
+```
+
 ## 后续路线
 
 1. 完成 DouZero `InfoSet` 适配，把服务端房间状态转换为 DouZero 可推理状态。

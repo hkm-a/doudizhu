@@ -5,6 +5,11 @@
   "description": "Tauri desktop shell for the svzdev/doudizhu based project.",
   "scripts": {
     "clean:python-cache": "node scripts/clean-python-cache.mjs",
+    "verify": "node scripts/verify.mjs",
+    "verify:backend": "node scripts/verify.mjs backend",
+    "verify:web": "node scripts/verify.mjs web",
+    "verify:desktop": "node scripts/verify.mjs desktop",
+    "verify:format": "node scripts/verify.mjs format",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "pretauri:build": "npm run clean:python-cache",
