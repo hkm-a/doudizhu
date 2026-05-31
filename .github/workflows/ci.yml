@@ -5,7 +5,28 @@ on:
     branches: [master]
   pull_request:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
+  hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate verification script
+        run: node --check scripts/verify.mjs
+
+      - name: Run repository hygiene checks
+        run: npm run verify:format
+
   backend:
     name: Backend checks
     runs-on: ubuntu-22.04
