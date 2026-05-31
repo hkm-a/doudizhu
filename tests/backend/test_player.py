@@ -46,6 +46,23 @@ class RoomStub:
         self.saved_rounds += 1
 
 
+class WaitingRoomStub:
+    def __init__(self, is_ready=False):
+        self.players = []
+        self.broadcasts = []
+        self.deals = 0
+        self._is_ready = is_ready
+
+    def broadcast(self, packet):
+        self.broadcasts.append(packet)
+
+    def is_ready(self):
+        return self._is_ready
+
+    def on_deal_poker(self):
+        self.deals += 1
+
+
 class CallScoreRoomStub:
     def __init__(self, is_end=False, landlord=None):
         self.whose_turn = 0
@@ -92,6 +109,66 @@ def make_call_score_player(room=None):
     if room._landlord is None:
         room._landlord = player
     return player, room
+
+
+def make_waiting_player(room=None):
+    player = Player(1, 'probe')
+    player.socket = SocketStub()
+    player.seat = 0
+    player.state = State.WAITING
+    room = room or WaitingRoomStub()
+    player.room = room
+    room.players = [player]
+    return player, room
+
+
+class PlayerHandleWaitingTest(unittest.TestCase):
+    def setUp(self):
+        self.logger_patch = patch('api.game.player.logger')
+        self.logger_patch.start()
+
+    def tearDown(self):
+        self.logger_patch.stop()
+
+    def test_ready_value_updates_and_broadcasts_without_dealing_until_room_is_ready(self):
+        player, room = make_waiting_player(WaitingRoomStub(is_ready=False))
+
+        player.handle_waiting(Pt.REQ_READY, {'ready': 1})
+
+        self.assertEqual(player.ready, 1)
+        self.assertEqual(player.state, State.WAITING)
+        self.assertEqual(room.broadcasts, [[Pt.RSP_READY, {'uid': 1, 'ready': 1}]])
+        self.assertEqual(room.deals, 0)
+
+    def test_ready_value_starts_call_score_and_deals_when_room_is_ready(self):
+        player, room = make_waiting_player(WaitingRoomStub(is_ready=True))
+
+        player.handle_waiting(Pt.REQ_READY, {'ready': 1})
+
+        self.assertEqual(player.state, State.CALL_SCORE)
+        self.assertEqual(room.broadcasts, [[Pt.RSP_READY, {'uid': 1, 'ready': 1}]])
+        self.assertEqual(room.deals, 1)
+
+    def test_invalid_ready_value_is_rejected_without_mutating_room(self):
+        for ready in (True, '1', 2, None):
+            with self.subTest(ready=ready):
+                player, room = make_waiting_player(WaitingRoomStub(is_ready=True))
+
+                player.handle_waiting(Pt.REQ_READY, {'ready': ready})
+
+                self.assertEqual(player.ready, 0)
+                self.assertEqual(player.state, State.WAITING)
+                self.assertEqual(room.broadcasts, [])
+                self.assertEqual(room.deals, 0)
+                self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'Invalid ready value'}]])
+
+    def test_non_ready_message_reports_state_error(self):
+        player, room = make_waiting_player()
+
+        player.handle_waiting(Pt.REQ_CALL_SCORE, {'rob': 1})
+
+        self.assertEqual(room.broadcasts, [])
+        self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'STATE[State.WAITING]'}]])
 
 
 class PlayerHandleCallScoreTest(unittest.IsolatedAsyncioTestCase):

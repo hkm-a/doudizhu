@@ -177,7 +177,12 @@ class Player(object):
 
     def handle_waiting(self, code: int, packet: Dict[str, Any]):
         if code == Pt.REQ_READY:
-            self.ready = packet.get('ready')
+            ready = packet.get('ready')
+            if not self._is_protocol_bit(ready):
+                self.write_error('Invalid ready value')
+                return
+
+            self.ready = ready
             if self.room.is_ready():
                 self.change_state(State.CALL_SCORE)
                 self.room.on_deal_poker()
@@ -188,7 +193,7 @@ class Player(object):
     async def handle_call_score(self, code: int, packet: Dict[str, Any]):
         if code == Pt.REQ_CALL_SCORE:
             rob = packet.get('rob')
-            if type(rob) is not int or rob not in (0, 1):
+            if not self._is_protocol_bit(rob):
                 self.write_error('Invalid rob value')
                 return
 
@@ -248,6 +253,10 @@ class Player(object):
             isinstance(pokers, list)
             and all(type(poker) is int and 1 <= poker <= 54 for poker in pokers)
         )
+
+    @staticmethod
+    def _is_protocol_bit(value) -> bool:
+        return type(value) is int and value in (0, 1)
 
     def handle_game_over(self, code: int, packet: Dict[str, Any]):
         self.write_error('STATE[%s]' % self.state)
