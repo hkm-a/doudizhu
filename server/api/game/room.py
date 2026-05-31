@@ -69,6 +69,8 @@ class Room(object):
         self._rob_record = []
 
         for player in self.players:
+            if player is None:
+                continue
             if player.is_left():
                 IOLoop.current().add_callback(self.on_leave, player, True)
             else:

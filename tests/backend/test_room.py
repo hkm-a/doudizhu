@@ -9,19 +9,36 @@ class PlayerStub:
         self.seat = seat
         self.landlord = landlord
         self.rob = -1
+        self.ready = 1
+        self.left = 0
+        self.restarts = 0
         self.timeout = 20
         self.hand_pokers = []
 
     def push_pokers(self, pokers):
         self.hand_pokers.extend(pokers)
 
+    def is_left(self):
+        return self.left == 1
+
+    def restart(self):
+        self.restarts += 1
+        self.ready = 0
+        self.rob = -1
+        self.landlord = 0
+        self.hand_pokers = []
+
 
 class TimerStub:
     def __init__(self):
         self.started = []
+        self.stopped = False
 
     def start_timing(self, timeout):
         self.started.append(timeout)
+
+    def stop_timing(self):
+        self.stopped = True
 
 
 class RoomShotTest(unittest.TestCase):
@@ -90,6 +107,35 @@ class RoomShotTest(unittest.TestCase):
         self.assertEqual(room.on_shot(1, [53, 54]), '')
         self.assertEqual(room._multiple_details['bomb'], 4)
         self.assertEqual(room.shot_round, [[3, 16, 29, 42], [53, 54]])
+
+
+class RoomRestartTest(unittest.TestCase):
+    def test_restart_skips_empty_seats_and_restarts_present_players(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        players = [PlayerStub(1, 0), None, PlayerStub(3, 2)]
+        room.players = players
+        room.pokers = [53, 54, 3]
+        room.landlord_seat = 2
+        room.whose_turn = 2
+        room.last_shot_seat = 2
+        room.last_shot_poker = [3]
+        room.shot_round = [[3]]
+        room._multiple_details['bomb'] = 4
+
+        room.restart()
+
+        self.assertEqual(room.players, players)
+        self.assertEqual(players[0].restarts, 1)
+        self.assertEqual(players[2].restarts, 1)
+        self.assertEqual(room.pokers, [])
+        self.assertEqual(room.landlord_seat, 0)
+        self.assertEqual(room.whose_turn, 0)
+        self.assertEqual(room.last_shot_seat, 0)
+        self.assertEqual(room.last_shot_poker, [])
+        self.assertEqual(room.shot_round, [])
+        self.assertEqual(room._multiple_details['bomb'], 1)
+        self.assertTrue(room.timer.stopped)
 
 
 class RoomRobTest(unittest.TestCase):
