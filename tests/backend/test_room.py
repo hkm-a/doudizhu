@@ -18,6 +18,7 @@ class PlayerStub:
         self.timeout = 20
         self.hand_pokers = []
         self.messages = []
+        self.socket = None
 
     def push_pokers(self, pokers):
         self.hand_pokers.extend(pokers)
@@ -50,6 +51,14 @@ class TimerStub:
 
     def stop_timing(self):
         self.stopped = True
+
+
+class RecordSocketStub:
+    def __init__(self):
+        self.records = []
+
+    async def insert(self, record):
+        self.records.append(record)
 
 
 class RoomShotTest(unittest.TestCase):
@@ -361,6 +370,56 @@ class RoomScoringTest(unittest.TestCase):
         self.assertEqual([item['uid'] for item in response[1]['players']], [1, 3])
         self.assertEqual(players[2].messages[-1], response)
         self.assertTrue(room.timer.stopped)
+
+
+class RoomSaveShotRoundTest(unittest.IsolatedAsyncioTestCase):
+    async def test_save_shot_round_records_first_available_socket(self):
+        room = Room(1)
+        players = [
+            PlayerStub(1, 0, landlord=1),
+            PlayerStub(2, 1),
+            PlayerStub(3, 2),
+        ]
+        players[0].socket = RecordSocketStub()
+        players[1].socket = RecordSocketStub()
+        players[0].hand_pokers = [3]
+        players[1].hand_pokers = [4, 5]
+        players[2].hand_pokers = []
+        room.players = players
+        room.shot_round = [[6], [], [7]]
+
+        saved = await room.save_shot_round()
+
+        self.assertTrue(saved)
+        self.assertEqual(len(players[0].socket.records), 1)
+        self.assertEqual(players[1].socket.records, [])
+        record = players[0].socket.records[0]
+        self.assertEqual(record.round, {
+            'left': {
+                0: [3],
+                1: [4, 5],
+                2: [],
+            },
+            'round': [[6], [], [7]],
+            'lord': 0,
+        })
+
+    async def test_save_shot_round_skips_missing_landlord_instead_of_crashing(self):
+        room = Room(1)
+        player = PlayerStub(1, 0)
+        player.socket = RecordSocketStub()
+        room.players = [player, None, PlayerStub(3, 2)]
+        room.shot_round = [[3]]
+
+        with patch('api.game.room.logging') as logging:
+            saved = await room.save_shot_round()
+
+        self.assertFalse(saved)
+        self.assertEqual(player.socket.records, [])
+        logging.warning.assert_called_once_with(
+            'Room[%d] skipped saving shot round because landlord is missing',
+            1,
+        )
 
 
 class RoomMultipleTest(unittest.TestCase):

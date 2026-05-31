@@ -272,6 +272,11 @@ class Room(object):
         IOLoop.current().add_callback(self.restart)
 
     async def save_shot_round(self):
+        landlord = self.landlord
+        if landlord is None:
+            logging.warning('Room[%d] skipped saving shot round because landlord is missing', self.room_id)
+            return False
+
         for active_player in self.players:
             if not active_player or not active_player.socket:
                 continue
@@ -283,13 +288,15 @@ class Room(object):
                     if room_player
                 },
                 'round': [list(shot) for shot in self.shot_round],
-                'lord': self.landlord.seat,
+                'lord': landlord.seat,
             }, robot=self.has_robot())
             try:
                 await active_player.socket.insert(record)
             except Exception:
                 logging.exception('Room[%d] failed to save shot round', self.room_id)
-            break
+                return False
+            return True
+        return False
 
     @property
     def multiple(self) -> int:
