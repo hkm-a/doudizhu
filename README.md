@@ -1,6 +1,29 @@
 # 斗地主桌面端融合工程
 
-这个仓库以 [svzdev/doudizhu](https://github.com/svzdev/doudizhu) 为游戏基础，后续接入 [kwai/DouZero](https://github.com/kwai/DouZero) 作为强 AI。当前发布形态使用 Tauri 封装桌面端，桌面应用会加载并尝试自动拉起本机 Tornado 服务。
+[![CI](https://github.com/hkm-a/doudizhu/actions/workflows/ci.yml/badge.svg)](https://github.com/hkm-a/doudizhu/actions/workflows/ci.yml)
+[![Status](https://img.shields.io/badge/status-desktop%20prototype-blue)](https://github.com/hkm-a/doudizhu)
+[![AI](https://img.shields.io/badge/AI-DouZero%20adapter%20planned-0f766e)](docs/architecture.md)
+
+一个面向桌面端发布的斗地主融合工程：以 [svzdev/doudizhu](https://github.com/svzdev/doudizhu) 为游戏基础，接入 [kwai/DouZero](https://github.com/kwai/DouZero) 的 AI 策略边界，并用 Tauri 打包成本地应用。目标不是只做一个能跑的 fork，而是逐步打磨成可复现、可贡献、可发布的开源桌面斗地主项目。
+
+## 为什么值得关注
+
+- 桌面优先：第一版以 Tauri 桌面端为发布形态，不再维护旧项目外壳。
+- AI 可替换：机器人逻辑已抽成策略边界，规则 AI 稳定 fallback，DouZero 适配按模块推进。
+- 可验证：CI 覆盖后端编译和烟测、前端构建、桌面 Rust 测试。
+- 可贡献：社区文件、issue 模板、路线图和许可状态说明已纳入仓库。
+
+## 项目状态
+
+| 方向 | 状态 |
+| --- | --- |
+| WebSocket 斗地主基础流程 | 可运行，已纳入后端烟测 |
+| 桌面端封装 | Tauri 2 原型，可自动尝试拉起本机后端 |
+| 规则机器人 | 默认启用，作为稳定 fallback |
+| DouZero AI | 依赖和模型目录校验已接入，牌局 `InfoSet` 适配待完成 |
+| 一键安装体验 | 待完善，当前仍依赖本机 MySQL 和 Python 依赖 |
+
+更细的工程路线见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 当前基础
 
@@ -33,6 +56,26 @@ export DOUZERO_MODEL_DIR=/absolute/path/to/douzero/baselines/douzero_ADP
 - `landlord_down.ckpt`
 
 当前 `DouZeroPolicy` 会验证依赖和模型文件；牌局 `InfoSet` 编码适配尚未完成时会自动回退到规则 AI，保证游戏仍可运行。
+
+## 快速体验
+
+```bash
+git clone https://github.com/hkm-a/doudizhu.git
+cd doudizhu
+cp .env.example .env
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+mysql --user=root -p < schema.sql
+cd server
+PYTHONPATH=. python3 app.py
+```
+
+然后打开：
+
+```text
+http://127.0.0.1:8081
+```
 
 ## 本地开发
 
@@ -159,3 +202,13 @@ src-tauri/target/release/bundle/deb/doudizhu_0.1.0_amd64.deb
 2. 加入 AI 对局日志和回放，方便比较启发式 AI 与 DouZero 出牌。
 3. 整理前端资源和 Phaser 牌桌体验。
 4. 完善桌面端封装：打包 Python 运行时、依赖安装和数据库初始化流程。
+
+## 贡献与安全
+
+- 贡献指南见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+- 安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。
+- 支持入口见 [SUPPORT.md](SUPPORT.md)。
+
+## 许可状态
+
+当前仓库包含来自 `svzdev/doudizhu` 的代码基础；截至本次核验，上游仓库未声明许可证。`kwai/DouZero` 使用 Apache-2.0。完整说明见 [LICENSE.md](LICENSE.md) 和 [NOTICE.md](NOTICE.md)。在许可状态澄清或替换相关代码前，请不要假设整个仓库已按某个开源许可证重新授权。
