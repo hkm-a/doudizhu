@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+from api.game.protocol import Protocol as Pt
 from api.game.room import Room
 
 
@@ -16,6 +17,7 @@ class PlayerStub:
         self.timeouts = 0
         self.timeout = 20
         self.hand_pokers = []
+        self.messages = []
 
     def push_pokers(self, pokers):
         self.hand_pokers.extend(pokers)
@@ -32,6 +34,9 @@ class PlayerStub:
 
     def on_timeout(self):
         self.timeouts += 1
+
+    def write_message(self, packet):
+        self.messages.append(packet)
 
 
 class TimerStub:
@@ -257,6 +262,21 @@ class RoomScoringTest(unittest.TestCase):
         room.shot_round = [[3], [4], [5], [6]]
 
         self.assertFalse(room.anti_spring(players[1]))
+
+    def test_game_over_skips_empty_seats_when_building_score_response(self):
+        room, players = self.make_room()
+        room.timer = TimerStub()
+        room.players = [players[0], None, players[2]]
+        room.shot_round = [[3], [], []]
+
+        with patch('api.game.room.logging'):
+            room.on_game_over(players[0])
+
+        response = players[0].messages[-1]
+        self.assertEqual(response[0], Pt.RSP_GAME_OVER)
+        self.assertEqual([item['uid'] for item in response[1]['players']], [1, 3])
+        self.assertEqual(players[2].messages[-1], response)
+        self.assertTrue(room.timer.stopped)
 
 
 class RoomMultipleTest(unittest.TestCase):

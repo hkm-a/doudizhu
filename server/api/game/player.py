@@ -266,7 +266,8 @@ class Player(object):
 
     def change_state(self, state: State):
         for player in self.room.players:
-            player.state = state
+            if player:
+                player.state = state
 
     def write_message(self, packet):
         self.socket.write_message(packet)

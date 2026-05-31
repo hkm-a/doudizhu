@@ -297,6 +297,18 @@ class PlayerHandleCallScoreTest(unittest.IsolatedAsyncioTestCase):
             'pokers': [53, 54, 3],
         }]])
 
+    async def test_finished_call_score_skips_empty_room_seats_when_changing_state(self):
+        player, room = make_call_score_player(CallScoreRoomStub(is_end=True))
+        other = Player(2, 'other')
+        other.state = State.CALL_SCORE
+        room.players = [player, None, other]
+
+        await player.handle_call_score(Pt.REQ_CALL_SCORE, {'rob': 0})
+
+        self.assertEqual(player.state, State.PLAYING)
+        self.assertEqual(other.state, State.PLAYING)
+        self.assertEqual(room.players[1], None)
+
     async def test_non_call_score_message_reports_state_error(self):
         player, room = make_call_score_player()
 
