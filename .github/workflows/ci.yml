@@ -21,6 +21,12 @@ jobs:
       - name: Validate verification script
         run: node --check scripts/verify.mjs
 
+      - name: Validate configuration script
+        run: node --check scripts/verify-config.mjs
+
+      - name: Run configuration checks
+        run: npm run verify:config
+
       - name: Run repository hygiene checks
         run: npm run verify:format
 

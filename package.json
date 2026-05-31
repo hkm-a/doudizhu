@@ -9,6 +9,7 @@
     "verify:backend": "node scripts/verify.mjs backend",
     "verify:web": "node scripts/verify.mjs web",
     "verify:desktop": "node scripts/verify.mjs desktop",
+    "verify:config": "node scripts/verify.mjs config",
     "verify:format": "node scripts/verify.mjs format",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",

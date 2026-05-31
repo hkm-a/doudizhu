@@ -45,6 +45,14 @@ const commands = {
       cwd: root,
     },
   ],
+  config: [
+    {
+      label: 'Check local development config',
+      command: process.execPath,
+      args: ['scripts/verify-config.mjs'],
+      cwd: root,
+    },
+  ],
   format: [
     {
       label: 'Check git whitespace',
@@ -56,7 +64,7 @@ const commands = {
 };
 
 const requested = process.argv.slice(2);
-const targets = requested.length > 0 ? requested : ['backend', 'web', 'desktop', 'format'];
+const targets = requested.length > 0 ? requested : ['backend', 'web', 'desktop', 'config', 'format'];
 
 try {
   for (const target of targets) {

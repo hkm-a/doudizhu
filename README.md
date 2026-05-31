@@ -63,10 +63,10 @@ export DOUZERO_MODEL_DIR=/absolute/path/to/douzero/baselines/douzero_ADP
 git clone https://github.com/hkm-a/doudizhu.git
 cd doudizhu
 cp .env.example .env
+docker compose up -d mysql
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-mysql --user=root -p < schema.sql
 cd server
 PYTHONPATH=. python3 app.py
 ```
@@ -82,7 +82,7 @@ http://127.0.0.1:8081
 准备数据库：
 
 ```bash
-mysql --user=root -p < schema.sql
+docker compose up -d mysql
 ```
 
 准备本地配置：
@@ -92,6 +92,12 @@ cp .env.example .env
 ```
 
 默认配置使用 `ddz` / `ddz` 连接本机 MySQL，并监听 `8081` 端口。需要改数据库、端口、DouZero 模型目录或 WeChat 参数时，编辑 `.env` 即可。
+
+如果不使用 Docker，可以手动创建 MySQL 数据库和用户后导入 schema：
+
+```bash
+mysql --user=root -p < schema.sql
+```
 
 安装后端依赖：
 
@@ -204,12 +210,13 @@ src-tauri/target/release/bundle/deb/doudizhu_0.1.0_amd64.deb
 npm run verify
 ```
 
-它会依次执行后端编译、后端 smoke、后端单元测试、前端构建、桌面 Rust 测试和 Git 空白检查。也可以按模块运行：
+它会依次执行后端编译、后端 smoke、后端单元测试、前端构建、桌面 Rust 测试、本地开发配置检查和 Git 空白检查。也可以按模块运行：
 
 ```bash
 npm run verify:backend
 npm run verify:web
 npm run verify:desktop
+npm run verify:config
 npm run verify:format
 ```
 
