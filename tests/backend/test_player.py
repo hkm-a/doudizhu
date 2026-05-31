@@ -163,6 +163,32 @@ def make_left_player(room=None):
     return player
 
 
+class PlayerWriteMessageTest(unittest.TestCase):
+    def setUp(self):
+        self.logger_patch = patch('api.game.player.logger')
+        self.logger = self.logger_patch.start()
+
+    def tearDown(self):
+        self.logger_patch.stop()
+
+    def test_write_message_without_socket_is_logged_and_skipped(self):
+        player = Player(1, 'probe')
+
+        sent = player.write_message([Pt.RSP_READY, {'uid': 1, 'ready': 1}])
+
+        self.assertFalse(sent)
+        self.logger.warning.assert_called_once_with('USER[%d] missing socket for response %s', 1, [Pt.RSP_READY, {'uid': 1, 'ready': 1}])
+
+    def test_write_message_with_socket_sends_packet(self):
+        player = Player(1, 'probe')
+        player.socket = SocketStub()
+
+        sent = player.write_message([Pt.RSP_READY, {'uid': 1, 'ready': 1}])
+
+        self.assertTrue(sent)
+        self.assertEqual(player.socket.messages, [[Pt.RSP_READY, {'uid': 1, 'ready': 1}]])
+
+
 class PlayerHandleLeaveTest(unittest.TestCase):
     def setUp(self):
         self.logger_patch = patch('api.game.player.logger')

@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+from api.game.player import Player
 from api.game.protocol import Protocol as Pt
 from api.game.room import Room
 
@@ -127,6 +128,21 @@ class RoomShotTest(unittest.TestCase):
         self.assertEqual(room.on_shot(1, [53, 54]), '')
         self.assertEqual(room._multiple_details['bomb'], 4)
         self.assertEqual(room.shot_round, [[3, 16, 29, 42], [53, 54]])
+
+
+class RoomBroadcastTest(unittest.TestCase):
+    def test_broadcast_continues_when_player_has_no_socket(self):
+        room = Room(1)
+        connected = PlayerStub(1, 0)
+        disconnected = Player(2, 'disconnected')
+        room.players = [connected, disconnected, None]
+        packet = [Pt.RSP_READY, {'uid': 1, 'ready': 1}]
+
+        with patch('api.game.player.logger') as logger:
+            room.broadcast(packet)
+
+        self.assertEqual(connected.messages, [packet])
+        logger.warning.assert_called_once_with('USER[%d] missing socket for response %s', 2, packet)
 
 
 class RoomRestartTest(unittest.TestCase):

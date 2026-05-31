@@ -271,7 +271,11 @@ class Player(object):
                 player.state = state
 
     def write_message(self, packet):
+        if not self.socket:
+            logger.warning('USER[%d] missing socket for response %s', self.uid, packet)
+            return False
         self.socket.write_message(packet)
+        return True
 
     def write_error(self, reason: str):
         if self.socket:
