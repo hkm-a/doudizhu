@@ -117,10 +117,14 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
     @staticmethod
     def decode_message(message):
         try:
-            code, packet = json.loads(message)
-            if isinstance(code, int) and isinstance(packet, dict):
+            decoded = json.loads(message)
+            if not isinstance(decoded, list) or len(decoded) != 2:
+                return None, None
+
+            code, packet = decoded
+            if type(code) is int and isinstance(packet, dict):
                 return code, packet
-        except (json.decoder.JSONDecodeError, ValueError):
+        except (json.decoder.JSONDecodeError, TypeError):
             logging.error('ERROR MESSAGE: %s', message)
         return None, None
 
