@@ -63,6 +63,23 @@ class WaitingRoomStub:
         self.deals += 1
 
 
+class LeaveRoomStub:
+    def __init__(self, room_id=1):
+        self.room_id = room_id
+        self.synced = 0
+        self.left_players = []
+        self.broadcasts = []
+
+    def sync_room(self):
+        self.synced += 1
+
+    def on_leave(self, player):
+        self.left_players.append(player)
+
+    def broadcast(self, packet):
+        self.broadcasts.append(packet)
+
+
 class CallScoreRoomStub:
     def __init__(self, is_end=False, landlord=None):
         self.whose_turn = 0
@@ -120,6 +137,72 @@ def make_waiting_player(room=None):
     player.room = room
     room.players = [player]
     return player, room
+
+
+def make_left_player(room=None):
+    player = Player(1, 'probe')
+    player.socket = SocketStub()
+    player.seat = 0
+    player.state = State.WAITING
+    player.room = room
+    player.set_left(1)
+    return player
+
+
+class PlayerHandleLeaveTest(unittest.TestCase):
+    def setUp(self):
+        self.logger_patch = patch('api.game.player.logger')
+        self.logger_patch.start()
+
+    def tearDown(self):
+        self.logger_patch.stop()
+
+    def test_rejoin_missing_room_keeps_player_left_and_reports_error(self):
+        player = make_left_player(LeaveRoomStub(room_id=7))
+
+        with patch('api.game.globalvar.GlobalVar.find_room', return_value=None):
+            handled = player.handle_leave(Pt.REQ_JOIN_ROOM, {'room': 99, 'level': 1})
+
+        self.assertTrue(handled)
+        self.assertTrue(player.is_left())
+        self.assertEqual(player.socket.messages[-1], [Pt.ERROR, {'reason': 'Room[99] Not Found'}])
+
+    def test_rejoin_current_room_clears_left_state_and_syncs_room(self):
+        room = LeaveRoomStub(room_id=7)
+        player = make_left_player(room)
+
+        with patch('api.game.globalvar.GlobalVar.find_room', return_value=room):
+            handled = player.handle_leave(Pt.REQ_JOIN_ROOM, {'room': 7, 'level': 1})
+
+        self.assertTrue(handled)
+        self.assertFalse(player.is_left())
+        self.assertEqual(room.synced, 1)
+
+    def test_rejoin_different_room_is_rejected_without_switching_room(self):
+        current_room = LeaveRoomStub(room_id=7)
+        target_room = LeaveRoomStub(room_id=8)
+        player = make_left_player(current_room)
+
+        with patch('api.game.globalvar.GlobalVar.find_room', return_value=target_room):
+            handled = player.handle_leave(Pt.REQ_JOIN_ROOM, {'room': 8, 'level': 1})
+
+        self.assertTrue(handled)
+        self.assertTrue(player.is_left())
+        self.assertIs(player.room, current_room)
+        self.assertEqual(target_room.synced, 0)
+        self.assertEqual(player.socket.messages[-1], [Pt.ERROR, {'reason': 'Room[8] Not Joined'}])
+
+    def test_leave_to_lobby_removes_player_from_room_and_allows_init_handling(self):
+        room = LeaveRoomStub(room_id=7)
+        player = make_left_player(room)
+
+        handled = player.handle_leave(Pt.REQ_JOIN_ROOM, {'room': -1, 'level': 1})
+
+        self.assertFalse(handled)
+        self.assertFalse(player.is_left())
+        self.assertIsNone(player.room)
+        self.assertEqual(player.state, State.INIT)
+        self.assertEqual(room.left_players, [player])
 
 
 class PlayerHandleWaitingTest(unittest.TestCase):

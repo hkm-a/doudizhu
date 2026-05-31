@@ -137,9 +137,9 @@ class Player(object):
     def handle_leave(self, code: int, packet: Dict[str, Any]):
         from .globalvar import GlobalVar
         if code == Pt.REQ_JOIN_ROOM:
-            self.set_left(0)
             room_id, level = packet.get('room', -1), packet.get('level', 1)
             if room_id == -1:
+                self.set_left(0)
                 self.restart()
                 self.state = State.INIT
                 if self.room:
@@ -148,11 +148,14 @@ class Player(object):
                 return False
 
             room = GlobalVar.find_room(room_id, level, self.allow_robot)
-            if room.room_id == room_id:
-                self.room.sync_room()
+            if room is None:
+                self.write_error('Room[%s] Not Found' % room_id)
+            elif self.room == room:
+                self.set_left(0)
+                room.sync_room()
                 logger.info('PLAYER[%s] REJOIN ROOM[%d]', self.uid, room.room_id)
             else:
-                self.write_error('Room[%s] Not Found' % room_id)
+                self.write_error('Room[%s] Not Joined' % room_id)
         return True
 
     def handle_init(self, code: int, packet: Dict[str, Any]):
