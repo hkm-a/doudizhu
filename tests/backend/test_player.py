@@ -44,6 +44,29 @@ class RoomStub:
         self.saved_rounds += 1
 
 
+class CallScoreRoomStub:
+    def __init__(self, is_end=False, landlord=None):
+        self.whose_turn = 0
+        self.multiple = 30
+        self.pokers = [53, 54, 3]
+        self.players = []
+        self.broadcasts = []
+        self.on_rob_calls = []
+        self._is_end = is_end
+        self._landlord = landlord
+
+    def on_rob(self, player):
+        self.on_rob_calls.append(player)
+        return self._is_end
+
+    @property
+    def landlord(self):
+        return self._landlord
+
+    def broadcast(self, packet):
+        self.broadcasts.append(packet)
+
+
 def make_player(hand_pokers, room=None):
     room = room or RoomStub()
     player = Player(1, 'probe')
@@ -54,6 +77,71 @@ def make_player(hand_pokers, room=None):
     player._hand_pokers = list(hand_pokers)
     room.players = [player]
     return player, room
+
+
+def make_call_score_player(room=None):
+    player = Player(1, 'probe')
+    player.socket = SocketStub()
+    player.seat = 0
+    player.state = State.CALL_SCORE
+    room = room or CallScoreRoomStub()
+    player.room = room
+    room.players = [player]
+    if room._landlord is None:
+        room._landlord = player
+    return player, room
+
+
+class PlayerHandleCallScoreTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.logger_patch = patch('api.game.player.logger')
+        self.logger_patch.start()
+
+    def tearDown(self):
+        self.logger_patch.stop()
+
+    async def test_unfinished_call_score_broadcasts_without_landlord_or_bottom_cards(self):
+        player, room = make_call_score_player(CallScoreRoomStub(is_end=False))
+
+        await player.handle_call_score(Pt.REQ_CALL_SCORE, {'rob': 1})
+
+        self.assertEqual(player.rob, 1)
+        self.assertEqual(room.on_rob_calls, [player])
+        self.assertEqual(player.state, State.CALL_SCORE)
+        self.assertEqual(room.broadcasts, [[Pt.RSP_CALL_SCORE, {
+            'uid': 1,
+            'rob': 1,
+            'landlord': -1,
+            'multiple': 30,
+            'pokers': [],
+        }]])
+
+    async def test_finished_call_score_switches_room_to_playing_and_broadcasts_landlord(self):
+        player, room = make_call_score_player(CallScoreRoomStub(is_end=True))
+        other = Player(2, 'other')
+        other.state = State.CALL_SCORE
+        room.players.append(other)
+
+        await player.handle_call_score(Pt.REQ_CALL_SCORE, {'rob': 0})
+
+        self.assertEqual(player.rob, 0)
+        self.assertEqual(player.state, State.PLAYING)
+        self.assertEqual(other.state, State.PLAYING)
+        self.assertEqual(room.broadcasts, [[Pt.RSP_CALL_SCORE, {
+            'uid': 1,
+            'rob': 0,
+            'landlord': 1,
+            'multiple': 30,
+            'pokers': [53, 54, 3],
+        }]])
+
+    async def test_non_call_score_message_reports_state_error(self):
+        player, room = make_call_score_player()
+
+        await player.handle_call_score(Pt.REQ_READY, {'ready': 1})
+
+        self.assertEqual(room.on_rob_calls, [])
+        self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'STATE[State.CALL_SCORE]'}]])
 
 
 class PlayerHandlePlayingTest(unittest.IsolatedAsyncioTestCase):

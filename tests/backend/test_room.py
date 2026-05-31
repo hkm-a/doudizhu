@@ -8,6 +8,20 @@ class PlayerStub:
         self.uid = uid
         self.seat = seat
         self.landlord = landlord
+        self.rob = -1
+        self.timeout = 20
+        self.hand_pokers = []
+
+    def push_pokers(self, pokers):
+        self.hand_pokers.extend(pokers)
+
+
+class TimerStub:
+    def __init__(self):
+        self.started = []
+
+    def start_timing(self, timeout):
+        self.started.append(timeout)
 
 
 class RoomShotTest(unittest.TestCase):
@@ -76,6 +90,44 @@ class RoomShotTest(unittest.TestCase):
         self.assertEqual(room.on_shot(1, [53, 54]), '')
         self.assertEqual(room._multiple_details['bomb'], 4)
         self.assertEqual(room.shot_round, [[3, 16, 29, 42], [53, 54]])
+
+
+class RoomRobTest(unittest.TestCase):
+    def make_room(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        players = [PlayerStub(i + 1, i) for i in range(3)]
+        room.players = players
+        room.landlord_seat = 0
+        room.whose_turn = 0
+        return room, players
+
+    def test_rob_doubles_rob_multiple_and_moves_to_next_turn_when_unfinished(self):
+        room, players = self.make_room()
+        players[0].rob = 1
+
+        is_end = room.on_rob(players[0])
+
+        self.assertFalse(is_end)
+        self.assertEqual(room._multiple_details['rob'], 2)
+        self.assertEqual(room.whose_turn, 1)
+        self.assertEqual(room.timer.started, [20])
+        self.assertEqual([player.landlord for player in players], [0, 0, 0])
+
+    def test_all_players_decline_assigns_original_landlord_seat(self):
+        room, players = self.make_room()
+        room.whose_turn = 2
+        room.pokers = [53, 54, 3]
+        for player in players:
+            player.rob = 0
+
+        is_end = room.on_rob(players[2])
+
+        self.assertTrue(is_end)
+        self.assertEqual(players[0].landlord, 1)
+        self.assertEqual(players[0].hand_pokers, [53, 54, 3])
+        self.assertEqual(room.last_shot_seat, 0)
+        self.assertEqual(room._multiple_details['di'], 4)
 
 
 class RoomScoringTest(unittest.TestCase):
