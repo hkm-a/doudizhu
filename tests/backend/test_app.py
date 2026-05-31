@@ -6,6 +6,7 @@ from unittest.mock import patch
 from tornado.testing import AsyncHTTPTestCase
 
 from app import Application
+from api.game.protocol import Protocol
 from api.game.views import SocketHandler
 
 
@@ -92,6 +93,37 @@ class SocketHandlerDecodeMessageTest(unittest.TestCase):
         for message in invalid_messages:
             with self.subTest(message=message):
                 self.assertEqual(SocketHandler.decode_message(message), (None, None))
+
+
+class SocketHandlerMessageTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.logging_patch = patch('api.game.views.logging')
+        self.logging = self.logging_patch.start()
+
+    def tearDown(self):
+        self.logging_patch.stop()
+
+    async def test_non_room_list_message_without_player_reports_error(self):
+        class HandlerProbe:
+            player = None
+            decode_message = staticmethod(SocketHandler.decode_message)
+
+            def __init__(self):
+                self.messages = []
+
+            @property
+            def uid(self):
+                return 0
+
+            def write_message(self, message):
+                self.messages.append(message)
+
+        handler = HandlerProbe()
+
+        await SocketHandler.on_message(handler, '[2001, {"ready": 1}]')
+
+        self.assertEqual(handler.messages, [[Protocol.ERROR, {'reason': 'Player is not ready'}]])
+        self.logging.warning.assert_called_once_with('SOCKET message ignored before player is ready: %s', '[2001, {"ready": 1}]')
 
 
 if __name__ == '__main__':

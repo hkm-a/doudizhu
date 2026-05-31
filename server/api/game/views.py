@@ -86,6 +86,11 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
             self.write_message([Protocol.RSP_ROOM_LIST, {'rooms': GlobalVar.room_list()}])
             return
 
+        if self.player is None:
+            logging.warning('SOCKET message ignored before player is ready: %s', message)
+            self.write_message([Protocol.ERROR, {'reason': 'Player is not ready'}])
+            return
+
         await self.player.on_message(code, packet)
 
     def on_close(self):
