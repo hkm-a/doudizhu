@@ -20,6 +20,8 @@ class RoomStub:
         self.whose_turn = 0
         self.multiple = 15
         self.on_shot_error = on_shot_error
+        self.last_shot_seat = 0
+        self.last_shot_poker = []
         self.shots = []
         self.broadcasts = []
         self.next_turns = 0
@@ -142,6 +144,61 @@ class PlayerHandleCallScoreTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(room.on_rob_calls, [])
         self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'STATE[State.CALL_SCORE]'}]])
+
+
+class PlayerHandleTimeoutTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.logger_patch = patch('api.game.player.logger')
+        self.logger_patch.start()
+
+    def tearDown(self):
+        self.logger_patch.stop()
+
+    async def test_call_score_timeout_defaults_to_decline_for_connected_player(self):
+        player, room = make_call_score_player(CallScoreRoomStub(is_end=False))
+
+        await player.handle_timeout()
+
+        self.assertEqual(player.rob, 0)
+        self.assertEqual(room.on_rob_calls, [player])
+        self.assertEqual(room.broadcasts, [[Pt.RSP_CALL_SCORE, {
+            'uid': 1,
+            'rob': 0,
+            'landlord': -1,
+            'multiple': 30,
+            'pokers': [],
+        }]])
+
+    async def test_timeout_bypasses_left_player_message_gate(self):
+        player, room = make_call_score_player(CallScoreRoomStub(is_end=False))
+        player.set_left(1)
+
+        await player.handle_timeout()
+
+        self.assertEqual(player.rob, 0)
+        self.assertEqual(room.on_rob_calls, [player])
+        self.assertEqual(room.broadcasts, [
+            [Pt.RSP_LEAVE_ROOM, {'uid': 1}],
+            [Pt.RSP_CALL_SCORE, {
+                'uid': 1,
+                'rob': 0,
+                'landlord': -1,
+                'multiple': 30,
+                'pokers': [],
+            }],
+        ])
+
+    async def test_playing_timeout_passes_when_following_another_player(self):
+        player, room = make_player([4, 5])
+        room.last_shot_seat = 1
+        room.last_shot_poker = [3]
+
+        await player.handle_timeout()
+
+        self.assertEqual(player.hand_pokers, [4, 5])
+        self.assertEqual(room.shots, [(0, [])])
+        self.assertEqual(room.broadcasts, [[Pt.RSP_SHOT_POKER, {'uid': 1, 'pokers': [], 'multiple': 15}]])
+        self.assertEqual(room.next_turns, 1)
 
 
 class PlayerHandlePlayingTest(unittest.IsolatedAsyncioTestCase):

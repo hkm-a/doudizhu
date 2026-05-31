@@ -120,15 +120,16 @@ class Player(object):
         self.set_left()
 
     def on_timeout(self):
-        if not self.is_left():
-            return
+        IOLoop.current().add_callback(self.handle_timeout)
+
+    async def handle_timeout(self):
         if self.state == State.CALL_SCORE:
-            self.to_server(Pt.REQ_CALL_SCORE, {'rob': 0})
+            await self.handle_call_score(Pt.REQ_CALL_SCORE, {'rob': 0})
         elif self.state == State.PLAYING:
             if not self.room.last_shot_poker or self.room.last_shot_seat == self.seat:
-                self.to_server(Pt.REQ_SHOT_POKER, {'pokers': rule.find_best_shot(self.hand_pokers)})
+                await self.handle_playing(Pt.REQ_SHOT_POKER, {'pokers': rule.find_best_shot(self.hand_pokers)})
             else:
-                self.to_server(Pt.REQ_SHOT_POKER, {'pokers': []})
+                await self.handle_playing(Pt.REQ_SHOT_POKER, {'pokers': []})
 
     def to_server(self, code: int, packet: Dict[str, Any]):
         IOLoop.current().add_callback(self.on_message, code, packet)
