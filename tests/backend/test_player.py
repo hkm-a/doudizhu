@@ -385,7 +385,7 @@ class PlayerHandleCallScoreTest(unittest.IsolatedAsyncioTestCase):
 class PlayerHandleTimeoutTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.logger_patch = patch('api.game.player.logger')
-        self.logger_patch.start()
+        self.logger = self.logger_patch.start()
 
     def tearDown(self):
         self.logger_patch.stop()
@@ -424,6 +424,18 @@ class PlayerHandleTimeoutTest(unittest.IsolatedAsyncioTestCase):
             }],
         ])
 
+    async def test_call_score_timeout_without_room_is_logged_and_skipped(self):
+        player = Player(1, 'probe')
+        player.socket = SocketStub()
+        player.state = State.CALL_SCORE
+
+        handled = await player.handle_timeout()
+
+        self.assertFalse(handled)
+        self.assertEqual(player.rob, -1)
+        self.assertEqual(player.socket.messages, [])
+        self.logger.warning.assert_called_once_with('USER[%d] timeout skipped because room is missing', 1)
+
     async def test_playing_timeout_passes_when_following_another_player(self):
         player, room = make_player([4, 5])
         room.last_shot_seat = 1
@@ -435,6 +447,20 @@ class PlayerHandleTimeoutTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(room.shots, [(0, [])])
         self.assertEqual(room.broadcasts, [[Pt.RSP_SHOT_POKER, {'uid': 1, 'pokers': [], 'multiple': 15}]])
         self.assertEqual(room.next_turns, 1)
+
+    async def test_playing_timeout_without_room_is_logged_and_skipped(self):
+        player = Player(1, 'probe')
+        player.socket = SocketStub()
+        player.state = State.PLAYING
+        player.seat = 0
+        player._hand_pokers = [3, 4]
+
+        handled = await player.handle_timeout()
+
+        self.assertFalse(handled)
+        self.assertEqual(player.hand_pokers, [3, 4])
+        self.assertEqual(player.socket.messages, [])
+        self.logger.warning.assert_called_once_with('USER[%d] timeout skipped because room is missing', 1)
 
 
 class PlayerHandlePlayingTest(unittest.IsolatedAsyncioTestCase):

@@ -124,13 +124,21 @@ class Player(object):
         IOLoop.current().add_callback(self.handle_timeout)
 
     async def handle_timeout(self):
+        room = self.room
+        if self.state in (State.CALL_SCORE, State.PLAYING) and room is None:
+            logger.warning('USER[%d] timeout skipped because room is missing', self.uid)
+            return False
+
         if self.state == State.CALL_SCORE:
             await self.handle_call_score(Pt.REQ_CALL_SCORE, {'rob': 0})
+            return True
         elif self.state == State.PLAYING:
-            if not self.room.last_shot_poker or self.room.last_shot_seat == self.seat:
+            if not room.last_shot_poker or room.last_shot_seat == self.seat:
                 await self.handle_playing(Pt.REQ_SHOT_POKER, {'pokers': rule.find_best_shot(self.hand_pokers)})
             else:
                 await self.handle_playing(Pt.REQ_SHOT_POKER, {'pokers': []})
+            return True
+        return False
 
     def to_server(self, code: int, packet: Dict[str, Any]):
         IOLoop.current().add_callback(self.on_message, code, packet)
