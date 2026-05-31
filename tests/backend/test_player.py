@@ -145,6 +145,16 @@ class PlayerHandleCallScoreTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(room.on_rob_calls, [])
         self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'STATE[State.CALL_SCORE]'}]])
 
+    async def test_invalid_call_score_value_is_rejected_without_mutating_room(self):
+        player, room = make_call_score_player()
+
+        await player.handle_call_score(Pt.REQ_CALL_SCORE, {'rob': True})
+
+        self.assertEqual(player.rob, -1)
+        self.assertEqual(room.on_rob_calls, [])
+        self.assertEqual(room.broadcasts, [])
+        self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'Invalid rob value'}]])
+
 
 class PlayerHandleTimeoutTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -217,6 +227,34 @@ class PlayerHandlePlayingTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(player.hand_pokers, [3, 4])
         self.assertEqual(room.shots, [])
         self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'Poker does not exist'}]])
+
+    async def test_rejects_missing_poker_list_without_mutating_room(self):
+        player, room = make_player([3, 4])
+
+        await player.handle_playing(Pt.REQ_SHOT_POKER, {})
+
+        self.assertEqual(player.hand_pokers, [3, 4])
+        self.assertEqual(room.shots, [])
+        self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'Invalid pokers'}]])
+
+    async def test_rejects_non_integer_or_out_of_range_pokers(self):
+        invalid_packets = (
+            {'pokers': '3'},
+            {'pokers': [0]},
+            {'pokers': [55]},
+            {'pokers': ['3']},
+            {'pokers': [True]},
+        )
+
+        for packet in invalid_packets:
+            with self.subTest(packet=packet):
+                player, room = make_player([3, 4])
+
+                await player.handle_playing(Pt.REQ_SHOT_POKER, packet)
+
+                self.assertEqual(player.hand_pokers, [3, 4])
+                self.assertEqual(room.shots, [])
+                self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'Invalid pokers'}]])
 
     async def test_room_rejection_keeps_hand_and_reports_error(self):
         player, room = make_player([3, 4], RoomStub(on_shot_error='Poker small than last shot'))

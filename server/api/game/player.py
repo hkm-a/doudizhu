@@ -187,7 +187,12 @@ class Player(object):
     @shot_turn
     async def handle_call_score(self, code: int, packet: Dict[str, Any]):
         if code == Pt.REQ_CALL_SCORE:
-            self.rob = packet.get('rob')
+            rob = packet.get('rob')
+            if type(rob) is not int or rob not in (0, 1):
+                self.write_error('Invalid rob value')
+                return
+
+            self.rob = rob
 
             is_end = self.room.on_rob(self)
             if is_end:
@@ -209,6 +214,9 @@ class Player(object):
     async def handle_playing(self, code, packet):
         if code == Pt.REQ_SHOT_POKER:
             pokers = packet.get('pokers')
+            if not self._is_valid_poker_list(pokers):
+                self.write_error('Invalid pokers')
+                return
 
             if not rule.is_contains(self._hand_pokers, pokers):
                 self.write_error('Poker does not exist')
@@ -233,6 +241,13 @@ class Player(object):
                 await self.room.save_shot_round()
         else:
             self.write_error('STATE[%s]' % self.state)
+
+    @staticmethod
+    def _is_valid_poker_list(pokers) -> bool:
+        return (
+            isinstance(pokers, list)
+            and all(type(poker) is int and 1 <= poker <= 54 for poker in pokers)
+        )
 
     def handle_game_over(self, code: int, packet: Dict[str, Any]):
         self.write_error('STATE[%s]' % self.state)
