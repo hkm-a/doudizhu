@@ -31,6 +31,12 @@ const commands = {
   ],
   web: [
     {
+      label: 'Run React client tests',
+      command: process.env.NPM || 'npm',
+      args: ['run', 'test:ci'],
+      cwd: path.join(root, 'client'),
+    },
+    {
       label: 'Build React client',
       command: process.env.NPM || 'npm',
       args: ['run', 'build'],

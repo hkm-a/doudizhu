@@ -215,7 +215,7 @@ src-tauri/target/release/bundle/deb/doudizhu_0.1.0_amd64.deb
 npm run verify
 ```
 
-它会依次执行后端编译、后端 smoke、后端单元测试、前端构建、桌面 Rust 测试、本地开发配置检查和 Git 空白检查。也可以按模块运行：
+它会依次执行后端编译、后端 smoke、后端单元测试、前端测试、前端构建、桌面 Rust 测试、本地开发配置检查和 Git 空白检查。也可以按模块运行：
 
 ```bash
 npm run verify:backend
