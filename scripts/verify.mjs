@@ -53,6 +53,12 @@ const commands = {
       cwd: root,
     },
     {
+      label: 'Validate development doctor script',
+      command: process.execPath,
+      args: ['--check', 'scripts/doctor-dev.mjs'],
+      cwd: root,
+    },
+    {
       label: 'Check local development config',
       command: process.execPath,
       args: ['scripts/verify-config.mjs'],

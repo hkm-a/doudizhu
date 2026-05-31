@@ -28,6 +28,7 @@ const expectedScripts = {
   'dev:setup': 'node scripts/setup-dev.mjs',
   'dev:db': 'docker compose up -d mysql',
   'dev:db:down': 'docker compose down',
+  'dev:doctor': 'node scripts/doctor-dev.mjs',
   'dev:server': 'cd server && PYTHONPATH=. python3 app.py',
   'dev:web': 'npm --prefix client start',
   'verify:config': 'node scripts/verify.mjs config',

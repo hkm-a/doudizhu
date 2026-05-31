@@ -64,6 +64,7 @@ git clone https://github.com/hkm-a/doudizhu.git
 cd doudizhu
 npm install
 npm run dev:setup
+npm run dev:doctor
 npm run dev:db
 python3 -m venv .venv
 source .venv/bin/activate
@@ -92,6 +93,12 @@ npm run dev:setup
 ```
 
 默认配置使用 `ddz` / `ddz` 连接本机 MySQL，并监听 `8081` 端口。需要改数据库、端口、DouZero 模型目录或 WeChat 参数时，编辑 `.env` 即可。
+
+如果本地启动不顺，先运行诊断：
+
+```bash
+npm run dev:doctor
+```
 
 如果不使用 Docker，可以手动创建 MySQL 数据库和用户后导入 schema：
 

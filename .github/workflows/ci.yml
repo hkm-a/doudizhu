@@ -27,6 +27,9 @@ jobs:
       - name: Validate development setup script
         run: node --check scripts/setup-dev.mjs
 
+      - name: Validate development doctor script
+        run: node --check scripts/doctor-dev.mjs
+
       - name: Run configuration checks
         run: npm run verify:config
 

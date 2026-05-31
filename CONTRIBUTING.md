@@ -16,6 +16,7 @@
 ```bash
 npm install
 npm run dev:setup
+npm run dev:doctor
 npm run dev:db
 python3 -m venv .venv
 source .venv/bin/activate
