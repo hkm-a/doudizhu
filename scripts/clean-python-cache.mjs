@@ -1,7 +1,7 @@
-import { readdirSync, rmSync, statSync, unlinkSync } from 'node:fs';
+import { existsSync, readdirSync, rmSync, statSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 
-const roots = ['server'];
+const roots = ['server', 'scripts', 'tests'];
 
 let removed = 0;
 
@@ -29,6 +29,9 @@ function cleanDirectory(directory) {
 }
 
 for (const root of roots) {
+  if (!existsSync(root)) {
+    continue;
+  }
   cleanDirectory(root);
 }
 

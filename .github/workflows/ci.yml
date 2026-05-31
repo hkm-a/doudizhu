@@ -49,6 +49,11 @@ jobs:
           PYTHONPATH: server
         run: python scripts/backend-smoke.py
 
+      - name: Run backend unit tests
+        env:
+          PYTHONPATH: server
+        run: python -m unittest discover -s tests/backend -p 'test_*.py'
+
   web:
     name: Web build
     runs-on: ubuntu-22.04

@@ -21,6 +21,13 @@ const commands = {
       cwd: root,
       env: { PYTHONPATH: 'server' },
     },
+    {
+      label: 'Run backend unit tests',
+      command: process.env.PYTHON || 'python3',
+      args: ['-m', 'unittest', 'discover', '-s', 'tests/backend', '-p', 'test_*.py'],
+      cwd: root,
+      env: { PYTHONPATH: 'server' },
+    },
   ],
   web: [
     {

@@ -52,7 +52,7 @@ class DouZeroConfig:
 
     @classmethod
     def from_env(cls) -> DouZeroConfig:
-        enabled = os.getenv('DOUZERO_ENABLED', '').lower() in {'1', 'true', 'yes', 'on'}
+        enabled = os.getenv('DOUZERO_ENABLED', '').strip().lower() in {'1', 'true', 'yes', 'on'}
         return cls(enabled=enabled, model_dir=os.getenv('DOUZERO_MODEL_DIR'))
 
 
