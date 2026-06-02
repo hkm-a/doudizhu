@@ -13,7 +13,7 @@ import { spawnSync } from 'node:child_process';
 const releaseName = process.argv[2] && !process.argv[2].startsWith('--')
   ? process.argv[2]
   : 'v0.2.0-alpha';
-const artifact = 'src-tauri/target/release/bundle/deb/doudizhu_0.1.0_amd64.deb';
+const artifact = 'src-tauri/target/release/bundle/deb/doudizhu_0.2.0-alpha_amd64.deb';
 const manifest = `${artifact}.manifest.json`;
 const notes = 'docs/releases/v0.2.0-alpha.md';
 const outDir = path.join('dist', 'linux-alpha', releaseName);

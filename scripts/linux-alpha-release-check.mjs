@@ -7,8 +7,8 @@ const releaseName = process.argv[2] && !process.argv[2].startsWith('--')
   : 'v0.2.0-alpha';
 const bundleDir = path.join('dist', 'linux-alpha', releaseName);
 const expectedFiles = [
-  'doudizhu_0.1.0_amd64.deb',
-  'doudizhu_0.1.0_amd64.deb.manifest.json',
+  'doudizhu_0.2.0-alpha_amd64.deb',
+  'doudizhu_0.2.0-alpha_amd64.deb.manifest.json',
   `${releaseName}.md`,
   'SHA256SUMS',
 ];
@@ -34,10 +34,10 @@ for (const file of expectedFiles.filter((file) => file !== 'SHA256SUMS')) {
   }
 }
 
-const artifactName = 'doudizhu_0.1.0_amd64.deb';
+const artifactName = 'doudizhu_0.2.0-alpha_amd64.deb';
 const artifactPath = path.join(bundleDir, artifactName);
 const manifest = JSON.parse(
-  readFileSync(path.join(bundleDir, 'doudizhu_0.1.0_amd64.deb.manifest.json'), 'utf8'),
+  readFileSync(path.join(bundleDir, 'doudizhu_0.2.0-alpha_amd64.deb.manifest.json'), 'utf8'),
 );
 
 if (manifest.sha256 !== sha256(artifactPath)) {
@@ -48,7 +48,7 @@ if (manifest.sizeBytes !== statSync(artifactPath).size) {
 }
 for (const field of [
   ['package', 'doudizhu'],
-  ['version', '0.1.0'],
+  ['version', '0.2.0-alpha'],
   ['architecture', 'amd64'],
 ]) {
   const [key, expected] = field;

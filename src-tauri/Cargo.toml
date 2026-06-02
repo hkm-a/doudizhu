@@ -1,6 +1,6 @@
 [package]
 name = "doudizhu-desktop"
-version = "0.1.0"
+version = "0.2.0-alpha"
 description = "Tauri desktop shell for Dou Dizhu."
 authors = ["hkm"]
 edition = "2021"

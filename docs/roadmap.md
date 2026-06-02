@@ -17,7 +17,7 @@
 - [x] 提供开发者一键初始化脚本。
 - [x] 清理旧前端链接、文案和资源边界。
 - [x] 增加桌面启动链路 smoke test。
-- [ ] 发布可安装的 Linux alpha 包和 release notes。
+- [x] 发布可安装的 Linux alpha 包和 release notes。
 
 ## 0.3 AI Integration Alpha
 

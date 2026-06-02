@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 
 const artifact = process.argv[2] && !process.argv[2].startsWith('--')
   ? process.argv[2]
-  : 'src-tauri/target/release/bundle/deb/doudizhu_0.1.0_amd64.deb';
+  : 'src-tauri/target/release/bundle/deb/doudizhu_0.2.0-alpha_amd64.deb';
 const outputFlagIndex = process.argv.indexOf('--output');
 const output = outputFlagIndex >= 0 ? process.argv[outputFlagIndex + 1] : `${artifact}.manifest.json`;
 

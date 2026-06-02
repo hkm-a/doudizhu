@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
-const artifact = process.argv[2] || 'src-tauri/target/release/bundle/deb/doudizhu_0.1.0_amd64.deb';
+const artifact = process.argv[2] || 'src-tauri/target/release/bundle/deb/doudizhu_0.2.0-alpha_amd64.deb';
 
 if (!existsSync(artifact)) {
   throw new Error(`Linux alpha artifact is missing: ${artifact}`);
@@ -10,7 +10,7 @@ if (!existsSync(artifact)) {
 const fields = run('dpkg-deb', ['-f', artifact]);
 for (const required of [
   'Package: doudizhu',
-  'Version: 0.1.0',
+  'Version: 0.2.0-alpha',
   'Architecture: amd64',
 ]) {
   assertIncludes(fields, required, `${artifact} metadata`);
