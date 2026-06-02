@@ -45,6 +45,15 @@ class PlayerStub:
     def write_message(self, packet):
         self.messages.append(packet)
 
+    def sync_data(self, real=True):
+        return {
+            'uid': self.uid,
+            'ready': self.ready,
+            'rob': self.rob,
+            'landlord': self.landlord,
+            'point': self.point,
+        }
+
 
 class TimerStub:
     def __init__(self):
@@ -880,6 +889,268 @@ class RoomMetadataTest(unittest.TestCase):
         room._multiple_details['landlord'] = 2
 
         self.assertEqual(room.multiple, 60)
+
+
+class RoomStateTest(unittest.TestCase):
+    def test_room_state_returns_init_when_all_left(self):
+        room = Room(1)
+        room.players = [PlayerStub(1, 0), PlayerStub(2, 1), PlayerStub(3, 2)]
+        for p in room.players:
+            p.left = 1
+
+        self.assertEqual(room.room_state, State.INIT)
+
+
+class RoomSyncRoomTest(unittest.TestCase):
+    def test_sync_room_sends_state_and_players_to_each_player(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        p1, p2 = PlayerStub(1, 0), PlayerStub(2, 1)
+        room.players = [p1, p2, None]
+
+        room.sync_room()
+
+        self.assertEqual(len(p1.messages), 1)
+        self.assertEqual(len(p2.messages), 1)
+        rsp1 = p1.messages[0]
+        rsp2 = p2.messages[0]
+        self.assertEqual(rsp1[0], Pt.RSP_JOIN_ROOM)
+        self.assertEqual(rsp2[0], Pt.RSP_JOIN_ROOM)
+        self.assertIn('room', rsp1[1])
+        self.assertIn('players', rsp1[1])
+        self.assertIsNotNone(rsp1[1]['players'][0])
+
+
+class RoomAddRobotEdgeTest(unittest.TestCase):
+    def test_add_robot_returns_when_full(self):
+        room = Room(1)
+        room.players = [PlayerStub(1, 0), PlayerStub(2, 1), PlayerStub(3, 2)]
+        room.add_robot()
+
+    def test_add_robot_skips_when_two_players_and_first_call(self):
+        room = Room(1)
+        room.players = [PlayerStub(1, 0), PlayerStub(2, 1), None]
+        room.add_robot(nth=1)
+
+    def test_add_robot_skips_second_when_only_one_player(self):
+        room = Room(1)
+        room.players = [PlayerStub(1, 0), None, None]
+        room.add_robot(nth=2)
+
+    def test_add_robot_skips_when_exceeded_limit(self):
+        room = Room(1)
+        room.players = [PlayerStub(1, 0), None, None]
+        room.robot_no = 6
+        room.add_robot()
+
+
+class RoomJoinFailTest(unittest.TestCase):
+    def test_on_join_returns_false_when_room_full(self):
+        room = Room(1)
+        room.players = [PlayerStub(1, 0), PlayerStub(2, 1), PlayerStub(3, 2)]
+        extra = PlayerStub(4, -1)
+
+        result = room.on_join(extra)
+
+        self.assertFalse(result)
+
+
+class RoomStartDoublePhaseTest(unittest.TestCase):
+    def test_start_double_skips_when_no_landlord(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        players = [PlayerStub(1, 0), PlayerStub(2, 1), PlayerStub(3, 2)]
+        room.players = players
+        room.landlord_seat = 0
+
+        room.start_double_phase()
+
+        self.assertEqual(room.double_turn_seat, -1)
+        self.assertEqual(room.whose_turn, 0)
+        for p in players:
+            self.assertEqual(p.state, State.PLAYING)
+
+    def test_start_double_sets_first_farmer_as_double_turn(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        players = [PlayerStub(1, 0, landlord=1), PlayerStub(2, 1), PlayerStub(3, 2)]
+        room.players = players
+
+        room.start_double_phase()
+
+        self.assertEqual(room.double_turn_seat, 1)
+        self.assertEqual(room._double_decisions, {})
+
+    def test_start_double_skips_left_player(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        players = [PlayerStub(1, 0, landlord=1), PlayerStub(2, 1), PlayerStub(3, 2)]
+        players[1].left = 1
+        room.players = players
+
+        room.start_double_phase()
+
+        self.assertEqual(room.double_turn_seat, 2)
+
+    def test_start_double_skips_to_playing_when_all_players_left(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        players = [PlayerStub(1, 0, landlord=1), PlayerStub(2, 1), PlayerStub(3, 2)]
+        for p in players:
+            p.left = 1
+        room.players = players
+        room.double_turn_seat = 1
+
+        room.start_double_phase()
+
+        self.assertEqual(room.double_turn_seat, -1)
+
+
+
+
+
+class RoomLeaveEdgeTest(unittest.TestCase):
+    def test_restart_with_left_players_triggers_on_leave(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        players = [PlayerStub(1, 0), PlayerStub(2, 1), PlayerStub(3, 2)]
+        players[1].left = 1
+        room.players = players
+
+        with patch('api.game.room.IOLoop') as ioloop_mock:
+            room.restart()
+
+        ioloop_mock.current.return_value.add_callback.assert_called_once()
+
+    def test_on_leave_removes_robot_on_restart(self):
+        from api.game.components.simple import RobotPlayer
+        room = Room(1)
+        room.robot_no = 2
+        players = [RobotPlayer(10001, 'bot'), PlayerStub(102, 1), PlayerStub(103, 2)]
+        room.players = list(players)
+
+        room.on_leave(players[1], is_restart=True)
+
+        self.assertIsNone(room.players[0])
+        self.assertIsNone(room.players[1])
+        self.assertIsNotNone(room.players[2])
+        self.assertEqual(room.robot_no, 1)
+
+    def test_on_leave_exception_returns_false(self):
+        room = Room(1)
+        room.players = [PlayerStub(101, 0), None, None]
+        unknown_list = [None, None, None]
+
+        room.players = unknown_list
+        result = room.on_leave(PlayerStub(999, 5))
+
+        self.assertTrue(result)
+
+
+class RoomPlayerDoubleLogTest(unittest.TestCase):
+    def setUp(self):
+        self.env_patch = patch.dict('os.environ', {'PLAYER_EVENT_LOG_PATH': '/tmp/test_events.jsonl'})
+        self.env_patch.start()
+
+    def tearDown(self):
+        self.env_patch.stop()
+
+    def test_log_player_double_records_farmer_decision(self):
+        from api.player_event import get_player_event_logger, new_session_id
+        get_player_event_logger.cache_clear()
+
+        room = Room(1)
+        room.timer = TimerStub()
+        players = [PlayerStub(1, 0, landlord=1), PlayerStub(2, 1), PlayerStub(3, 2)]
+        room.players = players
+
+        room.on_double(players[1], 1)
+
+        self.assertEqual(room._multiple_details['farmer'], 2)
+
+    def test_log_player_double_skips_when_logger_disabled(self):
+        from api.player_event import get_player_event_logger
+        get_player_event_logger.cache_clear()
+        room = Room(1)
+        room.timer = TimerStub()
+        players = [PlayerStub(1, 0, landlord=1), PlayerStub(2, 1), PlayerStub(3, 2)]
+        room.players = players
+
+        room.on_double(players[1], 0)
+
+
+class RoomSaveShotRoundEdgeTest(unittest.IsolatedAsyncioTestCase):
+    async def test_save_shot_skips_player_without_socket(self):
+        room = Room(1)
+        players = [
+            PlayerStub(1, 0, landlord=1),
+            PlayerStub(2, 1),
+            PlayerStub(3, 2),
+        ]
+        room.players = players
+        room.shot_round = [[3]]
+
+        saved = await room.save_shot_round()
+
+        self.assertFalse(saved)
+
+    async def test_save_shot_round_returns_false_on_exception(self):
+        room = Room(1)
+        players = [
+            PlayerStub(1, 0, landlord=1),
+            PlayerStub(2, 1),
+            PlayerStub(3, 2),
+        ]
+        players[0].socket = Mock()
+        players[0].socket.insert = Mock(side_effect=Exception('db error'))
+        room.players = players
+        room.shot_round = [[3]]
+
+        with patch('api.game.room.logging') as logging:
+            saved = await room.save_shot_round()
+
+        self.assertFalse(saved)
+
+
+class RoomSavePlayerPointsEdgeTest(unittest.IsolatedAsyncioTestCase):
+    async def test_save_returns_false_when_no_balances(self):
+        room = Room(1)
+        room.players = [None, None, None]
+
+        saved = await room.save_player_points()
+
+        self.assertFalse(saved)
+
+    async def test_save_skips_player_without_socket(self):
+        room = Room(1)
+        players = [PlayerStub(1, 0), PlayerStub(2, 1), None]
+        room.players = players
+
+        saved = await room.save_player_points()
+
+        self.assertFalse(saved)
+
+    async def test_save_skips_player_without_save_method(self):
+        room = Room(1)
+        players = [PlayerStub(1, 0), PlayerStub(2, 1), None]
+        players[0].socket = object()
+        room.players = players
+
+        saved = await room.save_player_points()
+
+        self.assertFalse(saved)
+
+    async def test_save_player_points_handles_exception(self):
+        room = Room(1)
+        players = [PlayerStub(1, 0), PlayerStub(2, 1), None]
+        players[0].socket = Mock()
+        players[0].socket.save_player_points = Mock(side_effect=Exception('db error'))
+        room.players = players
+
+        with patch('api.game.room.logging') as logging:
+            saved = await room.save_player_points()
+
+        self.assertFalse(saved)
 
 
 if __name__ == '__main__':
