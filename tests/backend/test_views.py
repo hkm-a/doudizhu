@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 from http import HTTPStatus
 from tornado.web import HTTPError
@@ -71,3 +72,53 @@ class DecodeMessageTest(unittest.TestCase):
         code, packet = SocketHandler.decode_message('[2007, "bad"]')
         self.assertIsNone(code)
         self.assertIsNone(packet)
+
+
+class SavePlayerPointsTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.handler = SocketHandler.__new__(SocketHandler)
+
+    async def test_save_player_points_calls_session_execute(self):
+        session = AsyncMock()
+        session.__aenter__ = AsyncMock(return_value=session)
+        session.__aexit__ = AsyncMock(return_value=None)
+        session.begin = MagicMock()
+        session.begin.return_value = AsyncMock()
+        session.begin.return_value.__aenter__ = AsyncMock(return_value=session)
+        session.begin.return_value.__aexit__ = AsyncMock(return_value=None)
+
+        with patch.object(SocketHandler, 'session', new_callable=PropertyMock, return_value=session):
+            result = await self.handler.save_player_points({1: 1200, 2: 800})
+
+        self.assertTrue(result)
+        self.assertEqual(session.execute.call_count, 2)
+        session.commit.assert_awaited_once()
+
+    async def test_save_player_points_with_empty_dict(self):
+        session = AsyncMock()
+        session.__aenter__ = AsyncMock(return_value=session)
+        session.__aexit__ = AsyncMock(return_value=None)
+        session.begin = MagicMock()
+        session.begin.return_value = AsyncMock()
+        session.begin.return_value.__aenter__ = AsyncMock(return_value=session)
+        session.begin.return_value.__aexit__ = AsyncMock(return_value=None)
+
+        with patch.object(SocketHandler, 'session', new_callable=PropertyMock, return_value=session):
+            result = await self.handler.save_player_points({})
+
+        self.assertTrue(result)
+        session.execute.assert_not_called()
+        session.commit.assert_awaited_once()
+
+    async def test_save_player_points_always_returns_true(self):
+        session = AsyncMock()
+        session.__aenter__ = AsyncMock(return_value=session)
+        session.__aexit__ = AsyncMock(return_value=None)
+        session.begin = MagicMock()
+        session.begin.return_value = AsyncMock()
+        session.begin.return_value.__aenter__ = AsyncMock(return_value=session)
+        session.begin.return_value.__aexit__ = AsyncMock(return_value=None)
+
+        with patch.object(SocketHandler, 'session', new_callable=PropertyMock, return_value=session):
+            result = await self.handler.save_player_points({1: 1000})
+        self.assertTrue(result)

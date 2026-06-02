@@ -1,5 +1,5 @@
-import { copyFileSync, existsSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { execSync, spawnSync } from 'node:child_process';
 
 const args = new Set(process.argv.slice(2));
 const dryRun = args.has('--dry-run');
@@ -13,6 +13,7 @@ ensureEnvFile();
 ensureRootDependencies();
 ensureClientDependencies();
 ensurePythonEnvironment();
+ensureAiModels();
 printNextSteps();
 
 function ensureEnvFile() {
@@ -101,6 +102,46 @@ function runAction(label, action) {
   }
   action();
   step('ok', label);
+}
+
+function ensureAiModels() {
+  const script = 'scripts/download-douzero-model.mjs';
+  if (!existsSync(script)) {
+    step('warn', `${script} missing; skipping AI model download.`);
+    return;
+  }
+
+  if (dryRun) {
+    step('dry-run', 'Would download DouZero AI models.');
+    return;
+  }
+
+  step('run', 'Downloading DouZero AI models (if not cached) ...');
+  const result = spawnSync('node', [script], { stdio: 'inherit', timeout: 60000 });
+  if (result.status === 0 || result.signal === 'SIGTERM') {
+    step(result.status === 0 ? 'ok' : 'skip', `AI models: ${result.status === 0 ? 'ready' : 'download timed out; will retry next time'}`);
+  } else {
+    step('warn', 'AI model download failed; DouZero will fall back to rule AI. Run npm run dev:ai:setup to retry.');
+  }
+
+  ensureAiEnvVars();
+}
+
+function ensureAiEnvVars() {
+  const envPath = '.env';
+  if (!existsSync(envPath)) return;
+
+  let content = readFileSync(envPath, 'utf8');
+  const modelDir = execSync('node -e "console.log(require(\'path\').join(require(\'os\').homedir(), \'.doudizhu\', \'models\'))"', { encoding: 'utf8' }).trim();
+
+  if (content.includes('DOUZERO_ENABLED=0')) {
+    content = content.replace('DOUZERO_ENABLED=0', 'DOUZERO_ENABLED=1');
+  }
+  if (content.includes('DOUZERO_MODEL_DIR=')) {
+    content = content.replace(/^DOUZERO_MODEL_DIR=.*$/m, `DOUZERO_MODEL_DIR=${modelDir}`);
+  }
+  writeFileSync(envPath, content, 'utf8');
+  step('ok', 'Set DOUZERO_ENABLED=1 and DOUZERO_MODEL_DIR in .env');
 }
 
 function printNextSteps() {

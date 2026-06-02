@@ -5,6 +5,7 @@ import os
 import socket
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import List
 from urllib.parse import urlparse
 
@@ -16,6 +17,13 @@ REQUIRED_IMPORTS = (
     'tornado',
     'uvloop',
 )
+
+AI_OPTIONAL_IMPORTS = (
+    'torch',
+    'douzero',
+)
+
+DOUZERO_MODEL_FILES = ('landlord.ckpt', 'landlord_up.ckpt', 'landlord_down.ckpt')
 
 
 @dataclass(frozen=True)
@@ -47,9 +55,45 @@ def run_preflight(database_uri=None, skip_network=False, timeout=1.5) -> List[Ch
                 'Install backend dependencies with pip install -r requirements.txt.',
             ))
 
+    checks.append(check_douzero_ai())
+
     database_uri = database_uri or os.getenv('DATABASE_URI', 'mysql+aiomysql://ddz:ddz@127.0.0.1:3306/ddz')
     checks.append(check_database_uri(database_uri, skip_network=skip_network, timeout=timeout))
     return checks
+
+
+def check_douzero_ai() -> Check:
+    enabled = os.getenv('DOUZERO_ENABLED', '').strip().lower() in {'1', 'true', 'yes', 'on'}
+    if not enabled:
+        return Check('skip', 'AI (DouZero)', 'disabled (DOUZERO_ENABLED is not set)')
+
+    missing_imports = [m for m in AI_OPTIONAL_IMPORTS if not importlib.util.find_spec(m)]
+    if missing_imports:
+        return Check(
+            'warn', 'AI (DouZero)',
+            f'missing imports: {", ".join(missing_imports)}',
+            'Install optional AI deps: pip install -r requirements-ai.txt',
+        )
+
+    model_dir = os.getenv('DOUZERO_MODEL_DIR', '')
+    if not model_dir:
+        return Check(
+            'warn', 'AI (DouZero)',
+            'DOUZERO_MODEL_DIR is not set',
+            'Run npm run dev:ai:setup to download models and configure .env',
+        )
+
+    model_path = Path(model_dir)
+    missing_models = [f for f in DOUZERO_MODEL_FILES if not (model_path / f).is_file()]
+    if missing_models:
+        return Check(
+            'warn', 'AI (DouZero)',
+            f'missing model files in {model_dir}: {", ".join(missing_models)}',
+            'Run npm run dev:ai:setup to download missing models',
+        )
+
+    total_size = sum((model_path / f).stat().st_size for f in DOUZERO_MODEL_FILES)
+    return Check('pass', 'AI (DouZero)', f'ready: {len(DOUZERO_MODEL_FILES)} models, {total_size / 1024 / 1024:.1f} MB')
 
 
 def check_database_uri(database_uri, skip_network=False, timeout=1.5) -> Check:

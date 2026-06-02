@@ -388,4 +388,4 @@ class Player(PureGamePlayer):
 
         self.set_left(0)
         self.room = room
-        return room._on_join(self)
+        return room.on_join(self)

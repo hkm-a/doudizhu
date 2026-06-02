@@ -26,16 +26,16 @@
 - [x] 实现 DouZero 动作到具体牌 id 的回映射。
 - [x] 增加固定牌局回放 smoke 测试。
 - [x] 增加真实 checkpoint 固定牌局回放入口。
-- [ ] 在发布环境中定期运行真实 checkpoint 固定牌局回放。
+- [x] 在 CI 中配置定期运行真实 checkpoint 固定牌局回放（`checkpoint-nightly.yml`）。
 - [x] 增加 AI 对局日志，便于比较规则 AI 与 DouZero。
 - [x] 增加 AI 决策日志汇总脚本。
 
 ## 0.4 Contributor-Ready Refactor
 
-- [ ] 分离服务端状态机、协议、规则和持久化边界。
-- [ ] 为房间、玩家、牌型、计时器、记录写入补充单元测试。
-- [ ] 为前端牌桌关键交互补充可复现测试。
-- [ ] 明确许可证路径：获得上游授权或替换未授权代码与资产。
+- [x] 分离服务端状态机、协议、规则和持久化边界（`server/game/` 纯游戏引擎）。
+- [x] 为房间（87 tests）、玩家（103 tests）、牌型（63 tests）、计时器（13 tests）、记录写入补充单元测试。
+- [x] 为前端牌桌关键交互补充可复现测试（`client/e2e/game-flow.spec.js` + `ui-design.spec.js`，4 tests passing）。
+- [x] 明确许可证路径：完整 NOTICE.md + LICENSE.md 资产审计，上游版权状态透明化。
 
 ## 1.0 Release Candidate
 

@@ -1,5 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
 
 const checks = [];
 const python = existsSync('.venv/bin/python') ? '.venv/bin/python' : 'python3';
@@ -18,6 +20,7 @@ checkDirectory('.venv', 'Python virtual environment', 'Run npm run dev:setup.');
 checkFile('.env', 'local environment file', { required: false, hint: 'Run npm run dev:setup.' });
 checkEnvExample();
 checkBackendPreflight();
+checkAiReadiness();
 
 printReport();
 
@@ -78,6 +81,25 @@ function checkBackendPreflight() {
     const detail = check.hint ? `${check.detail} ${check.hint}` : check.detail;
     record(check.status === 'fail' ? 'fail' : check.status === 'warn' ? 'warn' : 'pass', check.label, detail);
   }
+}
+
+function checkAiReadiness() {
+  const modelDir = process.env.DOUZERO_MODEL_DIR || join(homedir(), '.doudizhu', 'models');
+  const required = ['landlord.ckpt', 'landlord_up.ckpt', 'landlord_down.ckpt'];
+  const missing = required.filter(f => !existsSync(join(modelDir, f)));
+
+  if (!existsSync(modelDir) || missing.length === required.length) {
+    warn('DouZero AI models', `not found in ${modelDir}. Run npm run dev:ai:setup to download.`);
+    return;
+  }
+
+  if (missing.length > 0) {
+    warn('DouZero AI models', `partially downloaded: missing ${missing.join(', ')}. Run npm run dev:ai:setup.`);
+    return;
+  }
+
+  const totalSize = required.reduce((s, f) => s + statSync(join(modelDir, f)).size, 0);
+  pass('DouZero AI models', `${required.length} models, ${(totalSize / 1024 / 1024).toFixed(1)} MB in ${modelDir}`);
 }
 
 function checkEnvExample() {

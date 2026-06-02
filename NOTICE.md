@@ -59,7 +59,31 @@ All transitive Rust dependencies (435 crates) are permissively licensed (MIT / A
 
 ## Bundled Assets
 
-Static game assets and audio were inherited from svzdev/doudizhu. Their license status follows the same upstream-license caveat described in [LICENSE.md](LICENSE.md).
+### Image Assets
+- Inherited from svzdev/doudizhu (no declared license):
+  - `client/public/assets/bg.png`, `client/public/assets/poker.png`, `client/public/assets/logo.png`, `client/public/assets/ui-0.png`, `client/public/assets/preload.png`
+  - `client/public/assets/btn/` (button sprites)
+  - `server/static/i/` (server-side UI assets)
+- License status follows the upstream-license caveat described in [LICENSE.md](LICENSE.md).
+
+### Audio Assets
+- **Inherited from svzdev/doudizhu** (no declared license): `bg_room.mp3`, `bg_game.ogg`, `deal.mp3`, `end_lose.mp3`, `end_win.mp3`, `f_score_*.mp3`, `m_score_*.mp3`
+- **Generated placeholders** (GDD v0.2, newly authored): `*_placeholder.wav` files in `server/static/audio/` — generated via `scripts/generate-placeholder-sounds.py`. These are original works and can be licensed freely.
+
+### Game Logic (server/static/js/)
+- `phaser.min.js` / `phaser-input.js` / `phaser-input.min.js` — third-party libraries (Phaser: MIT, phaser-input: MIT)
+- `generator.mjs`, `rule.mjs` — inherited from svzdev/doudizhu
+- `boot.mjs`, `game.mjs`, `net.mjs`, `player.mjs` — derived from svzdev/doudizhu with modifications
+
+### Asset Audit Summary (2026-06-03)
+
+| Category | Status | Action Needed Before 1.0 |
+|----------|--------|--------------------------|
+| Inherited images | No clear license | Replace with original art or obtain upstream license |
+| Inherited audio | No clear license | Replace with original audio or obtain upstream license |
+| Placeholder audio | Newly authored (clean) | None — ready for 1.0 |
+| Third-party JS libs | MIT (clean) | None |
+| Game logic JS | Derivative | Replace or get upstream license |
 
 ## Future Work
 
