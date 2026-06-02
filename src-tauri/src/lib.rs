@@ -169,7 +169,7 @@ impl BackendProcess {
 
         let python = self
             .ensure_venv(server_dir)
-            .or_else(|_| Ok(python_executable(server_dir)))?;
+            .unwrap_or_else(|_| python_executable(server_dir));
 
         if python.to_string_lossy().contains(".venv") {
             let _ = self.install_deps_if_needed(&python, server_dir);
