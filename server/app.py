@@ -3,6 +3,7 @@ import logging
 import logging.config
 import signal
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import tornado.locks
 import tornado.web
@@ -24,6 +25,22 @@ from config import DEBUG, LOGGING, PORT, SECRET_KEY, TEMPLATE_ROOT, STATIC_ROOT,
 
 logging.config.dictConfig(LOGGING)
 logger = logging.getLogger(__name__)
+
+
+def run_startup_migrations():
+    alembic_ini = Path(__file__).parent / 'alembic.ini'
+    if not alembic_ini.is_file():
+        logger.warning('alembic.ini not found; skipping startup migrations')
+        return
+
+    try:
+        from alembic.config import CommandLine, Config
+        config = Config(str(alembic_ini))
+        config.set_main_option('script_location', str(alembic_ini.parent / 'alembic'))
+        CommandLine().run_cmd(config, ['upgrade', 'head'])
+        logger.info('Startup migrations applied')
+    except Exception as e:
+        logger.error('Startup migration failed: %s', e)
 
 
 class Application(tornado.web.Application):
@@ -62,6 +79,7 @@ class Application(tornado.web.Application):
 
 
 async def main():
+    run_startup_migrations()
     app = Application()
     app.listen(PORT)
     stop_event = asyncio.Event()

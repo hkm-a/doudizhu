@@ -39,8 +39,8 @@
 
 ## 1.0 Release Candidate
 
-- [ ] 桌面端内置或管理运行时依赖。
-- [ ] 提供数据库初始化和迁移生命周期。
+- [x] 提供数据库初始化和迁移生命周期（自动迁移 + `npm run dev:migrate`）。
+- [x] 桌面端自动管理 venv 和 pip 依赖（Tauri 启动时自动创建/安装）。
+- [x] 完成完整许可证和第三方 notices。
 - [ ] 具备 Windows、macOS、Linux 发布矩阵。
 - [ ] 完成安全检查、发布清单和回滚说明。
-- [ ] 完成完整许可证和第三方 notices。

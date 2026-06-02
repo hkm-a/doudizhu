@@ -107,6 +107,56 @@ struct PreflightCheck {
 }
 
 impl BackendProcess {
+    fn ensure_venv(&self, server_dir: &Path) -> Result<PathBuf, String> {
+        let venv_python = server_dir.join("../.venv/bin/python");
+        if venv_python.is_file() {
+            return Ok(venv_python);
+        }
+
+        let python3 = PathBuf::from("python3");
+        let result = Command::new(&python3)
+            .arg("-m")
+            .arg("venv")
+            .arg(server_dir.join("../.venv"))
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .output()
+            .map_err(|error| format!("failed to run python3: {error}"))?;
+
+        if !result.status.success() {
+            let stderr = String::from_utf8_lossy(&result.stderr);
+            return Err(format!("failed to create venv: {stderr}"));
+        }
+
+        Ok(venv_python)
+    }
+
+    fn install_deps_if_needed(&self, venv_python: &Path, server_dir: &Path) -> Result<(), String> {
+        let requirements = server_dir.join("../requirements.txt");
+        if !requirements.is_file() {
+            return Ok(());
+        }
+
+        let result = Command::new(venv_python)
+            .arg("-m")
+            .arg("pip")
+            .arg("install")
+            .arg("-r")
+            .arg(&requirements)
+            .arg("--quiet")
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .output()
+            .map_err(|error| format!("failed to run pip install: {error}"))?;
+
+        if !result.status.success() {
+            let stderr = String::from_utf8_lossy(&result.stderr);
+            return Err(format!("pip install failed: {stderr}"));
+        }
+
+        Ok(())
+    }
+
     fn start_if_needed(
         &self,
         config: &BackendConfig,
@@ -115,6 +165,14 @@ impl BackendProcess {
     ) -> Result<(), String> {
         if is_backend_ready(config) {
             return Ok(());
+        }
+
+        let python = self
+            .ensure_venv(server_dir)
+            .or_else(|_| Ok(python_executable(server_dir)))?;
+
+        if python.to_string_lossy().contains(".venv") {
+            let _ = self.install_deps_if_needed(&python, server_dir);
         }
 
         fs::create_dir_all(log_path.parent().unwrap_or_else(|| Path::new(".")))
@@ -128,8 +186,7 @@ impl BackendProcess {
             .try_clone()
             .map_err(|error| format!("failed to prepare backend log: {error}"))?;
 
-        let python = python_executable(server_dir);
-        let child = Command::new(python)
+        let child = Command::new(&python)
             .arg("app.py")
             .current_dir(server_dir)
             .env("PYTHONPATH", server_dir)
@@ -151,7 +208,7 @@ impl BackendProcess {
             .lock()
             .map_err(|_| "backend process lock poisoned".to_string())? = Some(child);
 
-        match wait_for_backend(config, Duration::from_secs(12)) {
+        match wait_for_backend(config, Duration::from_secs(15)) {
             Ok(()) => Ok(()),
             Err(error) => {
                 self.stop();
