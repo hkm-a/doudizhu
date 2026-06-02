@@ -29,6 +29,13 @@ const commands = {
       env: { PYTHONPATH: 'server' },
     },
     {
+      label: 'Run AI DouZero replay smoke',
+      command: process.env.PYTHON || 'python3',
+      args: ['scripts/ai-douzero-replay-smoke.py'],
+      cwd: root,
+      env: { PYTHONPATH: 'server' },
+    },
+    {
       label: 'Run player event smoke',
       command: process.env.PYTHON || 'python3',
       args: ['scripts/player-event-smoke.py'],

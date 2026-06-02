@@ -1,0 +1,75 @@
+name: Checkpoint Nightly
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  douzero-replay:
+    name: DouZero replay verification
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Restore cached DouZero checkpoints
+        id: cache-models
+        uses: actions/cache@v4
+        with:
+          path: /tmp/douzero-models
+          key: douzero-models-v1
+
+      - name: Download DouZero pretrained checkpoints
+        if: steps.cache-models.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /tmp/douzero-models
+          for f in landlord landlord_up landlord_down; do
+            echo "==> Downloading $f.ckpt ..."
+            curl -fSL "https://github.com/kwai/DouZero/releases/download/pretrained/$f.ckpt" \
+              -o "/tmp/douzero-models/$f.ckpt"
+          done
+          ls -lh /tmp/douzero-models/
+
+      - name: Verify checkpoint checksums
+        run: |
+          for f in landlord landlord_up landlord_down; do
+            ckpt="/tmp/douzero-models/$f.ckpt"
+            if [ ! -s "$ckpt" ]; then
+              echo "ERROR: $ckpt is missing or empty"
+              exit 1
+            fi
+            echo "ok $f.ckpt ($(stat -c%s "$ckpt") bytes)"
+          done
+
+      - name: Run DouZero replay smoke
+        run: python scripts/ai-douzero-replay-smoke.py --require
+        env:
+          PYTHONPATH: server
+          DOUZERO_ENABLED: 1
+          DOUZERO_MODEL_DIR: /tmp/douzero-models
+
+      - name: Verify replay result
+        run: |
+          RESULT=$(python scripts/ai-douzero-replay-smoke.py --require 2>&1)
+          STATUS=$(echo "$RESULT" | python -c "import sys,json; print(json.load(sys.stdin)['status'])")
+          if [ "$STATUS" != "passed" ]; then
+            echo "ERROR: replay status is $STATUS"
+            echo "$RESULT"
+            exit 1
+          fi
+          echo "replay passed: $RESULT"
+        env:
+          PYTHONPATH: server
+          DOUZERO_ENABLED: 1
+          DOUZERO_MODEL_DIR: /tmp/douzero-models
