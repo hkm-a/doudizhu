@@ -225,7 +225,7 @@ class Rule(object):
             if a_pokers:
                 return 1
             if b_pokers:
-                return 1
+                return 0
 
         a_card_type, a_card_value = self._get_cards_value(self._to_cards(a_pokers))
         b_card_type, b_card_value = self._get_cards_value(self._to_cards(b_pokers))

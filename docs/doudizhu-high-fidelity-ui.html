@@ -1,0 +1,1065 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>斗地主高保真游戏界面</title>
+  <style>
+    :root {
+      --felt: #0f684e;
+      --felt-deep: #063b2d;
+      --felt-shadow: #02251f;
+      --gold: #f0c85b;
+      --gold-deep: #b78026;
+      --cream: #fff8e6;
+      --ink: #17130c;
+      --red: #d84037;
+      --blue: #337ee8;
+      --cyan: #6dd6f0;
+      --green: #40bd7e;
+      --panel: rgba(5, 17, 16, 0.78);
+      --line: rgba(255, 248, 230, 0.18);
+      --font: "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+      --display: "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(62, 190, 132, 0.22), transparent 42%),
+        linear-gradient(140deg, #071513 0%, #111816 44%, #291a18 100%);
+      color: var(--cream);
+      font-family: var(--font);
+    }
+
+    .frame {
+      width: 1600px;
+      height: 900px;
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse at 50% 48%, rgba(29, 135, 92, 0.98) 0 34%, rgba(11, 85, 66, 0.96) 61%, rgba(3, 33, 30, 0.98) 100%),
+        var(--felt);
+      box-shadow: 0 38px 90px rgba(0, 0, 0, 0.54);
+      isolation: isolate;
+    }
+
+    .frame::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        repeating-linear-gradient(24deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 9px),
+        repeating-linear-gradient(116deg, rgba(0, 0, 0, 0.04) 0 1px, transparent 1px 11px),
+        radial-gradient(ellipse at 50% 53%, transparent 0 46%, rgba(0, 0, 0, 0.24) 72%, rgba(0, 0, 0, 0.46) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .frame::after {
+      content: "";
+      position: absolute;
+      inset: 58px 106px 140px;
+      border: 2px solid rgba(240, 200, 91, 0.24);
+      border-radius: 420px;
+      box-shadow:
+        inset 0 0 0 10px rgba(0, 0, 0, 0.08),
+        inset 0 0 80px rgba(0, 0, 0, 0.22),
+        0 0 46px rgba(240, 200, 91, 0.12);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .topbar {
+      position: absolute;
+      z-index: 5;
+      inset: 0 0 auto;
+      height: 70px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 18px;
+      padding: 12px 28px;
+      background: linear-gradient(180deg, rgba(5, 16, 15, 0.92), rgba(5, 16, 15, 0.55) 72%, transparent);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .back {
+      width: 44px;
+      height: 44px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.18));
+      font-size: 26px;
+      font-weight: 900;
+    }
+
+    .room {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .room b {
+      color: var(--gold);
+      font-weight: 900;
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+    }
+
+    .chip {
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(240, 200, 91, 0.28);
+      border-radius: 16px;
+      padding: 0 12px;
+      background: rgba(0, 0, 0, 0.24);
+      color: #f7e7b0;
+      font-size: 14px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .system {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: #d8f1e9;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .signal {
+      width: 24px;
+      height: 18px;
+      display: flex;
+      align-items: end;
+      gap: 3px;
+    }
+
+    .signal i {
+      width: 4px;
+      border-radius: 4px;
+      background: #74ef9a;
+      box-shadow: 0 0 8px rgba(116, 239, 154, 0.7);
+    }
+
+    .signal i:nth-child(1) { height: 6px; }
+    .signal i:nth-child(2) { height: 10px; }
+    .signal i:nth-child(3) { height: 14px; }
+    .signal i:nth-child(4) { height: 18px; opacity: 0.55; }
+
+    .battery {
+      width: 33px;
+      height: 16px;
+      border: 2px solid #d8f1e9;
+      border-radius: 4px;
+      padding: 2px;
+      position: relative;
+    }
+
+    .battery::before {
+      content: "";
+      display: block;
+      width: 74%;
+      height: 100%;
+      border-radius: 2px;
+      background: #77e68e;
+    }
+
+    .battery::after {
+      content: "";
+      position: absolute;
+      right: -6px;
+      top: 4px;
+      width: 4px;
+      height: 6px;
+      border-radius: 0 3px 3px 0;
+      background: #d8f1e9;
+    }
+
+    .player {
+      position: absolute;
+      z-index: 4;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      align-items: center;
+      min-width: 242px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.13), transparent 42%),
+        rgba(4, 17, 17, 0.78);
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.24);
+    }
+
+    .player.left { left: 42px; top: 218px; }
+    .player.right { right: 42px; top: 218px; }
+    .player.self {
+      left: 50%;
+      bottom: 124px;
+      transform: translateX(-50%);
+      min-width: 372px;
+      padding: 12px 16px;
+      z-index: 8;
+    }
+
+    .avatar {
+      width: 62px;
+      height: 62px;
+      border: 3px solid rgba(240, 200, 91, 0.75);
+      border-radius: 50%;
+      position: relative;
+      background:
+        radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.92) 0 8px, transparent 9px),
+        linear-gradient(140deg, #eeb15a, #9f3a31 58%, #412434);
+      box-shadow: inset 0 -8px 16px rgba(0, 0, 0, 0.24), 0 0 0 4px rgba(0, 0, 0, 0.24);
+    }
+
+    .right .avatar {
+      background:
+        radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.9) 0 8px, transparent 9px),
+        linear-gradient(140deg, #6fd0ff, #265bb9 58%, #1d253e);
+    }
+
+    .self .avatar {
+      width: 68px;
+      height: 68px;
+      background:
+        radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.94) 0 9px, transparent 10px),
+        linear-gradient(140deg, #f5db74, #d9562c 56%, #56212d);
+    }
+
+    .badge {
+      position: absolute;
+      left: -10px;
+      top: -10px;
+      min-width: 46px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 244, 178, 0.8);
+      border-radius: 5px;
+      background: linear-gradient(180deg, #ffe889, #cf8f20);
+      color: #5a2108;
+      font-size: 13px;
+      font-weight: 900;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+    }
+
+    .badge.farmer {
+      background: linear-gradient(180deg, #eff7ff, #6ca8e8);
+      color: #15355d;
+    }
+
+    .player strong {
+      display: block;
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .player span {
+      display: block;
+      margin-top: 5px;
+      color: #f4db87;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .mini-state {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .mini-state em {
+      height: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 11px;
+      padding: 0 8px;
+      background: rgba(0, 0, 0, 0.24);
+      color: #bdebe2;
+      font-size: 12px;
+      font-style: normal;
+      font-weight: 800;
+      line-height: 20px;
+    }
+
+    .hand-count {
+      position: absolute;
+      right: -18px;
+      bottom: -14px;
+      width: 52px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border: 2px solid #ffffff;
+      border-radius: 6px;
+      background: linear-gradient(180deg, #ffffff, #e8ded0);
+      color: var(--red);
+      font-size: 26px;
+      font-weight: 900;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    .chat {
+      position: absolute;
+      z-index: 6;
+      min-width: 168px;
+      border-radius: 8px;
+      padding: 10px 14px;
+      background: rgba(255, 250, 231, 0.94);
+      color: #29403b;
+      font-size: 16px;
+      font-weight: 800;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+    }
+
+    .chat::after {
+      content: "";
+      position: absolute;
+      bottom: -9px;
+      width: 16px;
+      height: 16px;
+      transform: rotate(45deg);
+      background: rgba(255, 250, 231, 0.94);
+    }
+
+    .chat.left {
+      left: 238px;
+      top: 182px;
+    }
+
+    .chat.left::after { left: 18px; }
+
+    .chat.right {
+      right: 234px;
+      top: 180px;
+    }
+
+    .chat.right::after { right: 18px; }
+
+    .table-center {
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      top: 128px;
+      width: 760px;
+      height: 438px;
+      transform: translateX(-50%);
+      display: grid;
+      justify-items: center;
+      align-content: start;
+      gap: 18px;
+    }
+
+    .kitty {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid rgba(240, 200, 91, 0.32);
+      border-radius: 8px;
+      padding: 10px 14px;
+      background: rgba(0, 0, 0, 0.24);
+      box-shadow: inset 0 0 16px rgba(240, 200, 91, 0.08);
+    }
+
+    .kitty span {
+      color: #f6e3a8;
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .card-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      width: 74px;
+      height: 104px;
+      position: relative;
+      border: 2px solid #fff;
+      border-radius: 8px;
+      margin-left: -12px;
+      background:
+        linear-gradient(180deg, #fffdf5, #eadfcf);
+      color: #151515;
+      box-shadow: 0 9px 18px rgba(0, 0, 0, 0.32);
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    .card:first-child { margin-left: 0; }
+
+    .card.red {
+      color: #c72525;
+    }
+
+    .card .rank {
+      position: absolute;
+      left: 7px;
+      top: 5px;
+      font-size: 23px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .card .suit {
+      position: absolute;
+      left: 9px;
+      top: 30px;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .card .big {
+      position: absolute;
+      inset: 28px 7px 8px;
+      display: grid;
+      place-items: center;
+      font-size: 42px;
+      font-weight: 900;
+    }
+
+    .card.joker {
+      background:
+        radial-gradient(circle at 50% 56%, rgba(255, 224, 102, 0.5), transparent 32%),
+        linear-gradient(180deg, #fffdf5, #dfd3c4);
+    }
+
+    .card.joker .rank {
+      writing-mode: vertical-rl;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .played-area {
+      display: grid;
+      justify-items: center;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .turn {
+      width: 96px;
+      height: 96px;
+      position: relative;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background:
+        conic-gradient(#f8d965 0 245deg, rgba(255, 255, 255, 0.16) 245deg 360deg);
+      box-shadow: 0 0 28px rgba(248, 217, 101, 0.28);
+    }
+
+    .turn::before {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      background: rgba(3, 30, 28, 0.94);
+      box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.58);
+    }
+
+    .turn b {
+      position: relative;
+      color: #fff6ce;
+      font-size: 35px;
+      font-weight: 900;
+    }
+
+    .turn small {
+      position: absolute;
+      z-index: 2;
+      bottom: 17px;
+      color: #99d6c6;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .pattern-ribbon {
+      display: flex;
+      gap: 8px;
+    }
+
+    .pattern-ribbon span {
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 5px;
+      padding: 5px 9px;
+      background: linear-gradient(180deg, rgba(246, 210, 91, 0.24), rgba(0, 0, 0, 0.18));
+      color: #fff0b2;
+      font-size: 13px;
+      font-weight: 900;
+      box-shadow: 0 0 16px rgba(240, 200, 91, 0.12);
+    }
+
+    .pass {
+      position: absolute;
+      z-index: 5;
+      left: 292px;
+      top: 356px;
+      transform: rotate(-7deg);
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      border-radius: 8px;
+      padding: 10px 22px;
+      background: rgba(2, 12, 12, 0.62);
+      color: #dbe9e7;
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 0;
+      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+    }
+
+    .right-play {
+      position: absolute;
+      z-index: 5;
+      right: 250px;
+      top: 352px;
+    }
+
+    .right-play .card {
+      width: 55px;
+      height: 78px;
+      margin-left: -10px;
+      border-radius: 6px;
+    }
+
+    .right-play .rank {
+      font-size: 18px;
+      left: 5px;
+      top: 4px;
+    }
+
+    .right-play .suit {
+      font-size: 14px;
+      left: 6px;
+      top: 24px;
+    }
+
+    .right-play .big {
+      font-size: 30px;
+      inset: 22px 5px 6px;
+    }
+
+    .side-tools {
+      position: absolute;
+      z-index: 8;
+      right: 26px;
+      top: 92px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .tool {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 34% 24%, rgba(255, 255, 255, 0.22), transparent 38%),
+        rgba(5, 19, 19, 0.76);
+      color: #f7e3a1;
+      font-size: 22px;
+      font-weight: 900;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+    }
+
+    .tool small {
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .call-pop {
+      position: absolute;
+      z-index: 7;
+      left: 34px;
+      bottom: 218px;
+      width: 292px;
+      border: 1px solid rgba(240, 200, 91, 0.34);
+      border-radius: 8px;
+      padding: 14px;
+      background: rgba(4, 17, 17, 0.86);
+      box-shadow: 0 20px 38px rgba(0, 0, 0, 0.34);
+    }
+
+    .call-pop h3 {
+      margin: 0 0 10px;
+      color: #fff1b5;
+      font-size: 16px;
+    }
+
+    .call-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 7px;
+    }
+
+    .call-grid button {
+      height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 6px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.22));
+      color: #fdf7db;
+      font: 900 14px var(--font);
+    }
+
+    .call-grid button.hot {
+      border-color: rgba(255, 228, 128, 0.9);
+      background: linear-gradient(180deg, #efc44d, #b66d1f);
+      color: #351b03;
+    }
+
+    .bottom-area {
+      position: absolute;
+      z-index: 7;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 236px;
+      background: linear-gradient(180deg, transparent, rgba(1, 17, 16, 0.36) 24%, rgba(1, 12, 12, 0.82));
+    }
+
+    .action-panel {
+      position: absolute;
+      left: 50%;
+      top: 8px;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      height: 50px;
+      min-width: 112px;
+      border: 0;
+      border-radius: 8px;
+      color: #fff;
+      font: 900 22px var(--font);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, 0.28),
+        inset 0 -5px 0 rgba(0, 0, 0, 0.15),
+        0 10px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .btn.gray {
+      background: linear-gradient(180deg, #87929c, #4a5965);
+    }
+
+    .btn.blue {
+      background: linear-gradient(180deg, #62b9ff, #2367d6);
+    }
+
+    .btn.red {
+      background: linear-gradient(180deg, #ff7669, #d83a2f);
+    }
+
+    .btn.gold {
+      min-width: 136px;
+      background: linear-gradient(180deg, #ffd766, #d98822);
+      color: #451b05;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.32);
+    }
+
+    .guide {
+      position: absolute;
+      z-index: 12;
+      left: calc(50% + 216px);
+      top: 1px;
+      width: 152px;
+      height: 62px;
+      border: 3px solid #fff36f;
+      border-radius: 10px;
+      box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.08), 0 0 22px rgba(255, 243, 111, 0.8);
+      pointer-events: none;
+    }
+
+    .guide-tip {
+      position: absolute;
+      z-index: 12;
+      left: calc(50% + 368px);
+      top: -54px;
+      width: 202px;
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #fff5b8;
+      color: #4a2505;
+      font-size: 15px;
+      font-weight: 900;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+    }
+
+    .guide-tip::before {
+      content: "";
+      position: absolute;
+      left: -17px;
+      bottom: -9px;
+      width: 40px;
+      height: 3px;
+      transform: rotate(32deg);
+      background: #fff36f;
+      box-shadow: 0 0 12px rgba(255, 243, 111, 0.7);
+    }
+
+    .feature-bar {
+      position: absolute;
+      left: 42px;
+      right: 42px;
+      top: 66px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .feature-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .feature {
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 19px;
+      padding: 0 14px;
+      background: rgba(0, 0, 0, 0.28);
+      color: #d7f0e8;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .toggle {
+      width: 52px;
+      height: 28px;
+      border-radius: 14px;
+      padding: 3px;
+      background: linear-gradient(180deg, #5bd58d, #1d8d54);
+    }
+
+    .toggle::before {
+      content: "";
+      display: block;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      margin-left: 24px;
+      background: #fff;
+      box-shadow: 0 3px 7px rgba(0, 0, 0, 0.28);
+    }
+
+    .hand {
+      position: absolute;
+      z-index: 9;
+      left: 50%;
+      bottom: 14px;
+      width: 1240px;
+      height: 152px;
+      transform: translateX(-50%);
+    }
+
+    .hand .card {
+      position: absolute;
+      bottom: 0;
+      width: 82px;
+      height: 118px;
+      margin: 0;
+      transform-origin: 50% 122%;
+      transition: transform 160ms ease;
+    }
+
+    .hand .card.selected {
+      bottom: 24px;
+      box-shadow: 0 0 0 3px rgba(255, 231, 91, 0.84), 0 16px 28px rgba(0, 0, 0, 0.32);
+    }
+
+    .hand .card:nth-child(1) { left: 76px; transform: rotate(-11deg); }
+    .hand .card:nth-child(2) { left: 142px; transform: rotate(-9deg); }
+    .hand .card:nth-child(3) { left: 208px; transform: rotate(-7deg); }
+    .hand .card:nth-child(4) { left: 274px; transform: rotate(-5deg); }
+    .hand .card:nth-child(5) { left: 340px; transform: rotate(-3deg); }
+    .hand .card:nth-child(6) { left: 406px; transform: rotate(-2deg); }
+    .hand .card:nth-child(7) { left: 472px; transform: rotate(-1deg); }
+    .hand .card:nth-child(8) { left: 538px; transform: rotate(0deg); }
+    .hand .card:nth-child(9) { left: 604px; transform: rotate(1deg); }
+    .hand .card:nth-child(10) { left: 670px; transform: rotate(2deg); }
+    .hand .card:nth-child(11) { left: 736px; transform: rotate(3deg); }
+    .hand .card:nth-child(12) { left: 802px; transform: rotate(5deg); }
+    .hand .card:nth-child(13) { left: 868px; transform: rotate(7deg); }
+    .hand .card:nth-child(14) { left: 934px; transform: rotate(8deg); }
+    .hand .card:nth-child(15) { left: 1000px; transform: rotate(9deg); }
+    .hand .card:nth-child(16) { left: 1066px; transform: rotate(10deg); }
+    .hand .card:nth-child(17) { left: 1132px; transform: rotate(11deg); }
+
+    .feedback {
+      position: absolute;
+      z-index: 6;
+      right: 224px;
+      bottom: 290px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .feedback span {
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 6px;
+      padding: 8px 12px;
+      background: linear-gradient(90deg, rgba(216, 52, 41, 0.74), rgba(241, 196, 74, 0.72));
+      color: #fff7d8;
+      font-size: 16px;
+      font-weight: 900;
+      box-shadow: 0 0 24px rgba(255, 102, 51, 0.18);
+    }
+
+    .coin-fx {
+      position: absolute;
+      z-index: 7;
+      left: 1040px;
+      top: 466px;
+      color: #ffe570;
+      font-size: 30px;
+      font-weight: 900;
+      text-shadow: 0 0 16px rgba(255, 214, 83, 0.8), 0 2px 4px rgba(0, 0, 0, 0.45);
+    }
+
+    .trend {
+      position: absolute;
+      z-index: 7;
+      left: 420px;
+      top: 456px;
+      border-radius: 6px;
+      padding: 8px 12px;
+      background: linear-gradient(180deg, rgba(79, 211, 128, 0.92), rgba(24, 116, 78, 0.9));
+      color: #fff;
+      font-size: 15px;
+      font-weight: 900;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+    }
+
+    .spark {
+      position: absolute;
+      z-index: 6;
+      width: 170px;
+      height: 170px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, rgba(255, 230, 85, 0.42), transparent 45%),
+        conic-gradient(from 18deg, transparent 0 12deg, rgba(255, 235, 115, 0.55) 12deg 18deg, transparent 18deg 42deg, rgba(255, 109, 69, 0.45) 42deg 48deg, transparent 48deg 360deg);
+      filter: blur(1px);
+      opacity: 0.78;
+      pointer-events: none;
+    }
+
+    .spark.one { left: 552px; top: 292px; }
+    .spark.two { right: 300px; top: 326px; transform: scale(0.72); }
+
+    @media (max-width: 1200px) {
+      body {
+        overflow: auto;
+      }
+
+      .frame {
+        transform: scale(0.72);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="frame" aria-label="斗地主高保真横版移动端对局界面">
+    <header class="topbar">
+      <div class="back">‹</div>
+      <div class="room">
+        <b>房间 830126</b>
+        <div class="meta">
+          <span class="chip">第 3/8 局</span>
+          <span class="chip">倍数 x12</span>
+          <span class="chip">底分 100</span>
+          <span class="chip">经典三人场</span>
+        </div>
+      </div>
+      <div class="system">
+        <div class="signal" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <span>48ms</span>
+        <div class="battery" aria-hidden="true"></div>
+        <span>20:36</span>
+      </div>
+    </header>
+
+    <section class="player left">
+      <div class="avatar">
+        <span class="badge farmer">农民</span>
+      </div>
+      <div>
+        <strong>老K不加班</strong>
+        <span>金币 86,240</span>
+        <div class="mini-state"><em>剩余 12 张</em><em>托管</em></div>
+      </div>
+      <div class="hand-count">12</div>
+    </section>
+
+    <section class="player right">
+      <div class="avatar">
+        <span class="badge">地主</span>
+      </div>
+      <div>
+        <strong>南风起牌</strong>
+        <span>金币 152,800</span>
+        <div class="mini-state"><em>剩余 9 张</em><em>离线 3s</em></div>
+      </div>
+      <div class="hand-count">9</div>
+    </section>
+
+    <section class="player self">
+      <div class="avatar">
+        <span class="badge farmer">农民</span>
+      </div>
+      <div>
+        <strong>我方玩家</strong>
+        <span>金币 128,600</span>
+        <div class="mini-state"><em>手牌 17 张</em><em>身份可切换</em></div>
+      </div>
+    </section>
+
+    <div class="chat left">这把我先观察。</div>
+    <div class="chat right">网络波动，已托管</div>
+
+    <section class="table-center">
+      <div class="kitty">
+        <span>底牌已翻开</span>
+        <div class="card-row">
+          <div class="card red"><span class="rank">Q</span><span class="suit">♥</span><span class="big">♥</span></div>
+          <div class="card"><span class="rank">7</span><span class="suit">♣</span><span class="big">♣</span></div>
+          <div class="card joker red"><span class="rank">大王</span><span class="big">J</span></div>
+        </div>
+      </div>
+
+      <div class="played-area">
+        <div class="turn"><b>18</b><small>地主出牌</small></div>
+        <div class="pattern-ribbon">
+          <span>当前牌型：顺子</span>
+          <span>可压制</span>
+          <span>倍率 +2</span>
+        </div>
+        <div class="card-row">
+          <div class="card"><span class="rank">6</span><span class="suit">♠</span><span class="big">♠</span></div>
+          <div class="card red"><span class="rank">7</span><span class="suit">♦</span><span class="big">♦</span></div>
+          <div class="card"><span class="rank">8</span><span class="suit">♣</span><span class="big">♣</span></div>
+          <div class="card red"><span class="rank">9</span><span class="suit">♥</span><span class="big">♥</span></div>
+          <div class="card"><span class="rank">10</span><span class="suit">♠</span><span class="big">♠</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="pass">不要</div>
+    <div class="right-play card-row">
+      <div class="card red"><span class="rank">A</span><span class="suit">♥</span><span class="big">♥</span></div>
+      <div class="card"><span class="rank">A</span><span class="suit">♠</span><span class="big">♠</span></div>
+    </div>
+
+    <nav class="side-tools" aria-label="快捷功能">
+      <div class="tool"><small>设</small></div>
+      <div class="tool"><small>聊</small></div>
+      <div class="tool"><small>表</small></div>
+      <div class="tool"><small>任</small></div>
+      <div class="tool"><small>喇</small></div>
+    </nav>
+
+    <aside class="call-pop" aria-label="叫地主阶段示意弹层">
+      <h3>叫分/抢地主阶段示意</h3>
+      <div class="call-grid">
+        <button>不叫</button>
+        <button>1分</button>
+        <button>2分</button>
+        <button>3分</button>
+        <button class="hot">抢</button>
+      </div>
+    </aside>
+
+    <div class="feedback">
+      <span>炸弹提示 x4</span>
+      <span>王炸预警</span>
+      <span>连对可出</span>
+      <span>飞机带翅膀</span>
+    </div>
+    <div class="coin-fx">+2,400</div>
+    <div class="trend">胜率趋势 ↑ 63%</div>
+    <div class="spark one"></div>
+    <div class="spark two"></div>
+
+    <section class="bottom-area">
+      <div class="action-panel">
+        <button class="btn gray">不出</button>
+        <button class="btn blue">提示</button>
+        <button class="btn red">重选</button>
+        <button class="btn gold">出牌</button>
+        <div class="guide"></div>
+        <div class="guide-tip">新手引导：点击这里打出已选牌组</div>
+      </div>
+
+      <div class="feature-bar">
+        <div class="feature-group">
+          <span class="feature"><span class="toggle"></span>自动理牌</span>
+          <span class="feature">明牌</span>
+          <span class="feature">记牌器</span>
+        </div>
+        <div class="feature-group">
+          <span class="feature">聊天</span>
+          <span class="feature">表情</span>
+          <span class="feature">任务</span>
+          <span class="feature">小喇叭</span>
+        </div>
+      </div>
+
+      <div class="hand" aria-label="主视角手牌">
+        <div class="card red"><span class="rank">3</span><span class="suit">♥</span><span class="big">♥</span></div>
+        <div class="card"><span class="rank">4</span><span class="suit">♣</span><span class="big">♣</span></div>
+        <div class="card red"><span class="rank">5</span><span class="suit">♦</span><span class="big">♦</span></div>
+        <div class="card selected"><span class="rank">6</span><span class="suit">♠</span><span class="big">♠</span></div>
+        <div class="card red selected"><span class="rank">7</span><span class="suit">♥</span><span class="big">♥</span></div>
+        <div class="card selected"><span class="rank">8</span><span class="suit">♣</span><span class="big">♣</span></div>
+        <div class="card red selected"><span class="rank">9</span><span class="suit">♦</span><span class="big">♦</span></div>
+        <div class="card selected"><span class="rank">10</span><span class="suit">♠</span><span class="big">♠</span></div>
+        <div class="card red"><span class="rank">J</span><span class="suit">♥</span><span class="big">♥</span></div>
+        <div class="card"><span class="rank">J</span><span class="suit">♣</span><span class="big">♣</span></div>
+        <div class="card red"><span class="rank">Q</span><span class="suit">♦</span><span class="big">♦</span></div>
+        <div class="card"><span class="rank">K</span><span class="suit">♠</span><span class="big">♠</span></div>
+        <div class="card red"><span class="rank">A</span><span class="suit">♥</span><span class="big">♥</span></div>
+        <div class="card"><span class="rank">2</span><span class="suit">♣</span><span class="big">♣</span></div>
+        <div class="card red"><span class="rank">2</span><span class="suit">♦</span><span class="big">♦</span></div>
+        <div class="card joker"><span class="rank">小王</span><span class="big">J</span></div>
+        <div class="card joker red"><span class="rank">大王</span><span class="big">J</span></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

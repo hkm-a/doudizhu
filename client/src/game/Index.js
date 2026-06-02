@@ -5,26 +5,41 @@ import GameScene from "./game"
 
 
 class Game extends React.Component {
-    render() {
+    constructor(props) {
+        super(props);
+        this.game = null;
+    }
+
+    componentDidMount() {
         const config = {
             type: Phaser.AUTO,
             parent: "game",
-            width: 480,
-            height: 960,
-            backgroundColor: 0x66666,
+            width: 960,
+            height: 540,
+            backgroundColor: 0x0c392f,
             scene: [BootScene, MenuScene, GameScene],
             scale: {
                 parent: 'game',
                 mode: Phaser.Scale.FIT,
-                width: 480,
-                height: 960,
+                width: 960,
+                height: 540,
             }
         };
 
-        // eslint-disable-next-line no-unused-vars
-        const game = new Phaser.Game(config);
+        const createGame = this.props.createGame || (gameConfig => new Phaser.Game(gameConfig));
+        this.game = createGame(config);
+    }
+
+    componentWillUnmount() {
+        if (this.game && typeof this.game.destroy === 'function') {
+            this.game.destroy(true);
+        }
+        this.game = null;
+    }
+
+    render() {
         return (
-            <div style={{margin: 'auto'}} id="game"></div>
+            <div className="game-canvas" id="game"></div>
         )
     }
 

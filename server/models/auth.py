@@ -13,6 +13,14 @@ class User(Base):
     name = Column(String(50))
     sex = Column(SMALLINT)
     avatar = Column(String(256))
+    point = Column(Integer, default=1000)
+    # GDD v0.2 H.1 段位体系
+    segment = Column(String(16), default='gold', nullable=False)
+    segment_points = Column(Integer, default=0, nullable=False)
+    # GDD v0.2 H.3 排位 ELO
+    elo = Column(Integer, default=1000, nullable=False)
+    # GDD v0.2 H.2 赛季重置时间戳
+    last_season_reset = Column(TIMESTAMP, nullable=True)
     date_joined = Column(TIMESTAMP, default=datetime.now)
     last_modified = Column(TIMESTAMP, default=datetime.now, onupdate=datetime.now)
 
@@ -21,7 +29,11 @@ class User(Base):
             'uid': self.id,
             'name': self.name,
             'sex': self.sex,
-            'avatar': self.avatar
+            'avatar': self.avatar,
+            'point': self.point if self.point is not None else 1000,
+            'segment': self.segment if self.segment else 'gold',
+            'segment_points': int(self.segment_points) if self.segment_points is not None else 0,
+            'elo': int(self.elo) if self.elo is not None else 1000,
         }
 
 

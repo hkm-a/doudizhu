@@ -3,12 +3,14 @@ import logging
 from http import HTTPStatus
 from typing import Optional, Any, Dict, List, Union
 
+from sqlalchemy import update
 from tornado.escape import json_decode
 from tornado.web import authenticated, HTTPError
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
 
 from api.base import RestfulHandler, JwtMixin
 from models.base import AlchemyMixin
+from models import User
 from .globalvar import GlobalVar
 from .player import Player
 from .protocol import Protocol
@@ -67,6 +69,8 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
     @authenticated
     async def open(self):
         self.player = GlobalVar.find_player(**self.current_user)
+        if 'point' in self.current_user:
+            self.player.point = Player.normalize_point(self.current_user.get('point'))
         self.player.socket = self
         logging.info('SOCKET[%s] OPEN', self.player.uid)
 
@@ -132,6 +136,18 @@ class SocketHandler(WebSocketHandler, AlchemyMixin, JwtMixin):
         except (json.decoder.JSONDecodeError, TypeError):
             logging.error('ERROR MESSAGE: %s', message)
         return None, None
+
+    async def save_player_points(self, points: Dict[int, int]) -> bool:
+        async with self.session as session:
+            async with session.begin():
+                for uid, point in points.items():
+                    await session.execute(
+                        update(User)
+                        .where(User.id == uid)
+                        .values(point=point)
+                    )
+                await session.commit()
+        return True
 
 
 class AdminHandler(RestfulHandler):

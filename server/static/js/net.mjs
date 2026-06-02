@@ -22,7 +22,13 @@ export const Protocol = {
 
     /**
      * 请求加入房间
-     * [REQ_JOIN_ROOM, {"room": int 房间号 (-1表示快速加入), "level": int (1/2/3 初/中/高级场)}]
+     * [REQ_JOIN_ROOM, {
+     *     "room": int 房间号 (-1表示快速加入),
+     *     "level": int (1/2/3 初/中/高级场),
+     *     "personality": string (optional, default "balanced")
+     *         // GDD v0.2 F 章节: AI 性格
+     *         // 取值: conservative / balanced / aggressive / trickster / erratic
+     * }]
      *
      */
     REQ_JOIN_ROOM: 1005,
@@ -39,6 +45,8 @@ export const Protocol = {
      *          "timer": int 倒计时,
      *          "last_shot_uid": int 房间状态,
      *          "last_shot_poker": int 房间状态,
+     *          "double_turn_uid": int 加倍阶段当前决策 UID (-1 if 不在加倍阶段),
+     *          "personality": string AI 性格 (conservative/balanced/aggressive/trickster/erratic)
      *      },
      *      "players": [{
      *          "uid": int 用户ID,
@@ -111,6 +119,24 @@ export const Protocol = {
 
 
     /**
+     * 是否加倍（地主确认后、地主第一次出牌前）
+     * [REQ_DOUBLE, {"double": int (0 不加倍 1 加倍)}]
+     */
+    REQ_DOUBLE: 2007,
+    /**
+     * 加倍广播
+     * [RSP_DOUBLE, {
+     *     "room_id": 房间号,
+     *     "uid": 加倍用户ID,
+     *     "double": int (0/1),
+     *     "multiple": int 加倍后的当前倍数,
+     *     "personality": "rule"|"douzero"|null  // AI 决策时记录
+     * }]
+     */
+    RSP_DOUBLE: 2008,
+
+
+    /**
      * 请求出牌
      * [REQ_SHOT_POKER, {"pokers": [int 扑克牌]}]
      */
@@ -143,6 +169,26 @@ export const Protocol = {
      *  }]
      */
     RSP_GAME_OVER: 4002,
+
+
+    /**
+     * 段位变更推送（服务端 → 单个玩家）
+     * [RSP_SEGMENT_CHANGE, {
+     *     "uid": 玩家 UID,
+     *     "old_segment": "gold",
+     *     "old_points": 80,
+     *     "new_segment": "platinum",
+     *     "new_points": 10,
+     *     "promoted": true,
+     *     "demoted": false,
+     *     "score_delta": 30
+     * }]
+     */
+    RSP_SEGMENT_CHANGE: 4009,
+
+
+    REQ_CHAT: 5001,
+    RSP_CHAT: 5002,
 };
 
 function pretty_log(tag, packet) {

@@ -35,16 +35,17 @@ class State(IntEnum):
     CALL_SCORE = 2
     PLAYING = 3
     GAME_OVER = 4
+    DOUBLE = 5  # GDD v0.2 G 章节：抢地主结束 → 加倍阶段 → PLAYING
 
 
 class Player(object):
 
-    def __init__(self, uid: int, name: str, sex: int = 1, avatar: str = '', **kwargs):
+    def __init__(self, uid: int, name: str, sex: int = 1, avatar: str = '', point: int = 1000, **kwargs):
         self.uid = uid
         self.name = name
         self.sex = sex
         self.avatar = avatar
-        self.point = 1000
+        self.point = self.normalize_point(point)
         self.room: Optional[Room] = None
         self.seat = -1
         self.state = State.INIT
@@ -103,7 +104,10 @@ class Player(object):
                 return
 
         if code == Pt.REQ_LEAVE_ROOM:
-            self.on_disconnect()
+            self.leave_room()
+            return
+        if code == Pt.REQ_CHAT:
+            self.handle_chat(packet)
             return
 
         if self.state == State.INIT:
@@ -112,13 +116,48 @@ class Player(object):
             self.handle_waiting(code, packet)
         elif self.state == State.CALL_SCORE:
             await self.handle_call_score(code, packet)
+        elif self.state == State.DOUBLE:
+            await self.handle_double(code, packet)
         elif self.state == State.PLAYING:
             await self.handle_playing(code, packet)
         elif self.state == State.GAME_OVER:
             self.handle_game_over(code, packet)
 
+    def handle_chat(self, packet: Dict[str, Any]):
+        if not self.room:
+            self.write_error('Room not joined')
+            return
+
+        message = packet.get('message') if isinstance(packet, dict) else None
+        if not isinstance(message, str):
+            self.write_error('Invalid chat message')
+            return
+
+        message = message.strip()
+        if not message or len(message) > 24:
+            self.write_error('Invalid chat message')
+            return
+
+        self.room.broadcast([Pt.RSP_CHAT, {'uid': self.uid, 'message': message}])
+
     def on_disconnect(self):
         self.set_left()
+
+    def leave_room(self):
+        if self.room and self.state in (State.INIT, State.WAITING, State.GAME_OVER):
+            room = self.room
+            room.broadcast([Pt.RSP_LEAVE_ROOM, {'uid': self.uid}])
+            room.on_leave(self)
+            room.sync_room()
+            self.room = None
+            self.seat = -1
+            self.set_left(0)
+            self.restart()
+            self.state = State.INIT
+            return True
+
+        self.on_disconnect()
+        return False
 
     def on_timeout(self):
         IOLoop.current().add_callback(self.handle_timeout)
@@ -131,6 +170,9 @@ class Player(object):
 
         if self.state == State.CALL_SCORE:
             await self.handle_call_score(Pt.REQ_CALL_SCORE, {'rob': 0})
+            return True
+        elif self.state == State.DOUBLE:
+            await self.handle_double(Pt.REQ_DOUBLE, {'double': 0})
             return True
         elif self.state == State.PLAYING:
             if not room.last_shot_poker or room.last_shot_seat == self.seat:
@@ -169,17 +211,36 @@ class Player(object):
 
     def handle_init(self, code: int, packet: Dict[str, Any]):
         from .globalvar import GlobalVar
+        from .room import Room
+        from ai.personality import PersonalityMode
         if code == Pt.REQ_JOIN_ROOM:
             room_id, level = packet.get('room', -1), packet.get('level', 1)
-            room = GlobalVar.find_room(room_id, level, self.allow_robot)
+            requested_profile = Room.level_profile(level)
+            if self.point < requested_profile['min_point']:
+                self.write_error('Insufficient point for room level')
+                return
+
+            # GDD v0.2 F 章节：房间 personality（房主创建时设置；其他人可改）
+            personality_str = packet.get('personality', 'balanced')
+            try:
+                personality = PersonalityMode(personality_str)
+            except ValueError:
+                personality = PersonalityMode.BALANCED
+
+            room = GlobalVar.find_room(room_id, level, self.allow_robot, personality=personality)
             if room is None:
                 self.write_error('Room[%s] Not Found' % room_id)
                 return
 
+            # GDD v0.2 F 章节：玩家加入时设定 personality（同一房间所有人共用）
+            if room.personality != personality:
+                # 房主已设性格；保持房主设定，避免被后续玩家覆盖
+                pass
+
             self.state = State.WAITING
             if self.join_room(room):
                 self.room.sync_room()
-            logger.info('PLAYER[%s] JOIN ROOM[%d]', self.uid, room.room_id)
+            logger.info('PLAYER[%s] JOIN ROOM[%d] [personality=%s]', self.uid, room.room_id, room.personality.value)
 
             if room.is_full():
                 GlobalVar.on_room_changed(room)
@@ -213,8 +274,10 @@ class Player(object):
 
             is_end = self.room.on_rob(self)
             if is_end:
-                self.change_state(State.PLAYING)
-                logger.info('ROB END LANDLORD[%s]', self.room.landlord)
+                # GDD v0.2 G 章节：抢地主结束 → 进 DOUBLE 阶段 → 阶段内切到 PLAYING
+                self.room.start_double_phase()
+                self.change_state(State.DOUBLE)
+                logger.info('ROB END LANDLORD[%s] -> DOUBLE phase', self.room.landlord)
 
             response = [Pt.RSP_CALL_SCORE, {
                 'uid': self.uid,
@@ -226,6 +289,33 @@ class Player(object):
             self.room.broadcast(response)
         else:
             self.write_error('STATE[%s]' % self.state)
+
+    async def handle_double(self, code, packet):
+        """加倍阶段：仅在 State.DOUBLE 接受 REQ_DOUBLE。"""
+        if not self.room:
+            self.write_error('Room not joined')
+            return
+        if self.room.double_turn_seat != self.seat:
+            self.write_error('TURN ERROR (double phase)')
+            return
+        if code != Pt.REQ_DOUBLE:
+            self.write_error('STATE[%s]' % self.state)
+            return
+        choice = packet.get('double')
+        if not self._is_protocol_bit(choice):
+            self.write_error('Invalid double value')
+            return
+        is_end = self.room.on_double(self, choice)
+        self.room.broadcast([Pt.RSP_DOUBLE, {
+            'uid': self.uid,
+            'double': choice,
+            'multiple': self.room._multiple_details,
+            'phase': 'end' if is_end else 'continue',
+        }])
+        if is_end:
+            self.change_state(State.PLAYING)
+            self.room.whose_turn = self.room.landlord_seat
+            self.room.timer.start_timing(self.room.turn_player.timeout)
 
     @shot_turn
     async def handle_playing(self, code, packet):
@@ -255,6 +345,7 @@ class Player(object):
             else:
                 self.change_state(State.GAME_OVER)
                 self.room.on_game_over(self)
+                await self.room.save_player_points()
                 await self.room.save_shot_round()
         else:
             self.write_error('STATE[%s]' % self.state)
@@ -269,6 +360,13 @@ class Player(object):
     @staticmethod
     def _is_protocol_bit(value) -> bool:
         return type(value) is int and value in (0, 1)
+
+    @staticmethod
+    def normalize_point(point) -> int:
+        try:
+            return int(point)
+        except (TypeError, ValueError):
+            return 1000
 
     def handle_game_over(self, code: int, packet: Dict[str, Any]):
         self.write_error('STATE[%s]' % self.state)

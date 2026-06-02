@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>欢乐斗地主 UI 审核</title>
+  <style>
+    :root {
+      --ink: #17140f;
+      --paper: #fff8e8;
+      --muted: #d7cbb3;
+      --felt: #0f5a49;
+      --panel: #171d1a;
+      --panel-2: #202721;
+      --brass: #d8aa48;
+      --red: #c83a37;
+      --blue: #6fb7d8;
+      --mint: #8ee0c0;
+      --line: rgba(255, 248, 232, 0.16);
+      --display: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", "KaiTi", serif;
+      --body: "Avenir Next", "Gill Sans", "Trebuchet MS", "Microsoft YaHei UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background:
+        linear-gradient(90deg, rgba(255, 248, 232, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255, 248, 232, 0.035) 1px, transparent 1px),
+        radial-gradient(ellipse at 52% 20%, rgba(15, 90, 73, 0.78), transparent 58%),
+        linear-gradient(145deg, #111614, #18201d 44%, #311f21);
+      background-size: 42px 42px, 42px 42px, auto, auto;
+      color: var(--paper);
+      font-family: var(--body);
+      line-height: 1.55;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      color: var(--mint);
+    }
+
+    .page {
+      width: min(1160px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 38px 0 54px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: end;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 22px;
+    }
+
+    .eyebrow,
+    .label {
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      margin-top: 6px;
+      font-family: var(--display);
+      font-size: clamp(32px, 6vw, 56px);
+      font-weight: 900;
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 20px;
+      line-height: 1.2;
+    }
+
+    h3 {
+      color: var(--paper);
+      font-size: 16px;
+    }
+
+    .status {
+      min-width: 172px;
+      border: 1px solid rgba(142, 224, 192, 0.3);
+      border-radius: 8px;
+      padding: 14px 16px;
+      background: rgba(15, 90, 73, 0.3);
+      text-align: right;
+    }
+
+    .status strong {
+      display: block;
+      color: var(--mint);
+      font-size: 22px;
+      line-height: 1.1;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-top-color: rgba(216, 170, 72, 0.42);
+      border-radius: 8px;
+      padding: 18px;
+      background:
+        linear-gradient(180deg, rgba(255, 248, 232, 0.06), transparent 42%),
+        rgba(18, 24, 21, 0.86);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+    }
+
+    .span-4 {
+      grid-column: span 4;
+    }
+
+    .span-6 {
+      grid-column: span 6;
+    }
+
+    .span-8 {
+      grid-column: span 8;
+    }
+
+    .span-12 {
+      grid-column: 1 / -1;
+    }
+
+    .summary {
+      display: grid;
+      gap: 10px;
+    }
+
+    .summary p {
+      color: var(--muted);
+    }
+
+    .score {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .metric {
+      min-height: 86px;
+      border: 1px solid rgba(255, 248, 232, 0.12);
+      border-radius: 7px;
+      padding: 12px;
+      background: rgba(6, 12, 10, 0.34);
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 8px;
+      color: var(--brass);
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    ul {
+      display: grid;
+      gap: 9px;
+      margin: 12px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    li {
+      position: relative;
+      padding-left: 20px;
+      color: var(--muted);
+    }
+
+    li::before {
+      content: "";
+      position: absolute;
+      top: 0.72em;
+      left: 0;
+      width: 8px;
+      height: 8px;
+      border-radius: 99px;
+      background: var(--blue);
+      box-shadow: 0 0 0 3px rgba(111, 183, 216, 0.12);
+    }
+
+    .pass li::before {
+      background: var(--mint);
+    }
+
+    .risk li::before {
+      background: #ff9b72;
+    }
+
+    .reference {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      padding: 12px 0;
+      border-top: 1px solid rgba(255, 248, 232, 0.1);
+    }
+
+    .reference:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .tile {
+      width: 42px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(200, 58, 55, 0.6);
+      border-radius: 5px;
+      background: var(--paper);
+      color: var(--red);
+      font-weight: 900;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .tag {
+      border: 1px solid rgba(216, 170, 72, 0.36);
+      border-radius: 999px;
+      padding: 4px 9px;
+      background: rgba(216, 170, 72, 0.1);
+      color: #f3d984;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .blend-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 248, 232, 0.12);
+      border-radius: 8px;
+      background: rgba(6, 12, 10, 0.24);
+    }
+
+    .blend-table th,
+    .blend-table td {
+      border-bottom: 1px solid rgba(255, 248, 232, 0.1);
+      padding: 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .blend-table th {
+      color: var(--blue);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .blend-table td {
+      color: var(--muted);
+    }
+
+    .blend-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .preview {
+      min-height: 260px;
+      display: grid;
+      grid-template-columns: 180px minmax(0, 1fr) 180px;
+      gap: 12px;
+      align-items: center;
+      margin-top: 14px;
+    }
+
+    .rail,
+    .table {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(6, 12, 10, 0.35);
+    }
+
+    .rail {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .rail span {
+      height: 38px;
+      border-radius: 6px;
+      background: rgba(111, 183, 216, 0.14);
+    }
+
+    .table {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse at center, rgba(28, 116, 96, 0.92), rgba(12, 45, 38, 0.98) 68%);
+    }
+
+    .table::before {
+      content: "";
+      position: absolute;
+      inset: 28px 44px;
+      border: 2px solid rgba(216, 170, 72, 0.24);
+      border-radius: 50%;
+    }
+
+    .hand {
+      position: absolute;
+      right: 22%;
+      bottom: 24px;
+      left: 22%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .hand i {
+      width: 28px;
+      height: 42px;
+      margin-left: -6px;
+      border: 1px solid rgba(23, 20, 15, 0.32);
+      border-radius: 4px;
+      background: var(--paper);
+      transform: rotate(var(--r));
+    }
+
+    footer {
+      margin-top: 20px;
+      color: rgba(255, 248, 232, 0.62);
+      font-size: 13px;
+    }
+
+    @media (max-width: 860px) {
+      header,
+      .preview {
+        grid-template-columns: 1fr;
+      }
+
+      .span-4,
+      .span-6,
+      .span-8 {
+        grid-column: 1 / -1;
+      }
+
+      .score {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .status {
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .page {
+        width: min(100% - 20px, 1160px);
+        padding-top: 22px;
+      }
+
+      .score {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <p class="eyebrow">Happy Dou Dizhu Review</p>
+        <h1>欢乐斗地主桌面 UI 审核</h1>
+      </div>
+      <div class="status">
+        <span class="label">审核结论</span>
+        <strong>通过</strong>
+        <small>构建已验证</small>
+      </div>
+    </header>
+
+    <section class="grid">
+      <article class="card span-8 summary">
+        <h2>设计方向</h2>
+        <p>本次重设计改为“欢乐斗地主式大厅 / 桌面 HUD”方向：登录页像红金游戏大厅，牌桌页以绿色桌毡、金币按钮、扑克牌符号和强状态提示为主。中心 16:9 牌桌保持主视觉，两侧放局势、座位、快捷语和回合状态，业务逻辑不变。</p>
+        <div class="tag-row">
+          <span class="tag">牌桌优先</span>
+          <span class="tag">欢乐斗地主参考</span>
+          <span class="tag">红金大厅</span>
+          <span class="tag">绿色桌毡</span>
+          <span class="tag">金币按钮</span>
+          <span class="tag">扑克牌符号</span>
+          <span class="tag">桌毡绿 + 大红 + 金黄</span>
+          <span class="tag">移动端单列降级</span>
+        </div>
+      </article>
+
+      <article class="card span-4">
+        <h2>验证结果</h2>
+        <div class="score">
+          <div class="metric">
+            <span class="label">Build</span>
+            <strong>OK</strong>
+          </div>
+          <div class="metric">
+            <span class="label">CSS</span>
+            <strong>OK</strong>
+          </div>
+          <div class="metric">
+            <span class="label">Scope</span>
+            <strong>1 file</strong>
+          </div>
+          <div class="metric">
+            <span class="label">Logic</span>
+            <strong>0</strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="card span-12">
+        <h2>欢乐斗地主参考说明</h2>
+        <table class="blend-table">
+          <thead>
+            <tr>
+              <th>参考对象</th>
+              <th>取用方式</th>
+              <th>落到当前 UI</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>欢乐斗地主大厅</td>
+              <td>取红金入口、场次卡、金币资产感。</td>
+              <td>登录页使用红金标题、扑克牌角标、金币按钮和三场次大厅选择。</td>
+            </tr>
+            <tr>
+              <td>欢乐斗地主牌桌</td>
+              <td>取绿色桌毡、椭圆桌面、金色边框和强操作态。</td>
+              <td>游戏页将 Phaser 画布置于桌面中心，外围 HUD 用金色重点和蓝色辅助状态围绕牌桌。</td>
+            </tr>
+            <tr>
+              <td>本项目已有 Phaser 素材</td>
+              <td>继续使用本地背景、扑克牌、按钮贴图和音频资源。</td>
+              <td>React 外壳使用 CSS 纹理，Phaser 场景继续加载 <code>bg.png</code>、<code>poker.png</code>、<code>ui.json</code> 和音频。</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card span-12">
+        <h2>布局预览意图</h2>
+        <div class="preview" aria-label="UI layout preview">
+          <div class="rail"><span></span><span></span><span></span><span></span></div>
+          <div class="table">
+            <div class="hand">
+              <i style="--r:-8deg"></i>
+              <i style="--r:-5deg"></i>
+              <i style="--r:-2deg"></i>
+              <i style="--r:1deg"></i>
+              <i style="--r:4deg"></i>
+              <i style="--r:7deg"></i>
+            </div>
+          </div>
+          <div class="rail"><span></span><span></span><span></span><span></span></div>
+        </div>
+      </article>
+
+      <article class="card span-6">
+        <h2>开源参考</h2>
+        <div class="reference">
+          <div class="tile">斗</div>
+          <div>
+            <h3><a href="https://github.com/mailgyc/doudizhu">mailgyc/doudizhu</a></h3>
+            <p>Phaser 牌桌、中心对局区和运行截图，作为本项目同源风格参考。</p>
+          </div>
+        </div>
+        <div class="reference">
+          <div class="tile">牌</div>
+          <div>
+            <h3><a href="https://github.com/laivv/doudizhu">laivv/doudizhu</a></h3>
+            <p>多人在线、快速加入、聊天能力，支持“牌桌 + 社交控制区”的布局判断。</p>
+          </div>
+        </div>
+        <div class="reference">
+          <div class="tile">AI</div>
+          <div>
+            <h3><a href="https://github.com/tian11111/doudizhu">tian11111/doudizhu</a></h3>
+            <p>状态展示、玩家信息、辅助提示和复盘面板，作为信息密度参考。</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="card span-6">
+        <h2>审核通过项</h2>
+        <ul class="pass">
+          <li>首屏保留真实牌桌，不改动 Phaser 游戏逻辑。</li>
+          <li>登录页、牌桌页共享同一套视觉 token，避免拼贴感。</li>
+          <li>按 frontend-design 技能要求替换泛用字体栈，增加更有中文游戏大厅气质的标题字体。</li>
+          <li>用非可见 <code>data-ui-theme="happy-doudizhu"</code> 标记设计目标，便于 E2E 验收。</li>
+          <li>中心牌桌、两侧状态栏、底部指标符合斗地主同类项目常见结构。</li>
+          <li>按钮、输入框、状态徽章、进度条和风险态均有明确层级。</li>
+          <li>增加 1180px、760px、520px 响应式布局，移动端降为单列。</li>
+          <li>生产构建已通过：<code>npm --prefix client run build</code>。</li>
+        </ul>
+      </article>
+
+      <article class="card span-6">
+        <h2>主要改动</h2>
+        <ul>
+          <li>新增全局 UI token：桌毡绿、骨白、金币黄、大红、青蓝。</li>
+          <li>重塑登录页为欢乐斗地主式大厅入口，房间选择像场次卡片。</li>
+          <li>重塑游戏页为桌面 HUD，牌桌置中并增加椭圆桌面和金色包边暗示。</li>
+          <li>按钮、房间卡、状态条和结算区统一为红金游戏质感。</li>
+          <li>优化座位、倍数、计时、行动建议、快捷语和结算区域的视觉状态。</li>
+          <li>保留原 className 和 DOM 结构，降低测试与业务逻辑影响。</li>
+        </ul>
+      </article>
+
+      <article class="card span-6">
+        <h2>后续复核风险</h2>
+        <ul class="risk">
+          <li>当前已做构建验证，但还未在真实后端牌局中完整点测一局。</li>
+          <li>CSS 不再依赖旧版融合方向，后续截图需按欢乐斗地主参考重新评审。</li>
+          <li>Phaser 画布内容仍由游戏场景绘制，若场景内部颜色很旧，可继续统一牌桌素材。</li>
+        </ul>
+      </article>
+    </section>
+
+    <footer>
+      审核文件：docs/ui-design-review.html。样式实现文件：client/src/components/Login.css。
+    </footer>
+  </main>
+</body>
+</html>

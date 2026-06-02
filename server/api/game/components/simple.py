@@ -46,6 +46,9 @@ class RobotPlayer(Player):
                     self.auto_rob()
                 elif self.room and self.room.turn_player == self:
                     IOLoop.current().call_later(1, self.auto_shot)
+        elif code == Pt.RSP_DOUBLE:
+            if self.room and self.room.double_turn_seat == self.seat and self.hand_pokers:
+                self.auto_double()
         elif code == Pt.RSP_SHOT_POKER:
             if self.room and self.room.turn_player == self and self.hand_pokers:
                 self.auto_shot()
@@ -83,4 +86,20 @@ class RobotPlayer(Player):
             return False
         pokers = get_robot_policy().choose_shot(self, self.room)
         IOLoop.current().call_later(2, self.to_server, Pt.REQ_SHOT_POKER, {'pokers': pokers})
+        return True
+
+    def auto_double(self):
+        """GDD v0.2 G 章节：机器人自动加倍决策（性格驱动）。"""
+        if not self.room:
+            logger.warning('ROBOT[%d] auto double skipped because room is missing', self.uid)
+            return False
+        if self.room.double_turn_seat != self.seat:
+            logger.warning('ROBOT[%d] auto double skipped because it is not the double turn', self.uid)
+            return False
+        if not self.hand_pokers:
+            logger.warning('ROBOT[%d] auto double skipped because hand is empty', self.uid)
+            return False
+        # GDD v0.2 F 章节：机器人用房间 personality 决策
+        choice = get_robot_policy().choose_double(self, self.room, personality=self.room.personality)
+        IOLoop.current().call_later(1, self.to_server, Pt.REQ_DOUBLE, {'double': choice})
         return True

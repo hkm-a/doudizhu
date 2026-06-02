@@ -19,5 +19,5 @@
 ## 当前已知限制
 
 - 桌面端还没有内置 Python 运行时、依赖安装和 MySQL 初始化流程。
-- DouZero 当前只完成策略边界、依赖检查和模型文件检查，尚未完成实际 `InfoSet` 适配。
+- DouZero 当前已有策略边界、牌面映射、`InfoSet` 适配、动作回映射和固定牌局回放入口；真实 checkpoint 定期验证仍待接入发布环境。
 - 上游 `svzdev/doudizhu` 未声明许可证，完整许可状态见 [LICENSE.md](LICENSE.md)。

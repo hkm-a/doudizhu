@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
 const checks = [];
+const python = existsSync('.venv/bin/python') ? '.venv/bin/python' : 'python3';
 
 checkFile('package.json', 'root package manifest');
 checkFile('.env.example', 'sample environment file');
@@ -11,11 +12,12 @@ checkCommand('node', ['--version'], 'Node.js runtime');
 checkCommand('npm', ['--version'], 'npm package manager');
 checkCommand('python3', ['--version'], 'Python backend runtime');
 checkCommand('docker', ['compose', 'version'], 'Docker Compose for local MySQL', { required: false });
-checkDirectory('node_modules', 'root npm dependencies', 'Run npm install.');
-checkDirectory('client/node_modules', 'client npm dependencies', 'Run npm --prefix client install.');
-checkDirectory('.venv', 'Python virtual environment', 'Run python3 -m venv .venv, then install requirements.txt.');
+checkDirectory('node_modules', 'root npm dependencies', 'Run npm run dev:setup.');
+checkDirectory('client/node_modules', 'client npm dependencies', 'Run npm run dev:setup.');
+checkDirectory('.venv', 'Python virtual environment', 'Run npm run dev:setup.');
 checkFile('.env', 'local environment file', { required: false, hint: 'Run npm run dev:setup.' });
 checkEnvExample();
+checkBackendPreflight();
 
 printReport();
 
@@ -50,6 +52,32 @@ function checkCommand(command, args, label, options = {}) {
     ? 'Install Docker for npm run dev:db, or use the manual MySQL setup in README.md.'
     : `Install ${command} and make sure it is on PATH.`;
   record(required ? 'fail' : 'warn', label, hint);
+}
+
+function checkBackendPreflight() {
+  if (!existsSync('scripts/backend-preflight.py')) {
+    warn('backend preflight checks', 'scripts/backend-preflight.py is missing.');
+    return;
+  }
+
+  const result = spawnSync(python, ['scripts/backend-preflight.py', '--json'], { encoding: 'utf8' });
+  if (result.status !== 0 && !result.stdout) {
+    fail('backend preflight checks', `Could not run backend preflight with ${python}. ${firstLine(result.stderr)}`);
+    return;
+  }
+
+  let preflight;
+  try {
+    preflight = JSON.parse(result.stdout);
+  } catch (error) {
+    fail('backend preflight checks', `Invalid preflight output: ${error.message}`);
+    return;
+  }
+
+  for (const check of preflight) {
+    const detail = check.hint ? `${check.detail} ${check.hint}` : check.detail;
+    record(check.status === 'fail' ? 'fail' : check.status === 'warn' ? 'warn' : 'pass', check.label, detail);
+  }
 }
 
 function checkEnvExample() {

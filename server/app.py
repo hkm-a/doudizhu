@@ -12,6 +12,13 @@ from tornado.process import cpu_count
 
 from api.auth import HealthHandler, IndexHandler, LoginHandler, UserInfoHandler
 from api.game.views import AdminHandler, SocketHandler
+from api.segment_handler import (
+    EloUpdateHandler,
+    SegmentHandler,
+    SegmentLeaderboardHandler,
+    SegmentUpdateHandler,
+    SeasonResetHandler,
+)
 from api.wx import WechatConfig, WechatHandler
 from config import DEBUG, LOGGING, PORT, SECRET_KEY, TEMPLATE_ROOT, STATIC_ROOT, STATIC_URL
 
@@ -42,6 +49,12 @@ class Application(tornado.web.Application):
             ('/ws', SocketHandler),
             ('/social/config', WechatConfig),
             ('/social/index', WechatHandler),
+            # GDD v0.2 H.1 段位 API
+            ('/segment', SegmentHandler),
+            ('/segment/update', SegmentUpdateHandler),
+            ('/segment/leaderboard', SegmentLeaderboardHandler),
+            ('/segment/season/reset', SeasonResetHandler),
+            ('/segment/elo/update', EloUpdateHandler),
         ]
         super().__init__(url_patterns, **settings)
         self.executor = ThreadPoolExecutor(cpu_count() * 2)

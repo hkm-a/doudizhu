@@ -21,6 +21,7 @@
     "targets": ["deb"],
     "resources": {
       "../server": "server",
+      "../scripts/backend-preflight.py": "backend-preflight.py",
       "../requirements.txt": "requirements.txt",
       "../schema.sql": "schema.sql"
     },

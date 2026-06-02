@@ -38,6 +38,11 @@ class RuleCompareTest(unittest.TestCase):
     def test_regular_cards_do_not_beat_different_non_bomb_shapes(self):
         self.assertEqual(rule.compare_pokers([4], [3, 16]), 0)
 
+    def test_empty_shot_does_not_beat_non_empty_shot(self):
+        self.assertEqual(rule.compare_pokers([], []), 0)
+        self.assertEqual(rule.compare_pokers([], [3]), 0)
+        self.assertGreater(rule.compare_pokers([3], []), 0)
+
 
 class RuleStrategyTest(unittest.TestCase):
     def test_find_best_shot_plays_complete_hand_when_possible(self):

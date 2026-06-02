@@ -89,6 +89,69 @@
         font-size: 0.9rem;
       }
 
+      .checks {
+        display: grid;
+        gap: 0.45rem;
+        list-style: none;
+        margin: 0.4rem 0 0;
+        padding: 0;
+        text-align: left;
+      }
+
+      .checks:empty {
+        display: none;
+      }
+
+      .check {
+        align-items: start;
+        background: rgb(255 255 255 / 0.06);
+        border: 1px solid rgb(255 255 255 / 0.09);
+        border-radius: 6px;
+        display: grid;
+        gap: 0.2rem;
+        grid-template-columns: 5.5rem 1fr;
+        padding: 0.55rem 0.7rem;
+      }
+
+      .badge {
+        border-radius: 999px;
+        color: #101418;
+        font-size: 0.78rem;
+        font-weight: 750;
+        justify-self: start;
+        padding: 0.14rem 0.48rem;
+        text-transform: uppercase;
+      }
+
+      .check[data-status="pass"] .badge {
+        background: #39b980;
+      }
+
+      .check[data-status="warn"] .badge {
+        background: #ffbc42;
+      }
+
+      .check[data-status="fail"] .badge {
+        background: #ff6b5f;
+      }
+
+      .check[data-status="skip"] .badge {
+        background: #9fa8ae;
+      }
+
+      .check-main {
+        color: #f7f3e8;
+        font-size: 0.92rem;
+        line-height: 1.35;
+      }
+
+      .check-hint {
+        color: #b9c0c4;
+        font-size: 0.82rem;
+        grid-column: 2;
+        line-height: 1.4;
+      }
+
       .actions {
         min-height: 2.5rem;
       }
@@ -115,7 +178,7 @@
         opacity: 0.7;
       }
 
-      .status[data-state="error"] + .actions button {
+      .status[data-state="error"] ~ .actions button {
         display: inline-block;
       }
 
@@ -134,6 +197,7 @@
         <span class="dot"></span>
         <span id="message">正在启动...</span>
       </div>
+      <ul class="checks" id="checks"></ul>
       <div class="actions">
         <button id="retry" type="button">重试启动</button>
       </div>
@@ -143,17 +207,45 @@
       const statusEl = document.getElementById('status');
       const messageEl = document.getElementById('message');
       const retryButton = document.getElementById('retry');
+      const checksEl = document.getElementById('checks');
 
-      window.__setStartupState = ({ state, message }) => {
+      window.__setStartupState = ({ state, message, checks }) => {
         statusEl.dataset.state = state || 'ready';
         messageEl.textContent = message || '正在启动...';
+        if (Array.isArray(checks)) {
+          checksEl.replaceChildren(...checks.map(renderCheck));
+        }
         retryButton.disabled = false;
       };
+
+      function renderCheck(check) {
+        const item = document.createElement('li');
+        item.className = 'check';
+        item.dataset.status = check.status || 'skip';
+
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.textContent = check.status || 'skip';
+
+        const main = document.createElement('span');
+        main.className = 'check-main';
+        main.textContent = `${check.label || '检查项'}：${check.detail || ''}`;
+
+        item.append(badge, main);
+        if (check.hint) {
+          const hint = document.createElement('span');
+          hint.className = 'check-hint';
+          hint.textContent = check.hint;
+          item.append(hint);
+        }
+        return item;
+      }
 
       retryButton.addEventListener('click', async () => {
         retryButton.disabled = true;
         statusEl.dataset.state = 'ready';
         messageEl.textContent = '正在重新启动...';
+        checksEl.replaceChildren();
 
         const invoke = window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke;
         if (!invoke) {

@@ -1,0 +1,114 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "username": "hkm-a",
+  "instructions": ["AGENTS.md"],
+
+  "agent": {
+    "backend": {
+      "description": "Python Tornado 后端开发 — WebSocket、API、游戏状态机、数据库",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "prompt": "你是斗地主桌面端项目的 Python Tornado 后端专家。项目后端位于 server/ 目录，使用 Tornado 6.5、SQLAlchemy 1.4、aiomysql、alembic。运行命令：PYTHONPATH=server python3 app.py（开发）或 npm run dev:server。验证后端：npm run verify:backend。测试：python3 -m unittest discover -s tests/backend -p test_*.py（需 PYTHONPATH=server）。数据库迁移使用 alembic，位于 server/alembic/。游戏核心逻辑在 server/api/game/ 下：room.py（房间状态机）、player.py（玩家状态机）、rule.py（牌型规则）、views.py（WebSocket 及 API）。AI 策略层在 server/ai/ 下。代码风格：Python 3.10+ 类型注解、异步优先（asyncio + uvloop）、使用 orjson 替代标准 json。"
+    },
+    "frontend": {
+      "description": "React + Phaser 前端开发 — 牌桌 UI、Canvas 渲染、WebSocket 通信",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "prompt": "你是斗地主桌面端项目的 React + Phaser 前端专家。前端位于 client/ 目录，使用 React 17 + Phaser 3 + Redux。运行命令：npm --prefix client start。构建：npm --prefix client run build。测试：npm --prefix client run test:ci。E2E 测试使用 Playwright，配置文件在 client/playwright.config.js。前端开发注意事项：CRA 构建工具链，TypeScript 4.2，Webpack 4.44 pinned。Phaser 游戏逻辑在 client/src/game/ 下。牌桌布局、动画、交互均在 Phaser Canvas 中实现，React 负责登录、主菜单等 UI。WebSocket 通过 /ws 连接后端。"
+    },
+    "desktop": {
+      "description": "Tauri 2 Rust 桌面壳 — 后端生命周期管理、预检、打包",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "prompt": "你是斗地主桌面端项目的 Tauri 2 桌面壳专家。桌面壳位于 src-tauri/ 目录，使用 Tauri 2.9、Rust edition 2021。开发命令：npm run tauri dev。构建：npm run tauri:build。验证：npm run verify:desktop。启动 smoke：npm run desktop:smoke。Rust 测试：cargo test --manifest-path src-tauri/Cargo.toml。桌面壳职责：自动启动 Python 后端进程、运行预检（Python 依赖 + MySQL 连接）、显示启动状态页面。构建产出为 .deb 包（Linux）。关键文件：src-tauri/src/lib.rs（应用入口与后端生命周期管理）、src-tauri/tauri.conf.json（窗口 1280x800 配置）。"
+    },
+    "game-ai": {
+      "description": "DouZero AI 策略层 — 策略适配、牌值转换、InfoSet、决策日志",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "prompt": "你是斗地主桌面端项目的 AI 策略专家。AI 层位于 server/ai/ 目录。关键文件：policy.py（RuleBasedPolicy + DouZeroPolicy 策略接口）、cards.py（svzdev 牌 ID 1-54 与 DouZero rank 双向转换）、infoset.py（房间状态到 DouZero InfoSet 转换）、decision_log.py（JSONL 决策日志）、replay.py（固定牌局回放 smoke）。运行 AI 相关命令：npm run ai:summary、npm run ai:report。AI 双人测试：python3 scripts/ai-double-smoke.py（需 PYTHONPATH=server）。决策日志位于 AI_DECISION_LOG_PATH 环境变量指定路径。AI 模型为 kwai/DouZero（Apache-2.0），checkpoint 文件通过 DOUZERO_MODEL_DIR 环境变量指定。启用 AI：设置 DOUZERO_ENABLED=1。策略适配层设计原则：隔离 AI 细节，不污染房间状态机、WebSocket 协议和前端 UI。"
+    },
+    "db-dev": {
+      "description": "MySQL 数据库 — schema、迁移、模型",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "prompt": "你是斗地主桌面端项目的数据库专家。数据库使用 MySQL 8.4，通过 Docker Compose 启动（npm run dev:db）。ORM 使用 SQLAlchemy 1.4 + aiomysql。迁移工具：Alembic，配置在 server/alembic/。初始 schema 在 schema.sql 中。数据库模型在 server/models/ 目录下。环境配置：DATABASE_URI=mysql+aiomysql://ddz:ddz@127.0.0.1:3306/ddz。Docker 配置在 compose.yml 中。开发中注意：SQL_ECHO=0 可开启 SQL 日志，TORNADO_DEBUG=0 控制调试模式。"
+    },
+    "reviewer": {
+      "description": "多语言代码审查 — 架构一致性、安全、风格",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "permission": { "edit": "deny" },
+      "prompt": "你是斗地主桌面端项目的代码审查专家。你需要审查的代码层：Python Tornado 后端（server/）、React + Phaser 前端（client/）、Tauri Rust 桌面壳（src-tauri/）、Node 脚本（scripts/）。审查重点：架构一致性（确保遵循 docs/architecture.md 的模块边界）、安全（检查 SECRET_KEY 等敏感信息未硬编码、WebSocket 输入验证、SQL 注入防护）、代码风格（Python 类型注解、Rust 惯用写法、React 最佳实践）、测试覆盖（新增代码是否有对应的 smoke test 或单元测试）。项目验证：npm run verify。配置检查：npm run verify:config。不直接编辑代码，仅给出结构化审查意见。"
+    },
+    "db-migration": {
+      "description": "Alembic 数据库迁移开发 — 模型修改、迁移生成、执行与回滚",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "prompt": "你是斗地主桌面端项目的数据库迁移专家。数据库 MySQL 8.4，ORM SQLAlchemy 1.4 + aiomysql，迁移工具 Alembic（server/alembic/）。初始 schema：schema.sql。连接：DATABASE_URI=mysql+aiomysql://ddz:ddz@127.0.0.1:3306/ddz。迁移工作流：修改模型 → alembic revision --autogenerate -m '描述' → 检查脚本 → alembic upgrade head → smoke 验证。本地 MySQL 通过 Docker Compose 启动（npm run dev:db）。迁移脚本必须向下兼容。"
+    },
+    "release": {
+      "description": "发布管理 — 版本号、Tauri 构建、Release Notes、artifact 完整性",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "prompt": "你是斗地主桌面端项目的发布管理专家。当前基线 v0.2.0-alpha。完整流程：npm run verify → npm run clean:python-cache → npx tauri build → npm run desktop:artifact-smoke → npm run desktop:artifact-manifest → npm run desktop:release-bundle -- vX.Y.Z → npm run desktop:release-check -- vX.Y.Z。发布产物在 dist/linux-alpha/vX.Y.Z/（.deb + manifest.json + Release Notes + SHA256SUMS）。Release Notes 位于 docs/releases/vX.Y.Z.md。发布前运行 npm run desktop:release-check 做元数据验证。"
+    },
+    "license": {
+      "description": "许可证管理 — 上游授权追踪、第三方 notices、合规检查（只读）",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "permission": { "edit": "deny" },
+      "prompt": "你是斗地主桌面端项目的许可证顾问。项目当前无项目级许可证。上游：svzdev/doudizhu（无声明）、DouZero（Apache-2.0）。关键文件：README.md（许可说明）、NOTICE.md（第三方通知）。roadmap 0.4 阶段目标：明确许可证路径。你的职责：扫描 server/static/ 和 client/public/ 资产来源，检查依赖许可证兼容性，协助填写 NOTICE.md，但绝不编辑任何文件。"
+    },
+    "packaging": {
+      "description": "桌面端打包 — 运行时依赖、Tauri 构建、多平台发布策略",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "prompt": "你是斗地主桌面端项目的打包专家。当前仅 Linux .deb 支持（Tauri 2.9）。需管理的运行时依赖：Python 运行时、Python 依赖（requirements.txt）、DouZero 模型文件（~100MB）、前端静态资源。构建：npx tauri build。Linux 系统依赖：libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf。路线图目标：1.0 实现 Windows/macOS/Linux 发布矩阵 + 内置运行时依赖管理。"
+    }
+  },
+
+  "command": {
+    "dev:setup": { "description": "一键初始化开发环境", "template": "运行 node scripts/setup-dev.mjs 进行一键开发环境初始化（创建 .env、安装 npm 和 Python 依赖）。如需跳过安装步骤使用 --skip-install，跳过 npm 用 --skip-npm，跳过 Python 用 --skip-python。运行前先检查 .env 是否存在以避免覆盖。然后建议用户运行 npm run dev:doctor 检查环境，再运行 npm run dev:db 启动 MySQL。" },
+    "dev:verify": { "description": "运行完整验证流水线", "template": "运行 node scripts/verify.mjs 执行所有验证（backend + web + desktop + config + format）。可指定单个目标，如 npm run verify:backend。注意：web 验证需要先在 client/ 下安装依赖，desktop 需要 Rust 工具链和 Tauri 系统依赖。" },
+    "dev:db": { "description": "启动数据库", "template": "运行 docker compose up -d mysql 启动 MySQL 8.4。运行前检查 compose.yml 是否存在以及 Docker 是否运行。如需停止：npm run dev:db:down。" },
+    "dev:doctor": { "description": "开发环境诊断", "template": "运行 node scripts/doctor-dev.mjs 检查开发环境——Node、Python、Rust、Docker、MySQL 连接等。" },
+    "ai:summary": { "description": "AI 决策日志汇总", "template": "运行 PYTHONPATH=server python3 scripts/ai-decision-summary.py 生成 AI 决策日志汇总。加 --html 生成 HTML 报告（npm run ai:report）。" },
+    "release:bundle": { "description": "构建发布包", "template": "先运行 npm run clean:python-cache 清理缓存，然后运行 npx tauri build 构建桌面端。使用 npm run desktop:release-check 检查发布元数据。注意：仅 Linux 平台支持，需要 Tauri 系统依赖。" },
+    "test:backend": { "description": "运行后端单元测试", "template": "运行 PYTHONPATH=server python3 -m unittest discover -s tests/backend -p test_*.py。测试文件在 tests/backend/ 下。如需单独运行某个测试文件：PYTHONPATH=server python3 -m unittest tests/backend/test_rule.py。" },
+    "test:smoke": { "description": "运行所有 smoke test", "template": "运行 npm run verify:backend 触发所有后端编译 + smoke test。Python smoke 脚本在 scripts/*-smoke.py，需 PYTHONPATH=server。" },
+    "migration:new": { "description": "生成新的 Alembic 迁移", "template": "先确认 MySQL 运行中（npm run dev:db），然后执行 cd server && PYTHONPATH=. alembic revision --autogenerate -m '迁移描述'。迁移脚本在 server/alembic/versions/ 下，生成后务必检查自动生成的 SQL。" },
+    "migration:run": { "description": "执行数据库迁移", "template": "先确认 MySQL 运行中，然后执行 cd server && PYTHONPATH=. alembic upgrade head。如需回滚最近一次：cd server && PYTHONPATH=. alembic downgrade -1。" },
+    "release:notes": { "description": "创建 Release Notes 模板", "template": "在 docs/releases/ 下创建 vX.Y.Z.md，需包含：'Changes since last release'（引用 roadmap checkboxes）、'Known Limitations'、'Verification'（npm run verify 结果）、'Artifact Checksums'。" },
+    "rules:validate": { "description": "验证 opencode 配置和规则文件", "template": "检查 .opencode/ 下所有规则文件和 opencode.jsonc 的结构一致性：确保 agents 目录中每个 .md 都对应 opencode.jsonc 中的 agent 定义（或反之），skills 目录结构正确（SKILL.md 命名），hooks 文件格式正确。" }
+  },
+
+  "permission": {
+    "edit": "allow",
+    "bash": {
+      "git *": "allow",
+      "cargo *": "ask",
+      "tauri *": "ask",
+      "docker *": "ask",
+      "rm *": "ask",
+      "*": "allow"
+    },
+    "external_directory": {
+      "~/.config/opencode/**": "deny",
+      "*": "allow"
+    }
+  },
+
+  "skills": {
+    "paths": [".opencode/skills"]
+  },
+
+  "experimental": {
+    "mcp_timeout": 60000
+  },
+
+  "tool_output": {
+    "max_lines": 500,
+    "max_bytes": 32768
+  }
+}

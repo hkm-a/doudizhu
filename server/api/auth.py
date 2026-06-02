@@ -1,12 +1,27 @@
+from http import HTTPStatus
 from typing import Optional, Awaitable
 
 from sqlalchemy import select
 from tornado.escape import json_encode
-from tornado.web import authenticated, RequestHandler
+from tornado.web import authenticated, HTTPError, RequestHandler
 
 from api.base import RestfulHandler, JwtMixin
 from api.game.globalvar import GlobalVar
 from models import User
+
+LOGIN_NAME_MAX_LENGTH = 50
+
+
+def normalize_login_name(value):
+    if not isinstance(value, str):
+        raise HTTPError(HTTPStatus.BAD_REQUEST, reason='昵称格式异常')
+
+    name = value.strip()
+    if not name:
+        raise HTTPError(HTTPStatus.BAD_REQUEST, reason='请先输入昵称')
+    if len(name) > LOGIN_NAME_MAX_LENGTH:
+        raise HTTPError(HTTPStatus.BAD_REQUEST, reason=f'昵称最多 {LOGIN_NAME_MAX_LENGTH} 个字')
+    return name
 
 
 class IndexHandler(RequestHandler):
@@ -25,6 +40,8 @@ class HealthHandler(RestfulHandler):
             'status': 'ok',
             'service': 'doudizhu',
             'robots': self.application.allow_robot,
+            'lobby': GlobalVar.lobby_summary(),
+            'rooms': GlobalVar.room_list(),
         })
 
 
@@ -35,12 +52,12 @@ class LoginHandler(RestfulHandler, JwtMixin):
         self.write({'detail': 'welcome'})
 
     async def post(self):
-        name = self.get_json_data()['name']
+        name = normalize_login_name(self.get_json_data()['name'])
         async with self.session as session:
             async with session.begin():
                 account = await self.get_one_or_none(select(User).where(User.name == name))
                 if not account:
-                    account = User(openid=name, name=name, sex=1, avatar='')
+                    account = User(openid=name, name=name, sex=1, avatar='', point=1000)
                     session.add(account)
                     await session.commit()
 

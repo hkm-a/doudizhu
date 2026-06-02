@@ -10,6 +10,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use serde::Deserialize;
 use serde_json::json;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
@@ -94,6 +95,15 @@ impl Default for DesktopState {
 #[derive(Clone, Default)]
 struct BackendProcess {
     child: Arc<Mutex<Option<Child>>>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct PreflightCheck {
+    status: String,
+    label: String,
+    detail: String,
+    #[serde(default)]
+    hint: String,
 }
 
 impl BackendProcess {
@@ -220,6 +230,20 @@ fn start_backend_async(app: tauri::AppHandle, window: tauri::WebviewWindow, stat
             }
         };
 
+        match run_backend_preflight(&app, &state.config, &server_dir) {
+            Ok(checks) => {
+                report_startup_preflight(&window, &checks);
+                if preflight_has_failures(&checks) {
+                    report_startup_error(&window, "后端预检未通过，请按上方提示修复后重试。");
+                    return;
+                }
+            }
+            Err(error) => {
+                report_startup_error(&window, &format!("后端预检无法运行：{error}"));
+                return;
+            }
+        }
+
         match state
             .backend
             .start_if_needed(&state.config, &server_dir, &backend_log_path)
@@ -251,6 +275,58 @@ fn find_server_dir(app: &tauri::AppHandle) -> Result<PathBuf, Box<dyn std::error
     }
 
     Err("server/app.py was not found in resources or project root".into())
+}
+
+fn find_preflight_script(app: &tauri::AppHandle) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let resource_script = app.path().resource_dir()?.join("backend-preflight.py");
+    if resource_script.is_file() {
+        return Ok(resource_script);
+    }
+
+    let manifest_script =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/backend-preflight.py");
+    if manifest_script.is_file() {
+        return Ok(manifest_script.canonicalize()?);
+    }
+
+    Err("scripts/backend-preflight.py was not found in resources or project root".into())
+}
+
+fn run_backend_preflight(
+    app: &tauri::AppHandle,
+    config: &BackendConfig,
+    server_dir: &Path,
+) -> Result<Vec<PreflightCheck>, String> {
+    let script = find_preflight_script(app).map_err(|error| error.to_string())?;
+    let output = Command::new(python_executable(server_dir))
+        .arg(script)
+        .arg("--json")
+        .arg("--database-uri")
+        .arg(&config.database_uri)
+        .env("PYTHONPATH", server_dir)
+        .output()
+        .map_err(|error| format!("failed to run backend preflight: {error}"))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if !stdout.trim().is_empty() {
+        return parse_preflight_checks(&stdout);
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    if output.status.success() {
+        Err("backend preflight returned no checks".to_string())
+    } else {
+        Err(stderr.trim().to_string())
+    }
+}
+
+fn parse_preflight_checks(raw_json: &str) -> Result<Vec<PreflightCheck>, String> {
+    serde_json::from_str(raw_json.trim())
+        .map_err(|error| format!("failed to parse backend preflight output: {error}"))
+}
+
+fn preflight_has_failures(checks: &[PreflightCheck]) -> bool {
+    checks.iter().any(|check| check.status == "fail")
 }
 
 fn wait_for_backend(config: &BackendConfig, timeout: Duration) -> Result<(), String> {
@@ -316,7 +392,9 @@ fn is_backend_ready(config: &BackendConfig) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{host_from_http_url, port_from_http_url};
+    use super::{
+        host_from_http_url, parse_preflight_checks, port_from_http_url, preflight_has_failures,
+    };
 
     #[test]
     fn extracts_host_from_http_url() {
@@ -338,6 +416,29 @@ mod tests {
     fn ignores_urls_without_explicit_port() {
         assert_eq!(port_from_http_url("http://localhost/"), None);
     }
+
+    #[test]
+    fn parses_preflight_json() {
+        let checks = parse_preflight_checks(
+            r#"[{"status":"pass","label":"python import tornado","detail":"available","hint":""}]"#,
+        )
+        .unwrap();
+
+        assert_eq!(checks.len(), 1);
+        assert_eq!(checks[0].status, "pass");
+        assert_eq!(checks[0].label, "python import tornado");
+        assert!(!preflight_has_failures(&checks));
+    }
+
+    #[test]
+    fn treats_failed_preflight_checks_as_blocking() {
+        let checks = parse_preflight_checks(
+            r#"[{"status":"warn","label":"database TCP 127.0.0.1:3306","detail":"refused","hint":"start MySQL"},{"status":"fail","label":"python import aiomysql","detail":"missing","hint":"pip install -r requirements.txt"}]"#,
+        )
+        .unwrap();
+
+        assert!(preflight_has_failures(&checks));
+    }
 }
 
 fn report_startup_status(window: &tauri::WebviewWindow, message: &str) {
@@ -346,6 +447,29 @@ fn report_startup_status(window: &tauri::WebviewWindow, message: &str) {
 
 fn report_startup_error(window: &tauri::WebviewWindow, message: &str) {
     update_startup_page(window, "error", message);
+}
+
+fn report_startup_preflight(window: &tauri::WebviewWindow, checks: &[PreflightCheck]) {
+    let checks = checks
+        .iter()
+        .map(|check| {
+            json!({
+                "status": check.status,
+                "label": check.label,
+                "detail": check.detail,
+                "hint": check.hint,
+            })
+        })
+        .collect::<Vec<_>>();
+    let payload = json!({
+        "state": "ready",
+        "message": "后端预检完成，正在准备启动服务...",
+        "checks": checks,
+    })
+    .to_string();
+    let _ = window.eval(format!(
+        "window.__setStartupState && window.__setStartupState({payload});"
+    ));
 }
 
 fn update_startup_page(window: &tauri::WebviewWindow, state: &str, message: &str) {

@@ -4,6 +4,7 @@ const env = parseEnv(readFileSync('.env.example', 'utf8'));
 const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
 const compose = readFileSync('compose.yml', 'utf8');
 const schema = readFileSync('schema.sql', 'utf8');
+const tauriConfig = readFileSync('src-tauri/tauri.conf.json', 'utf8');
 
 const expectedEnv = {
   PORT: '8081',
@@ -32,6 +33,12 @@ const expectedScripts = {
   'dev:server': 'cd server && PYTHONPATH=. python3 app.py',
   'dev:web': 'npm --prefix client start',
   'verify:config': 'node scripts/verify.mjs config',
+  'verify:release': 'node scripts/verify-release-metadata.mjs',
+  'desktop:smoke': 'node scripts/desktop-startup-smoke.mjs',
+  'desktop:artifact-smoke': 'node scripts/linux-alpha-artifact-smoke.mjs',
+  'desktop:artifact-manifest': 'node scripts/linux-alpha-manifest.mjs',
+  'desktop:release-bundle': 'node scripts/linux-alpha-bundle.mjs',
+  'desktop:release-check': 'node scripts/linux-alpha-release-check.mjs',
 };
 
 for (const [key, value] of Object.entries(expectedScripts)) {
@@ -60,6 +67,12 @@ for (const required of [
 ]) {
   assertIncludes(schema, required, 'schema.sql');
 }
+
+assertIncludes(
+  tauriConfig,
+  '"../scripts/backend-preflight.py": "backend-preflight.py"',
+  'src-tauri/tauri.conf.json',
+);
 
 console.log('configuration-ok');
 

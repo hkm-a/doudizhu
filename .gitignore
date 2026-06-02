@@ -51,3 +51,21 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *,cover
+
+# Generated indexes
+.codegraph/
+
+# Playwright MCP
+.playwright-mcp/
+
+# Debug screenshots
+screenshot/
+happy-*.png
+pixel-replica-game.png
+
+# Test artifacts
+client/test-results/
+
+# Stray files
+There
+.tmp-desktop-hud-qa.mjs

@@ -1,9 +1,9 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-from api.game.player import Player
+from api.game.player import Player, State
 from api.game.protocol import Protocol as Pt
-from api.game.room import Room
+from api.game.room import Room, ROBOT_FIRST_JOIN_DELAY, ROBOT_SECOND_JOIN_DELAY
 
 
 class PlayerStub:
@@ -20,6 +20,8 @@ class PlayerStub:
         self.hand_pokers = []
         self.messages = []
         self.socket = None
+        self.state = State.WAITING
+        self.point = 1000
 
     def push_pokers(self, pokers):
         self.hand_pokers.extend(pokers)
@@ -57,12 +59,26 @@ class TimerStub:
 class RecordSocketStub:
     def __init__(self):
         self.records = []
+        self.points = []
 
     async def insert(self, record):
         self.records.append(record)
 
+    async def save_player_points(self, points):
+        self.points.append(points)
+
 
 class RoomShotTest(unittest.TestCase):
+    def test_room_level_controls_base_score(self):
+        self.assertEqual(Room(1, level=1).sync_data()['origin'], 10)
+        self.assertEqual(Room(2, level=2).sync_data()['origin'], 30)
+        self.assertEqual(Room(3, level=3).sync_data()['origin'], 60)
+
+    def test_room_level_controls_entry_point_requirement(self):
+        self.assertEqual(Room.level_profile(1)['min_point'], 0)
+        self.assertEqual(Room.level_profile(2)['min_point'], 1000)
+        self.assertEqual(Room.level_profile(3)['min_point'], 2000)
+
     def test_valid_shot_updates_last_shot_and_round(self):
         room = Room(1)
 
@@ -119,6 +135,42 @@ class RoomShotTest(unittest.TestCase):
         self.assertEqual(room.last_shot_poker, [4])
         self.assertEqual(room.shot_round, [])
 
+    def test_equal_follow_is_rejected_without_mutating_state(self):
+        room = Room(1)
+        room.last_shot_seat = 0
+        room.last_shot_poker = [3]
+
+        error = room.on_shot(1, [3])
+
+        self.assertEqual(error, 'Poker small than last shot')
+        self.assertEqual(room.last_shot_seat, 0)
+        self.assertEqual(room.last_shot_poker, [3])
+        self.assertEqual(room.shot_round, [])
+
+    def test_different_non_bomb_shape_follow_is_rejected_without_mutating_state(self):
+        room = Room(1)
+        room.last_shot_seat = 0
+        room.last_shot_poker = [4]
+
+        error = room.on_shot(1, [3, 16])
+
+        self.assertEqual(error, 'Poker small than last shot')
+        self.assertEqual(room.last_shot_seat, 0)
+        self.assertEqual(room.last_shot_poker, [4])
+        self.assertEqual(room.shot_round, [])
+
+    def test_bomb_can_follow_regular_non_bomb_shape(self):
+        room = Room(1)
+        room.last_shot_seat = 0
+        room.last_shot_poker = [52]
+
+        error = room.on_shot(1, [3, 16, 29, 42])
+
+        self.assertEqual(error, '')
+        self.assertEqual(room.last_shot_seat, 1)
+        self.assertEqual(room.last_shot_poker, [3, 16, 29, 42])
+        self.assertEqual(room.shot_round, [[3, 16, 29, 42]])
+
     def test_bomb_and_rocket_double_bomb_multiplier(self):
         room = Room(1)
 
@@ -143,6 +195,36 @@ class RoomBroadcastTest(unittest.TestCase):
 
         self.assertEqual(connected.messages, [packet])
         logger.warning.assert_called_once_with('USER[%d] missing socket for response %s', 2, packet)
+
+
+class RoomRobotFillTest(unittest.TestCase):
+    def test_new_player_schedules_fast_robot_fill_for_beginner_room(self):
+        room = Room(1, level=1, allow_robot=True)
+        player = PlayerStub(1, 0)
+
+        with patch('api.game.room.IOLoop') as ioloop:
+            room.on_join(player)
+
+        ioloop.current.return_value.call_later.assert_called_once_with(
+            ROBOT_FIRST_JOIN_DELAY,
+            room.add_robot,
+            nth=1,
+        )
+
+    def test_first_robot_schedules_second_robot_quickly(self):
+        room = Room(1, level=1, allow_robot=True)
+        room.players = [PlayerStub(1, 0), None, None]
+
+        with patch('api.game.components.simple.RobotPlayer') as robot_player:
+            robot_player.return_value.to_server = Mock()
+            with patch('api.game.room.IOLoop') as ioloop:
+                room.add_robot(nth=1)
+
+        ioloop.current.return_value.call_later.assert_called_once_with(
+            ROBOT_SECOND_JOIN_DELAY,
+            room.add_robot,
+            nth=2,
+        )
 
 
 class RoomRestartTest(unittest.TestCase):
@@ -172,6 +254,33 @@ class RoomRestartTest(unittest.TestCase):
         self.assertEqual(room.shot_round, [])
         self.assertEqual(room._multiple_details['bomb'], 1)
         self.assertTrue(room.timer.stopped)
+
+
+class RoomSyncTest(unittest.TestCase):
+    def test_sync_data_exposes_serializable_room_state(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        players = [PlayerStub(1, 0), PlayerStub(2, 1), None]
+        players[0].state = State.PLAYING
+        players[1].state = State.PLAYING
+        room.players = players
+        room.whose_turn = 1
+        room.pokers = [52, 53, 54]
+        room.last_shot_seat = 0
+        room.last_shot_poker = [3, 4]
+
+        data = room.sync_data()
+
+        self.assertEqual(data['level'], 1)
+        self.assertEqual(data['label'], '新手场')
+        self.assertEqual(data['origin'], 10)
+        self.assertEqual(data['min_point'], 0)
+        self.assertEqual(data['state'], State.PLAYING)
+        self.assertIsInstance(data['state'], int)
+        self.assertEqual(data['whose_turn'], 2)
+        self.assertEqual(data['pokers'], [52, 53, 54])
+        self.assertEqual(data['last_shot_uid'], 1)
+        self.assertEqual(data['last_shot_poker'], [3, 4])
 
 
 class RoomTimeoutTest(unittest.TestCase):
@@ -338,6 +447,22 @@ class RoomScoringTest(unittest.TestCase):
         self.assertEqual(room.get_point(players[1], players[1]), 150)
         self.assertEqual(room.get_point(players[1], players[2]), 150)
 
+    def test_game_over_applies_score_delta_to_player_balances(self):
+        room, players = self.make_room()
+        room.timer = TimerStub()
+        room.shot_round = [[3], [4], []]
+
+        with patch('api.game.room.IOLoop') as ioloop_mock, patch('api.game.room.logging'):
+            room.on_game_over(players[0])
+
+        response = players[0].messages[-1]
+        self.assertEqual([
+            {'uid': 1, 'point': 300, 'balance': 1300, 'pokers': [], 'segment': 'gold', 'segment_points': 0},
+            {'uid': 2, 'point': -150, 'balance': 850, 'pokers': [], 'segment': 'gold', 'segment_points': 0},
+            {'uid': 3, 'point': -150, 'balance': 850, 'pokers': [], 'segment': 'gold', 'segment_points': 0},
+        ], response[1]['players'])
+        self.assertEqual([player.point for player in players], [1300, 850, 850])
+
     def test_landlord_lookup_skips_empty_seats(self):
         room = Room(1)
         players = [PlayerStub(1, 0), PlayerStub(3, 2, landlord=1)]
@@ -436,6 +561,26 @@ class RoomSaveShotRoundTest(unittest.IsolatedAsyncioTestCase):
             'Room[%d] skipped saving shot round because landlord is missing',
             1,
         )
+
+    async def test_save_player_points_records_current_balances(self):
+        room = Room(1)
+        players = [
+            PlayerStub(1, 0),
+            PlayerStub(2, 1),
+            PlayerStub(3, 2),
+        ]
+        players[0].point = 1300
+        players[1].point = 850
+        players[2].point = 850
+        players[0].socket = RecordSocketStub()
+        players[1].socket = RecordSocketStub()
+        room.players = players
+
+        saved = await room.save_player_points()
+
+        self.assertTrue(saved)
+        self.assertEqual(players[0].socket.points, [{1: 1300, 2: 850, 3: 850}])
+        self.assertEqual(players[1].socket.points, [])
 
 
 class RoomMultipleTest(unittest.TestCase):

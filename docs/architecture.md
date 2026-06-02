@@ -32,11 +32,17 @@ DouZero 与 svzdev 的牌表示不同：
 
 - 保留 svzdev 原启发式机器人为 `RuleBasedPolicy`。
 - 新增 `DouZeroPolicy`，负责检查 `DOUZERO_ENABLED`、`DOUZERO_MODEL_DIR`、模型文件和 Python 依赖。
+- 新增 `server.ai.cards`，负责 svz 具体牌 id 与 DouZero rank/action 的双向转换。
+- 新增 `server.ai.infoset`，负责把当前房间快照转换为 DouZero `InfoSet` 字段。
+- 新增 `server.ai.decision_log`，可通过 `AI_DECISION_LOG_PATH` 输出 JSONL 决策日志。
+- 新增 `server.ai.decision_summary` 和 `scripts/ai-decision-summary.py`，用于汇总 AI 决策日志。
+- 新增 AI 决策日志 HTML 报告，可视化策略、模式、fallback 原因和关键计数分布。
+- 新增 `server.ai.replay` 和 `scripts/ai-replay-smoke.py`，提供固定牌局回放 smoke。
+- 新增 `scripts/ai-douzero-replay-smoke.py`，用于有 checkpoint 环境下的严格 DouZero 回放验证。
+- 新增 `scripts/backend-preflight.py`，用于检查后端 Python 依赖和 MySQL TCP 可达性。
 - `RobotPlayer` 已改为通过策略接口出牌和抢地主。
 
 ## 待完成
 
-- 实现 svzdev 牌局状态到 DouZero `InfoSet` 的转换。
-- 实现 DouZero 动作到 svzdev 具体牌 id 的回映射。
-- 补充 AI 策略单元测试和固定牌局回放测试。
+- 在发布环境中定期运行真实 checkpoint 回放，并把结果纳入 release checklist。
 - 桌面端打包时处理 Python 服务、模型文件和前端静态资源的生命周期。

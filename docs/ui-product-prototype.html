@@ -1,0 +1,964 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>斗地主产品原型</title>
+  <style>
+    :root {
+      --ink: #17140f;
+      --paper: #fff8e8;
+      --muted: #d8cab0;
+      --felt: #105846;
+      --felt-2: #183f35;
+      --panel: rgba(18, 24, 21, 0.9);
+      --line: rgba(255, 248, 232, 0.15);
+      --brass: #d8aa48;
+      --brass-2: #f3d984;
+      --red: #c83a37;
+      --blue: #6fb7d8;
+      --mint: #8ee0c0;
+      --danger: #ff9b72;
+      --display: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", "KaiTi", serif;
+      --body: "Avenir Next", "Gill Sans", "Trebuchet MS", "Microsoft YaHei UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background:
+        linear-gradient(90deg, rgba(255, 248, 232, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255, 248, 232, 0.035) 1px, transparent 1px),
+        radial-gradient(ellipse at 52% 20%, rgba(16, 88, 70, 0.86), transparent 58%),
+        linear-gradient(145deg, #111614, #18201d 42%, #331f22);
+      background-size: 42px 42px, 42px 42px, auto, auto;
+      color: var(--paper);
+      font-family: var(--body);
+    }
+
+    .prototype {
+      width: min(1440px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 28px 0 44px;
+    }
+
+    .prototype__head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 18px;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1,
+    h2,
+    .brand-card {
+      font-family: var(--display);
+    }
+
+    h1 {
+      font-size: clamp(32px, 5vw, 56px);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+      max-width: 620px;
+    }
+
+    .pill {
+      border: 1px solid rgba(216, 170, 72, 0.34);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(216, 170, 72, 0.1);
+      color: var(--brass-2);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 380px minmax(0, 1fr);
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .panel,
+    .screen {
+      border: 1px solid var(--line);
+      border-top-color: rgba(216, 170, 72, 0.45);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255, 248, 232, 0.055), transparent 36%),
+        rgba(15, 20, 18, 0.88);
+      box-shadow: 0 22px 54px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .panel {
+      padding: 18px;
+    }
+
+    .panel h2 {
+      font-size: 25px;
+    }
+
+    .panel p {
+      margin-top: 8px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .flow {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .flow__item {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      border: 1px solid rgba(255, 248, 232, 0.1);
+      border-radius: 7px;
+      padding: 10px;
+      background: rgba(6, 12, 10, 0.34);
+    }
+
+    .flow__item b {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 5px;
+      background: rgba(111, 183, 216, 0.14);
+      color: var(--blue);
+    }
+
+    .flow__item strong {
+      display: block;
+      color: var(--paper);
+      font-size: 15px;
+    }
+
+    .flow__item span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .screen {
+      min-height: 860px;
+    }
+
+    .appbar {
+      min-height: 64px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 248, 232, 0.1);
+      padding: 12px 16px;
+      background: rgba(8, 14, 12, 0.54);
+    }
+
+    .user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-card {
+      width: 46px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border: 2px solid rgba(200, 58, 55, 0.78);
+      border-radius: 6px;
+      background: var(--paper);
+      color: var(--red);
+      font-size: 28px;
+      font-weight: 900;
+    }
+
+    .user strong {
+      display: block;
+      color: var(--paper);
+    }
+
+    .user span {
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      min-height: 36px;
+      border: 1px solid rgba(142, 224, 192, 0.34);
+      border-radius: 4px;
+      padding: 0 12px;
+      background: rgba(16, 88, 70, 0.48);
+      color: var(--paper);
+      font: inherit;
+      font-weight: 900;
+    }
+
+    button.primary {
+      border-color: rgba(216, 170, 72, 0.5);
+      background: linear-gradient(180deg, var(--brass-2), var(--brass));
+      color: var(--ink);
+    }
+
+    .lobby {
+      display: grid;
+      grid-template-columns: 290px minmax(0, 1fr);
+      gap: 16px;
+      padding: 16px;
+    }
+
+    .login-card {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      border: 1px solid rgba(255, 248, 232, 0.13);
+      border-radius: 8px;
+      padding: 16px;
+      background: rgba(6, 12, 10, 0.32);
+    }
+
+    .login-card h2,
+    .section-title {
+      color: var(--paper);
+      font-size: 22px;
+    }
+
+    .field {
+      display: grid;
+      grid-template-columns: 70px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .field input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid rgba(216, 170, 72, 0.42);
+      border-radius: 4px;
+      padding: 0 10px;
+      background: rgba(255, 248, 232, 0.96);
+      color: var(--ink);
+      font: inherit;
+      font-weight: 800;
+    }
+
+    .rooms {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .room {
+      position: relative;
+      min-height: 156px;
+      display: grid;
+      align-content: end;
+      gap: 5px;
+      border: 1px solid rgba(255, 248, 232, 0.13);
+      border-radius: 8px;
+      padding: 14px;
+      background:
+        linear-gradient(180deg, rgba(216, 170, 72, 0.12), transparent 45%),
+        rgba(7, 13, 11, 0.38);
+    }
+
+    .room::before {
+      content: "";
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 28px;
+      height: 38px;
+      border: 1px solid rgba(255, 248, 232, 0.24);
+      border-radius: 4px;
+      background: rgba(255, 248, 232, 0.08);
+    }
+
+    .room.selected {
+      border-color: rgba(216, 170, 72, 0.78);
+      box-shadow: 0 0 0 3px rgba(216, 170, 72, 0.13);
+    }
+
+    .room h3 {
+      color: var(--brass-2);
+      font-family: var(--display);
+      font-size: 22px;
+    }
+
+    .room span,
+    .room small {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .table-screen {
+      border-top: 1px solid rgba(255, 248, 232, 0.1);
+      padding: 16px;
+    }
+
+    .table-layout {
+      display: block;
+    }
+
+    .hud {
+      display: grid;
+      gap: 12px;
+    }
+
+    .hud-card {
+      border: 1px solid rgba(255, 248, 232, 0.13);
+      border-radius: 8px;
+      padding: 12px;
+      background:
+        linear-gradient(180deg, rgba(255, 248, 232, 0.045), transparent),
+        rgba(7, 13, 11, 0.68);
+      backdrop-filter: blur(10px);
+    }
+
+    .hud-card.action {
+      border-color: rgba(216, 170, 72, 0.58);
+      background:
+        linear-gradient(180deg, rgba(216, 170, 72, 0.16), transparent 42%),
+        rgba(39, 31, 20, 0.74);
+      animation: breathe 1.8s ease-in-out infinite;
+    }
+
+    .hud-card danger {
+      color: var(--danger);
+    }
+
+    .label {
+      display: block;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.03em;
+    }
+
+    .hud-card strong {
+      display: block;
+      margin-top: 4px;
+      color: var(--paper);
+      font-family: var(--display);
+      font-size: 20px;
+    }
+
+    .hud-card p,
+    .hud-card small {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .seat {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 8px;
+      border-left: 3px solid rgba(111, 183, 216, 0.44);
+      padding: 10px;
+      background: rgba(6, 12, 10, 0.28);
+    }
+
+    .seat + .seat {
+      margin-top: 8px;
+    }
+
+    .seat b {
+      width: 34px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 248, 232, 0.22);
+      border-radius: 5px;
+      color: var(--blue);
+    }
+
+    .table {
+      position: relative;
+      min-height: 660px;
+      overflow: hidden;
+      border: 1px solid rgba(216, 170, 72, 0.34);
+      border-radius: 8px;
+      background:
+        radial-gradient(ellipse at center, rgba(29, 124, 101, 0.96), rgba(12, 45, 38, 0.98) 67%),
+        var(--felt);
+      box-shadow: inset 0 0 0 12px rgba(255, 248, 232, 0.025);
+    }
+
+    .table-hud {
+      position: absolute;
+      z-index: 3;
+    }
+
+    .table-hud--advisor {
+      top: 58px;
+      left: 20px;
+      width: 230px;
+    }
+
+    .table-hud--seats {
+      top: 184px;
+      left: 20px;
+      width: 244px;
+    }
+
+    .table-hud--quick {
+      right: 20px;
+      bottom: 106px;
+      width: 250px;
+    }
+
+    .table-hud--pulse {
+      top: 58px;
+      right: 20px;
+      width: 230px;
+    }
+
+    .table-hud--activity {
+      right: 20px;
+      bottom: 194px;
+      width: 280px;
+    }
+
+    .table-hud--last {
+      top: 184px;
+      right: 20px;
+      width: 230px;
+    }
+
+    .table::before {
+      content: "";
+      position: absolute;
+      inset: 44px 62px;
+      border: 2px solid rgba(216, 170, 72, 0.22);
+      border-radius: 50%;
+    }
+
+    .phase {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      left: 14px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .phase span {
+      min-height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(7, 13, 11, 0.38);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .phase span.active {
+      background: rgba(216, 170, 72, 0.2);
+      color: var(--brass-2);
+    }
+
+    .last-shot {
+      position: absolute;
+      top: 232px;
+      left: 50%;
+      z-index: 2;
+      display: flex;
+      transform: translateX(-50%);
+    }
+
+    .hand {
+      position: absolute;
+      right: 12%;
+      bottom: 30px;
+      left: 12%;
+      z-index: 2;
+      display: flex;
+      justify-content: center;
+    }
+
+    .card {
+      width: 44px;
+      height: 64px;
+      display: grid;
+      place-items: center;
+      margin-left: -9px;
+      border: 1px solid rgba(23, 20, 15, 0.3);
+      border-radius: 5px;
+      background: linear-gradient(145deg, var(--paper), #eadbbd);
+      color: var(--ink);
+      font-family: Georgia, serif;
+      font-weight: 900;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+      transform: rotate(var(--r));
+    }
+
+    .card.red {
+      color: var(--red);
+    }
+
+    .metrics {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      left: 18px;
+      z-index: 3;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 0;
+      border: 1px solid rgba(255, 248, 232, 0.08);
+      border-radius: 8px;
+      padding: 8px;
+      background: rgba(6, 12, 10, 0.48);
+      backdrop-filter: blur(10px);
+    }
+
+    .metric {
+      position: relative;
+      overflow: hidden;
+      min-height: 72px;
+      border: 1px solid rgba(255, 248, 232, 0.1);
+      border-radius: 7px;
+      padding: 10px;
+      background: rgba(7, 13, 11, 0.34);
+    }
+
+    .metric::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(111, 183, 216, 0.58), transparent);
+    }
+
+    .metric span {
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 8px;
+      color: var(--brass-2);
+      font-family: var(--display);
+      font-size: 22px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .activity {
+      display: grid;
+      gap: 0;
+      padding: 0;
+    }
+
+    .activity h3 {
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 248, 232, 0.1);
+      padding: 0 12px;
+      color: var(--blue);
+      font-size: 12px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .activity-row {
+      display: grid;
+      grid-template-columns: 10px 58px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+      min-height: 36px;
+      padding: 8px 12px;
+      border-top: 1px solid rgba(255, 248, 232, 0.08);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .activity-row:first-of-type {
+      border-top: 0;
+      background: linear-gradient(90deg, rgba(216, 170, 72, 0.12), transparent 52%);
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 99px;
+      background: var(--blue);
+      animation: ping 1.3s ease-out infinite;
+    }
+
+    .settlement {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 16px;
+      padding: 16px;
+      border-top: 1px solid rgba(255, 248, 232, 0.1);
+      background: rgba(6, 12, 10, 0.22);
+    }
+
+    .score-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      min-height: 42px;
+      align-items: center;
+      border-top: 1px solid rgba(255, 248, 232, 0.1);
+      color: var(--muted);
+    }
+
+    .score-row strong {
+      color: var(--mint);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .score-row.lose strong {
+      color: var(--danger);
+    }
+
+    @keyframes breathe {
+      50% {
+        box-shadow: 0 0 0 4px rgba(216, 170, 72, 0.08);
+      }
+    }
+
+    @keyframes ping {
+      100% {
+        box-shadow: 0 0 0 9px rgba(111, 183, 216, 0);
+      }
+    }
+
+    @media (max-width: 1180px) {
+      .grid,
+      .lobby,
+      .settlement {
+        grid-template-columns: 1fr;
+      }
+
+      .rooms {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .prototype {
+        width: min(100% - 20px, 1440px);
+      }
+
+      .prototype__head,
+      .appbar {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .legend,
+      .actions {
+        justify-content: flex-start;
+      }
+
+      .metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .table {
+        min-height: 720px;
+      }
+
+      .table-hud {
+        position: relative;
+        top: auto;
+        right: auto;
+        bottom: auto;
+        left: auto;
+        width: auto;
+        margin: 10px;
+      }
+
+      .phase,
+      .last-shot,
+      .hand,
+      .metrics {
+        position: relative;
+        top: auto;
+        right: auto;
+        bottom: auto;
+        left: auto;
+        transform: none;
+        margin: 10px;
+      }
+
+      .last-shot,
+      .hand {
+        justify-content: center;
+      }
+
+      .card {
+        width: 34px;
+        height: 50px;
+        margin-left: -8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="prototype">
+    <header class="prototype__head">
+      <div>
+        <p class="eyebrow">Product Prototype</p>
+        <h1>斗地主桌面牌室</h1>
+      </div>
+      <div class="legend" aria-label="设计来源">
+        <span class="pill">Ant Design 信息架构</span>
+        <span class="pill">layui 中文工具感</span>
+        <span class="pill">React Bits 轻动效</span>
+      </div>
+    </header>
+
+    <section class="grid">
+      <aside class="panel">
+        <h2>原型说明</h2>
+        <p>这个原型展示产品进入牌局后的真实形态：不是营销页，而是一个可反复玩的桌面牌室。左侧是用户路径，右侧是一张完整的产品界面草图。</p>
+
+        <div class="flow">
+          <div class="flow__item">
+            <b>1</b>
+            <div>
+              <strong>进入大厅</strong>
+              <span>输入昵称、看服务状态、选择初级/中级/高级场。</span>
+            </div>
+          </div>
+          <div class="flow__item">
+            <b>2</b>
+            <div>
+              <strong>坐上牌桌</strong>
+              <span>中心是牌桌，两侧显示行动建议、座位、局势和动态。</span>
+            </div>
+          </div>
+          <div class="flow__item">
+            <b>3</b>
+            <div>
+              <strong>出牌与观察</strong>
+              <span>当前回合会轻微呼吸，最新动态会脉冲，避免错过操作。</span>
+            </div>
+          </div>
+          <div class="flow__item">
+            <b>4</b>
+            <div>
+              <strong>结算复盘</strong>
+              <span>局后看到本局输赢、余额、近局走势和上一手信息。</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <section class="screen" aria-label="斗地主产品界面原型">
+        <div class="appbar">
+          <div class="user">
+            <div class="brand-card">斗</div>
+            <div>
+              <strong>玩家：阿衡</strong>
+              <span>UID 42 · 积分 1680 · 中级场</span>
+            </div>
+          </div>
+          <div class="actions">
+            <button>换桌</button>
+            <button class="primary">退出登录</button>
+          </div>
+        </div>
+
+        <div class="lobby">
+          <div class="login-card">
+            <h2>大厅入口</h2>
+            <div class="field">
+              <label>昵称</label>
+              <input value="阿衡" readonly>
+            </div>
+            <div class="field">
+              <label>状态</label>
+              <input value="服务在线 · 机器人补位开启" readonly>
+            </div>
+            <button class="primary">进入牌桌</button>
+          </div>
+
+          <div>
+            <h2 class="section-title">选择场次</h2>
+            <div class="rooms">
+              <article class="room">
+                <h3>初级场</h3>
+                <span>底分 1</span>
+                <small>24 人 · 入场 0 · 可进入</small>
+              </article>
+              <article class="room selected">
+                <h3>中级场</h3>
+                <span>底分 5</span>
+                <small>18 人 · 入场 1000 · 已选择</small>
+              </article>
+              <article class="room">
+                <h3>高级场</h3>
+                <span>底分 20</span>
+                <small>6 人 · 入场 3000 · 积分不足</small>
+              </article>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-screen">
+          <div class="table-layout">
+            <aside class="hud">
+              <section class="hud-card action">
+                <span class="label">行动建议</span>
+                <strong>检查后出牌</strong>
+                <p>已选 3 张牌，可确认牌型后出牌。</p>
+              </section>
+
+              <section class="hud-card">
+                <span class="label">玩家座位</span>
+                <div class="seat">
+                  <b>你</b>
+                  <div><strong>阿衡</strong><small>地主 · 手牌 17 张</small></div>
+                </div>
+                <div class="seat">
+                  <b>上</b>
+                  <div><strong>机器人甲</strong><small>农民 · 手牌 12 张</small></div>
+                </div>
+                <div class="seat">
+                  <b>下</b>
+                  <div><strong>机器人乙</strong><small>农民 · 手牌 8 张</small></div>
+                </div>
+              </section>
+
+              <section class="hud-card">
+                <span class="label">快捷语</span>
+                <p>大家好 · 我准备好了 · 打得不错</p>
+              </section>
+            </aside>
+
+            <section>
+              <div class="table">
+                <div class="phase">
+                  <span>准备中</span>
+                  <span>叫地主</span>
+                  <span class="active">出牌中</span>
+                  <span>结算</span>
+                </div>
+                <div class="last-shot">
+                  <i class="card red" style="--r:-4deg">Q</i>
+                  <i class="card" style="--r:2deg">Q</i>
+                  <i class="card red" style="--r:6deg">Q</i>
+                </div>
+                <div class="hand">
+                  <i class="card red" style="--r:-11deg">3</i>
+                  <i class="card" style="--r:-8deg">4</i>
+                  <i class="card red" style="--r:-5deg">5</i>
+                  <i class="card" style="--r:-2deg">7</i>
+                  <i class="card red" style="--r:1deg">9</i>
+                  <i class="card" style="--r:4deg">J</i>
+                  <i class="card red" style="--r:7deg">K</i>
+                  <i class="card" style="--r:10deg">A</i>
+                </div>
+              </div>
+
+              <div class="metrics">
+                <div class="metric"><span>人数</span><strong>3/3</strong></div>
+                <div class="metric"><span>倍数</span><strong>x24</strong></div>
+                <div class="metric"><span>计时</span><strong>18s</strong></div>
+                <div class="metric"><span>地主</span><strong>你</strong></div>
+                <div class="metric"><span>已选</span><strong>3</strong></div>
+              </div>
+            </section>
+
+            <aside class="hud">
+              <section class="hud-card">
+                <span class="label">牌局脉搏</span>
+                <strong>下家低牌</strong>
+                <p>机器人乙只剩 8 张，节奏开始加快。</p>
+              </section>
+
+              <section class="hud-card activity">
+                <h3>牌桌动态</h3>
+                <div class="activity-row"><i class="dot"></i><span>出牌中</span><strong>轮到你操作</strong></div>
+                <div class="activity-row"><i></i><span>上一手</span><strong>机器人甲出了三张 Q</strong></div>
+                <div class="activity-row"><i></i><span>叫地主</span><strong>你成为地主，倍数 x3</strong></div>
+              </section>
+
+              <section class="hud-card">
+                <span class="label">上一手</span>
+                <strong>三张 Q</strong>
+                <p>需要三带、炸弹或更高牌型压制。</p>
+              </section>
+            </aside>
+          </div>
+
+          <div class="settlement">
+            <section class="hud-card">
+              <span class="label">结算摘要</span>
+              <strong>本局地主胜</strong>
+              <div class="score-row"><span>阿衡</span><strong>+240</strong></div>
+              <div class="score-row lose"><span>机器人甲</span><strong>-120</strong></div>
+              <div class="score-row lose"><span>机器人乙</span><strong>-120</strong></div>
+            </section>
+            <section class="hud-card">
+              <span class="label">近局战绩</span>
+              <strong>净胜分 +360</strong>
+              <p>3 胜 1 负 · 2 连胜。下一局仍保持中级场。</p>
+            </section>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

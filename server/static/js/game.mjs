@@ -2,6 +2,23 @@ import {Poker, Rule} from '/static/js/rule.mjs'
 import {Player, createPlay} from '/static/js/player.mjs'
 import {Protocol, Socket} from '/static/js/net.mjs'
 
+const GAME_OVER_RESTART_DELAY = 2000;
+
+function getGameOverResult(isLandlordWinner) {
+    if (isLandlordWinner) {
+        return {
+            title: '地主赢',
+            detail: '地主守住牌桌',
+            sound: 'music_win',
+        };
+    }
+    return {
+        title: '农民赢',
+        detail: '农民合力获胜',
+        sound: 'music_lose',
+    };
+}
+
 class Observer {
 
     constructor() {
@@ -156,6 +173,74 @@ export class Game {
             group.visible = is_rob;
             observer.set('countdown', -1);
         });
+
+        // GDD v0.2 G 章节：加倍阶段按钮 + HUD 状态
+        const doubleGroup = this.game.add.group();
+        const widthHalf = width;
+        const heightHalf = height;
+        const noDouble = this.game.add.text(widthHalf * 0.4, heightHalf * 0.6, '不加倍', {
+            font: '32px', fill: '#ffaa55', align: 'center',
+            backgroundColor: '#222', padding: {x: 18, y: 10},
+        });
+        noDouble.anchor.set(0.5, 0);
+        noDouble.inputEnabled = true;
+        noDouble.events.onInputDown.add(function () {
+            this.send_message([Protocol.REQ_DOUBLE, {'double': 0}]);
+            try { this.game.add.audio('pass_placeholder').play(); } catch (e) {}
+            doubleGroup.visible = false;
+        }, this);
+        doubleGroup.add(noDouble);
+
+        const yesDouble = this.game.add.text(widthHalf * 0.6, heightHalf * 0.6, '加倍', {
+            font: '32px', fill: '#ffeb70', align: 'center',
+            backgroundColor: '#553', padding: {x: 18, y: 10},
+        });
+        yesDouble.anchor.set(0.5, 0);
+        yesDouble.inputEnabled = true;
+        yesDouble.events.onInputDown.add(function () {
+            this.send_message([Protocol.REQ_DOUBLE, {'double': 1}]);
+            try { this.game.add.audio('double_placeholder').play(); } catch (e) {}
+            doubleGroup.visible = false;
+        }, this);
+        doubleGroup.add(yesDouble);
+        doubleGroup.visible = false;
+        this.doubleGroup = doubleGroup;
+        this.doubleTurnUid = -1;
+
+        // GDD v0.2 G 章节：加倍阶段 HUD 状态
+        this.doubleHud = this.game.add.text(width / 2, 64, '', {
+            font: '20px', fill: '#ffd86b', align: 'center',
+        });
+        this.doubleHud.anchor.set(0.5, 0);
+        this.doubleHud.visible = false;
+
+        // GDD v0.2 H.3：段位 HUD（顶部右侧，显示当前玩家段位）
+        this.segmentHud = this.game.add.text(width - 16, 8, 'GOLD · 0 分', {
+            font: '18px', fill: '#94d9c3', align: 'right',
+            backgroundColor: 'rgba(23, 35, 31, 0.86)', padding: {x: 8, y: 4},
+        });
+        this.segmentHud.anchor.set(1, 0);
+        // GDD v0.2 H.7：段位 badge sprite（左侧紧贴段位 HUD）
+        this.segmentBadge = this.game.add.image(width - 16 - 200, 8, 'segment-gold');
+        this.segmentBadge.anchor.set(1, 0);
+        this.segmentBadge.scale.set(0.4, 0.4);  // 80x80 → 32x32
+        this._currentSegment = 'gold';
+        observer.subscribe('segment', function (info) {
+            if (info && info.label) {
+                that.segmentHud.text = info.label;
+            }
+            if (info && info.segment && info.segment !== that._currentSegment) {
+                that._currentSegment = info.segment;
+                that.segmentBadge.loadTexture('segment-' + info.segment);
+            }
+        });
+
+        observer.subscribe('double', function (info) {
+            doubleGroup.visible = info && info.turn_uid === window.playerInfo.uid;
+            if (info && info.turn_uid === window.playerInfo.uid) {
+                observer.set('countdown', -1);
+            }
+        });
     }
 
     onopen() {
@@ -266,8 +351,56 @@ export class Game {
                     this.tablePoker[2] = packet['pokers'][2];
                     this.players[this.whoseTurn].setLandlord();
                     this.showLastThreePoker();
+                    // GDD v0.2 G 章节：抢地主结束 → 进 DOUBLE 阶段
+                    const room = observer.get('room') || {};
+                    this.startDoublePhase(room);
                 }
                 observer.set('room.multiple', packet['multiple']);
+                break;
+            }
+            case Protocol.RSP_DOUBLE: {
+                // GDD v0.2 G 章节：加倍决策广播
+                const room = observer.get('room') || {};
+                if (packet['phase'] === 'end') {
+                    observer.set('double', null);
+                    if (this.doubleHud) {
+                        this.doubleHud.text = '';
+                        this.doubleHud.visible = false;
+                    }
+                    if (this.doubleGroup) this.doubleGroup.visible = false;
+                    try { this.game.add.audio('shot').play(); } catch (e) {}
+                } else {
+                    // continue: another player is choosing; turn_uid is who
+                    const turnUid = (room.double_turn_uid != null) ? room.double_turn_uid : -1;
+                    observer.set('double', {turn_uid: turnUid, decisions: room.double_decisions || {}});
+                    if (this.doubleHud) {
+                        const decisions = room.double_decisions || {};
+                        const summary = Object.keys(decisions).map(function (uid) {
+                            return uid + ':' + (decisions[uid] ? '加倍' : '不加倍');
+                        }).join('  ');
+                        this.doubleHud.text = `加倍阶段  ${summary}  → 当前: ${turnUid}`;
+                        this.doubleHud.visible = true;
+                    }
+                    try { this.game.add.audio('shot').play(); } catch (e) {}
+                }
+                observer.set('room.multiple', packet['multiple']);
+                break;
+            }
+            case Protocol.RSP_SEGMENT_CHANGE: {
+                // GDD v0.2 H.3：段位变更单播
+                if (packet['uid'] === window.playerInfo.uid) {
+                    const label = `${packet['new_segment'].toUpperCase()} · ${packet['new_points']} 分`;
+                    this.updateSegmentHud(label);
+                    // GDD v0.2 H.7：同时更新段位 badge sprite
+                    if (this.segmentBadge) {
+                        this.segmentBadge.loadTexture('segment-' + packet['new_segment']);
+                    }
+                    // GDD v0.2 H.5：弹段位变更 overlay（晋升 / 降级）
+                    const oldLabel = `${packet['old_segment'].toUpperCase()} · ${packet['old_points']} 分`;
+                    this.showSegmentChangeOverlay(packet['promoted'], packet['demoted'], oldLabel, label);
+                    // 段位变更音效（用现有 shot 作为占位）
+                    try { this.game.add.audio('shot').play(); } catch (e) {}
+                }
                 break;
             }
             case Protocol.RSP_SHOT_POKER:
@@ -286,17 +419,31 @@ export class Game {
                 });
 
                 this.whoseTurn = this.uidToSeat(winner);
+                this.showGameOverResult(this.whoseTurn);
+
+                // GDD v0.2 H.3：游戏结束后更新本地段位 HUD（如果有 player[].segment 字段）
+                packet['players'].forEach(function (player) {
+                    if (player['uid'] === window.playerInfo.uid && player['segment']) {
+                        const seg = player['segment'];
+                        const pts = player['segment_points'] != null ? player['segment_points'] : 0;
+                        const label = `${seg.toUpperCase()} · ${pts} 分`;
+                        that.updateSegmentHud(label);
+                    }
+                });
 
                 function gameOver() {
-                    alert(that.players[that.whoseTurn].isLandlord ? "地主赢" : "农民赢");
                     observer.set('ready', false);
                     that.players.forEach(function (player) {
                         player.setReady(false);
                     });
                     this.cleanWorld();
+                    if (this.gameOverLayer) {
+                        this.gameOverLayer.destroy();
+                        this.gameOverLayer = null;
+                    }
                 }
 
-                this.game.time.events.add(2000, gameOver, this);
+                this.game.time.events.add(GAME_OVER_RESTART_DELAY, gameOver, this);
                 break;
             }
             // case Protocol.RSP_CHEAT:
@@ -306,6 +453,61 @@ export class Game {
             //     break;
             default:
                 console.log("UNKNOWN PACKET:", packet)
+        }
+    }
+
+    showGameOverResult(winnerSeat) {
+        const winner = this.players[winnerSeat];
+        const result = getGameOverResult(winner && winner.isLandlord);
+        const width = this.game.world.width;
+        const height = this.game.world.height;
+
+        if (this.gameOverLayer) {
+            this.gameOverLayer.destroy();
+        }
+
+        const layer = this.game.add.group();
+        const backdrop = this.game.add.graphics(0, 0);
+        backdrop.beginFill(0x08130f, 0.78);
+        backdrop.drawRect(0, 0, width, height);
+        backdrop.endFill();
+        layer.add(backdrop);
+
+        const panel = this.game.add.graphics(0, 0);
+        panel.beginFill(0x17231f, 0.96);
+        panel.lineStyle(2, 0xe3c15d, 0.84);
+        panel.drawRoundedRect(36, height / 2 - 105, width - 72, 210, 8);
+        panel.endFill();
+        layer.add(panel);
+
+        const title = this.game.add.text(width / 2, height / 2 - 48, result.title, {
+            font: "44px Arial",
+            fontWeight: "bold",
+            fill: "#fff8e7",
+            align: "center"
+        });
+        title.anchor.set(0.5);
+        layer.add(title);
+
+        const detail = this.game.add.text(width / 2, height / 2 + 18, result.detail, {
+            font: "22px Arial",
+            fill: "#94d9c3",
+            align: "center"
+        });
+        detail.anchor.set(0.5);
+        layer.add(detail);
+
+        const next = this.game.add.text(width / 2, height / 2 + 68, '即将开始下一局', {
+            font: "18px Arial",
+            fill: "#f1d885",
+            align: "center"
+        });
+        next.anchor.set(0.5);
+        layer.add(next);
+
+        this.gameOverLayer = layer;
+        if (this.game.sound && this.game.sound.play) {
+            this.game.sound.play(result.sound);
         }
     }
 
@@ -474,6 +676,51 @@ export class Game {
             observer.set('rob', true);
         }
 
+    }
+
+    startDoublePhase(room) {
+        // GDD v0.2 G 章节：抢地主结束 → 进 DOUBLE 阶段
+        // 服务器会先发一个 RSP_DOUBLE continue 广播驱动按钮，这里只触发 HUD 兜底
+        const turnUid = (room && room.double_turn_uid != null) ? room.double_turn_uid : -1;
+        observer.set('double', {turn_uid: turnUid, decisions: {}});
+        if (this.doubleHud) {
+            this.doubleHud.text = `加倍阶段  → 当前决策: ${turnUid}`;
+            this.doubleHud.visible = true;
+        }
+    }
+
+    updateSegmentHud(label) {
+        // GDD v0.2 H.5：游戏结束后由 RSP_GAME_OVER 调用，更新段位 HUD
+        if (this.segmentHud) {
+            this.segmentHud.text = label;
+        }
+    }
+
+    showSegmentChangeOverlay(promoted, demoted, oldLabel, newLabel) {
+        // GDD v0.2 H.5：段位变更时弹大字 overlay（中央 + 3 秒消失 + 渐入渐出）
+        const that = this;
+        const width = this.game.world.width;
+        const height = this.game.world.height;
+        const text = promoted
+            ? '🎉 段位晋升！' + oldLabel + ' → ' + newLabel
+            : (demoted ? '⚠️ 段位降级 ' + oldLabel + ' → ' + newLabel : '');
+        if (!text) return;
+        const overlay = this.game.add.text(width / 2, height / 2, text, {
+            font: 'bold 40px', fill: promoted ? '#f1d885' : '#ff9770', align: 'center',
+            backgroundColor: 'rgba(23, 35, 31, 0.94)', padding: {x: 24, y: 16},
+            wordWrap: true, wordWrapWidth: width * 0.8,
+        });
+        overlay.anchor.set(0.5);
+        overlay.alpha = 0;
+        // 渐入
+        const tweenIn = this.game.add.tween(overlay).to({alpha: 1}, 400, Phaser.Easing.Quadratic.Out, true);
+        tweenIn.onComplete.add(function () {
+            // 2.5 秒后渐出
+            that.game.time.events.add(2500, function () {
+                const tweenOut = that.game.add.tween(overlay).to({alpha: 0}, 400, Phaser.Easing.Quadratic.In, true);
+                tweenOut.onComplete.add(function () { overlay.destroy(); });
+            });
+        });
     }
 
     startPlay() {

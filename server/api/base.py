@@ -41,7 +41,7 @@ class JwtMixin(object):
         return None
 
 
-class RestfulHandler(RequestHandler, AlchemyMixin):
+class RestfulHandler(RequestHandler, AlchemyMixin, JwtMixin):
     required_fields = ()
 
     def prepare(self):
@@ -52,11 +52,18 @@ class RestfulHandler(RequestHandler, AlchemyMixin):
         self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
         self.set_header('Access-Control-Allow-Origin', '*')
         self.set_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.set_header('Access-Control-Allow-Headers', 'X-PINGOTHER, Content-Type')
+        self.set_header('Access-Control-Allow-Headers', 'X-PINGOTHER, Content-Type, Authorization')
         self.set_header('Access-Control-Allow-Credentials', 'true')
 
     def get_json_data(self) -> Dict[str, Any]:
-        json_data: Dict[str, Any] = orjson.loads(self.request.body)
+        try:
+            json_data = orjson.loads(self.request.body or b'{}')
+        except orjson.JSONDecodeError:
+            raise HTTPError(HTTPStatus.BAD_REQUEST, reason='请求 JSON 格式异常')
+
+        if not isinstance(json_data, dict):
+            raise HTTPError(HTTPStatus.BAD_REQUEST, reason='请求 JSON 必须是对象')
+
         if self.required_fields:
             for field in self.required_fields:
                 if field not in json_data:
@@ -67,13 +74,15 @@ class RestfulHandler(RequestHandler, AlchemyMixin):
         cookie = self.get_secure_cookie('userinfo')
         if cookie:
             return orjson.loads(cookie)
-        return None
+        return self.jwt_decode(self.parse_token(self.request.headers))
 
     def data_received(self, chunk: bytes) -> Optional[Awaitable[None]]:
         pass
 
     def write_error(self, status_code: int, **kwargs: Any) -> None:
-        self.finish(orjson.dumps({"detail": self._reason}))
+        exception = kwargs.get('exc_info', [None, None])[1]
+        reason = getattr(exception, 'reason', None) or self._reason
+        self.finish(orjson.dumps({"detail": reason}))
 
     @property
     def client_ip(self) -> str:

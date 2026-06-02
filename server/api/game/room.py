@@ -17,15 +17,27 @@ from .timer import Timer
 if TYPE_CHECKING:
     from .player import Player
 
+ROBOT_FIRST_JOIN_DELAY = 1
+ROBOT_SECOND_JOIN_DELAY = 1
+
 
 class Room(object):
     robot_no = 0
+    level_profiles = {
+        1: {'label': '新手场', 'origin': 10, 'min_point': 0},
+        2: {'label': '进阶场', 'origin': 30, 'min_point': 1000},
+        3: {'label': '高手场', 'origin': 60, 'min_point': 2000},
+    }
 
-    def __init__(self, room_id, level=1, allow_robot=True):
+    def __init__(self, room_id, level=1, allow_robot=True, personality=None):
+        from ai.personality import PersonalityMode, resolve_personality
         self.room_id = room_id
         self.level = level
+        level_profile = self.level_profile(level)
+        # GDD v0.2 F 章节：AI 性格注入层。房主创建房间时设定。
+        self.personality: PersonalityMode = personality if isinstance(personality, PersonalityMode) else resolve_personality(personality).mode
         self._multiple_details: Dict[str, int] = {
-            'origin': 10,
+            'origin': level_profile['origin'],
             'origin_multiple': 15,
             'di': 1,
             'ming': 1,
@@ -44,11 +56,26 @@ class Room(object):
         self.landlord_seat = 0
         self.bomb_multiple = 2
 
+        # GDD v0.2 G 章节：加倍阶段状态
+        self.double_turn_seat: int = -1
+        self._double_decisions: Dict[int, int] = {}
+
+        # GDD v0.2 onboarding 实施层：首局标记
+        self.first_session: bool = True
+
         self.last_shot_seat = 0
         self.last_shot_poker: List[int] = []
         self.shot_round: List[List[int]] = []
 
         self.allow_robot = allow_robot
+
+    @classmethod
+    def level_profile(cls, level):
+        return cls.level_profiles.get(level, {
+            'label': '%s 档' % level,
+            'origin': cls.level_profiles[1]['origin'],
+            'min_point': 0,
+        })
 
     def restart(self):
         for key, val in self._multiple_details.items():
@@ -67,6 +94,13 @@ class Room(object):
         self.last_shot_poker = []
         self.shot_round = []
         self._rob_record = []
+
+        # GDD v0.2 G 章节：重置加倍阶段状态
+        self.double_turn_seat = -1
+        self._double_decisions = {}
+
+        # GDD v0.2 onboarding 实施层：第一局标记
+        self.first_session = False
 
         for player in self.players:
             if player is None:
@@ -87,14 +121,29 @@ class Room(object):
     def sync_data(self):
         return {
             'id': self.room_id,
+            'level': self.level,
+            'label': self.level_profile(self.level)['label'],
             'origin': self._multiple_details['origin'],
+            'min_point': self.level_profile(self.level)['min_point'],
             'multiple': self.multiple,
             'state': self.room_state,
             'landlord_uid': self.seat_to_uid(self.landlord_seat),
             'whose_turn': self.seat_to_uid(self.whose_turn),
             'timer': self.timer.timeout,
+            'pokers': list(self.pokers),
             'last_shot_uid': self.seat_to_uid(self.last_shot_seat),
             'last_shot_poker': self.last_shot_poker,
+            # GDD v0.2 G 章节：加倍阶段状态
+            'double_turn_uid': self.seat_to_uid(self.double_turn_seat) if self.double_turn_seat >= 0 else -1,
+            # GDD v0.2 F 章节：AI 性格
+            'personality': self.personality.value if self.personality else 'balanced',
+            # GDD v0.2 onboarding 实施层：首局标记 + 引导提示
+            'first_session': self.first_session,
+            'onboarding_hints': {
+                'call_score_available': True,
+                'shot_highlight_hint': True,
+                'pass_button_hint': True,
+            },
         }
 
     def broadcast(self, response):
@@ -129,7 +178,7 @@ class Room(object):
         p1.to_server(Pt.REQ_JOIN_ROOM, {'room': self.room_id, 'level': 1})
 
         if nth == 1:
-            IOLoop.current().call_later(3, self.add_robot, nth=2)
+            IOLoop.current().call_later(ROBOT_SECOND_JOIN_DELAY, self.add_robot, nth=2)
             self.robot_no += 1
 
     def on_timeout(self):
@@ -143,7 +192,7 @@ class Room(object):
     def on_join(self, target: Player):
         if self._on_join(target):
             if self.allow_robot and self.level == 1:
-                IOLoop.current().call_later(10, self.add_robot, nth=1)
+                IOLoop.current().call_later(ROBOT_FIRST_JOIN_DELAY, self.add_robot, nth=1)
             return True
         return False
 
@@ -170,6 +219,195 @@ class Room(object):
                 return True
             self.go_prev_turn()
         return True
+
+    def start_double_phase(self) -> None:
+        """抢地主结束 → 开启加倍阶段。
+
+        顺序：依 seat 顺序从第一个非地主玩家开始。2 个农民先，地主最后。
+        """
+        if not self.landlord:
+            self._skip_double_to_playing()
+            return
+        for i in range(3):
+            player = self.players[i]
+            if player and not player.is_left() and not player.landlord:
+                self.double_turn_seat = i
+                self._double_decisions = {}
+                self.timer.start_timing(player.timeout)
+                return
+        # 极端情况（无人非地主）：跳过加倍
+        self._skip_double_to_playing()
+
+    def _skip_double_to_playing(self) -> None:
+        """无加倍阶段（房间不满等）→ 直接进 PLAYING。"""
+        from .player import State
+        self.double_turn_seat = -1
+        self._double_decisions = {}
+        self.whose_turn = self.landlord_seat
+        for player in self.players:
+            if player and not player.is_left():
+                player.change_state(State.PLAYING)
+        if self.turn_player:
+            self.timer.start_timing(self.turn_player.timeout)
+
+    def on_double(self, target: Player, choice: int) -> bool:
+        """记录 target 的加倍选择；返回是否所有玩家都已决策。"""
+        if not self.landlord:
+            return True
+        self._double_decisions[target.uid] = choice
+        if choice == 1:
+            if target.landlord == 1:
+                self._multiple_details['landlord'] *= 2
+            else:
+                self._multiple_details['farmer'] *= 2
+        # GDD v0.2 行为日志：玩家加倍决策写入 player_event_log
+        self._log_player_double(target, choice)
+        next_seat = self._next_double_seat(target.seat)
+        if next_seat is None:
+            return True  # 全部 3 人都已决策
+        self.double_turn_seat = next_seat
+        self.timer.start_timing(self.players[next_seat].timeout)
+        return False
+
+    def _next_double_seat(self, current_seat: int) -> Optional[int]:
+        for i in range(1, 4):
+            candidate = (current_seat + i) % 3
+            player = self.players[candidate]
+            if player and not player.is_left() and player.uid not in self._double_decisions:
+                return candidate
+        return None
+
+    def _log_player_double(self, target: Player, choice: int) -> None:
+        """GDD v0.2 行为日志：玩家加倍决策写入 JSONL。"""
+        try:
+            from api.player_event import get_player_event_logger, new_session_id
+            logger = get_player_event_logger()
+            if not logger.enabled:
+                return
+            # 会话 id：跨加倍 / 出牌全程唯一；优先复用 room 上的 _session_id
+            session_id = getattr(self, '_session_id', None) or new_session_id()
+            self._session_id = session_id
+            payload = {
+                'choice': int(choice),
+                'is_landlord': bool(target.landlord == 1),
+                'multiple_after': dict(self._multiple_details),
+            }
+            logger.log(
+                event_type='double_decision',
+                player_id=target.uid,
+                room_id=self.room_id,
+                session_id=session_id,
+                payload=payload,
+                result='success' if choice in (0, 1) else 'fail',
+            )
+        except Exception:
+            logging.warning('Room[%d] player double log failed', self.room_id, exc_info=True)
+
+    async def _auto_apply_segment(self, winner: Player) -> None:
+        """GDD v0.2 H.5：on_game_over 自动给 3 个玩家应用段位变更 + 推 RSP_SEGMENT_CHANGE。
+
+        异步执行，避开 on_game_over 同步路径。失败不重试（避免雪崩）。
+        """
+        try:
+            from sqlalchemy import select as _select, update as _update
+            from config import DATABASE_URI
+            from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+            from sqlalchemy.orm import sessionmaker as _sm
+            from models import User
+            from segment import (
+                MatchDelta, SegmentState, apply_match_result, compute_score_delta,
+                from_dict, SEGMENT_COEFFICIENTS,
+            )
+            from api.game.protocol import Protocol as _Pt
+        except Exception:
+            logging.warning('segment auto-apply imports failed', exc_info=True)
+            return
+
+        base_score = self._multiple_details['origin']
+        if base_score <= 0:
+            return
+
+        engine = create_async_engine(DATABASE_URI, echo=False, pool_pre_ping=True)
+        Session = _sm(engine, class_=AsyncSession, expire_on_commit=False)
+        updates = []
+        try:
+            async with Session() as session:
+                for player in self.players:
+                    if not player or player.is_left():
+                        continue
+                    user = (await session.execute(
+                        _select(User).where(User.id == player.uid)
+                    )).scalar_one_or_none()
+                    if not user:
+                        continue
+                    old = from_dict({'segment': user.segment, 'points': user.segment_points})
+                    is_winner = (player == winner)
+                    is_landlord = (player.landlord == 1)
+                    coefficient = float(SEGMENT_COEFFICIENTS[old.segment])
+                    score_delta = compute_score_delta(is_winner, is_landlord, base_score, coefficient)
+                    delta = MatchDelta(
+                        score_delta=score_delta,
+                        base_score=base_score,
+                        role='landlord' if is_landlord else 'farmer',
+                        is_winner=is_winner,
+                    )
+                    result = apply_match_result(old, delta)
+                    await session.execute(
+                        _update(User).where(User.id == user.id).values(
+                            segment=result.state.segment.value,
+                            segment_points=result.state.points,
+                        )
+                    )
+                    updates.append((player, old, result, is_winner, is_landlord))
+                await session.commit()
+        finally:
+            await engine.dispose()
+
+        # 推送 RSP_SEGMENT_CHANGE 给每个玩家
+        for player, old, result, is_winner, is_landlord in updates:
+            try:
+                player.write_message([_Pt.RSP_SEGMENT_CHANGE, {
+                    'uid': player.uid,
+                    'old_segment': old.segment.value,
+                    'old_points': old.points,
+                    'new_segment': result.state.segment.value,
+                    'new_points': result.state.points,
+                    'promoted': result.promoted,
+                    'demoted': result.demoted,
+                    'score_delta': result.score_delta,
+                }])
+            except Exception:
+                logging.warning('segment push to player=%d failed', player.uid, exc_info=True)
+
+            # 写 player_event_log
+            try:
+                from api.player_event import get_player_event_logger
+                logger = get_player_event_logger()
+                if logger.enabled:
+                    logger.log(
+                        event_type='segment_change',
+                        player_id=player.uid,
+                        room_id=self.room_id,
+                        session_id=f'room-{self.room_id}',
+                        payload={
+                            'old_segment': old.segment.value,
+                            'old_points': old.points,
+                            'new_segment': result.state.segment.value,
+                            'new_points': result.state.points,
+                            'promoted': result.promoted,
+                            'demoted': result.demoted,
+                            'score_delta': result.score_delta,
+                            'match': {
+                                'is_winner': is_winner,
+                                'is_landlord': is_landlord,
+                                'base_score': base_score,
+                            },
+                            'auto': True,
+                        },
+                        result='success',
+                    )
+            except Exception:
+                logging.warning('segment change log failed', exc_info=True)
 
     def on_deal_poker(self):
         if not self.is_full():
@@ -209,7 +447,7 @@ class Room(object):
             if spec is None:
                 return 'Poker does not comply with the rules'
 
-            if seat != self.last_shot_seat and rule.compare_pokers(pokers, self.last_shot_poker) < 0:
+            if seat != self.last_shot_seat and rule.compare_pokers(pokers, self.last_shot_poker) <= 0:
                 return 'Poker small than last shot'
 
             if spec == 'bomb' or spec == 'rocket':
@@ -260,15 +498,22 @@ class Room(object):
             if not player:
                 continue
             point = self.get_point(winner, player)
+            player.point += point
             response[1]['players'].append({
                 'uid': player.uid,
                 'point': point,
+                'balance': player.point,
                 'pokers': player.hand_pokers,
+                # GDD v0.2 H.5：RSP_GAME_OVER 带 segment 字段让前端 HUD 拿到
+                'segment': getattr(player, 'segment', None) or 'gold',
+                'segment_points': int(getattr(player, 'segment_points', 0) or 0),
             })
         self.broadcast(response)
         logging.info('Room[%d] GameOver', self.room_id)
 
         self.timer.stop_timing()
+        # GDD v0.2 H.5：on_game_over 自动给 3 个玩家应用段位变更
+        IOLoop.current().add_callback(self._auto_apply_segment, winner)
         IOLoop.current().add_callback(self.restart)
 
     async def save_shot_round(self):
@@ -294,6 +539,29 @@ class Room(object):
                 await active_player.socket.insert(record)
             except Exception:
                 logging.exception('Room[%d] failed to save shot round', self.room_id)
+                return False
+            return True
+        return False
+
+    async def save_player_points(self):
+        balances = {
+            player.uid: player.point
+            for player in self.players
+            if player
+        }
+        if not balances:
+            return False
+
+        for active_player in self.players:
+            if not active_player or not active_player.socket:
+                continue
+            save_player_points = getattr(active_player.socket, 'save_player_points', None)
+            if not save_player_points:
+                continue
+            try:
+                await save_player_points(balances)
+            except Exception:
+                logging.exception('Room[%d] failed to save player points', self.room_id)
                 return False
             return True
         return False

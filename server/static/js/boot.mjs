@@ -101,6 +101,10 @@ export class Preloader {
         this.load.image('bg', 'static/i/bg.png');
         this.load.spritesheet('poker', 'static/i/poker.png', 90, 120);
         this.load.json('rule', 'static/rule.json');
+        // GDD v0.2 H.7：段位 badge 占位 SVG 预加载（7 段位）
+        for (const seg of ['bronze', 'silver', 'gold', 'platinum', 'diamond', 'master', 'king']) {
+            this.load.image('segment-' + seg, 'static/i/segment/' + seg + '_placeholder.svg');
+        }
     }
 
     create() {

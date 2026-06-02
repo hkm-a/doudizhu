@@ -12,19 +12,23 @@
 
 ## 0.2 Playable Desktop Alpha
 
-- [ ] 桌面端自动检测 Python 依赖和 MySQL 连接，并给出可操作错误。
-- [ ] 提供开发者一键初始化脚本。
-- [ ] 清理旧前端链接、文案和资源边界。
-- [ ] 增加桌面启动链路 smoke test。
+- [x] 本地诊断自动检测 Python 依赖和 MySQL 连接，并给出可操作错误。
+- [x] 桌面端自动展示 Python 依赖和 MySQL 连接预检结果。
+- [x] 提供开发者一键初始化脚本。
+- [x] 清理旧前端链接、文案和资源边界。
+- [x] 增加桌面启动链路 smoke test。
 - [ ] 发布可安装的 Linux alpha 包和 release notes。
 
 ## 0.3 AI Integration Alpha
 
-- [ ] 实现 svzdev 牌 id 到 DouZero rank 表示的转换。
-- [ ] 实现房间状态到 DouZero `InfoSet` 的转换。
-- [ ] 实现 DouZero 动作到具体牌 id 的回映射。
-- [ ] 增加固定牌局回放测试。
-- [ ] 增加 AI 对局日志，便于比较规则 AI 与 DouZero。
+- [x] 实现 svzdev 牌 id 到 DouZero rank 表示的转换。
+- [x] 实现房间状态到 DouZero `InfoSet` 的转换。
+- [x] 实现 DouZero 动作到具体牌 id 的回映射。
+- [x] 增加固定牌局回放 smoke 测试。
+- [x] 增加真实 checkpoint 固定牌局回放入口。
+- [ ] 在发布环境中定期运行真实 checkpoint 固定牌局回放。
+- [x] 增加 AI 对局日志，便于比较规则 AI 与 DouZero。
+- [x] 增加 AI 决策日志汇总脚本。
 
 ## 0.4 Contributor-Ready Refactor
 

@@ -6,7 +6,11 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import List, Optional, Protocol, TYPE_CHECKING
 
+from ai.cards import douzero_cards_to_pokers
+from ai.decision_log import decision_event, get_decision_logger
+from ai.infoset import build_douzero_infoset, get_douzero_legal_actions, seat_to_douzero_position
 from api.game.rule import rule
+from ai.personality import PersonalityMode, resolve_personality
 
 if TYPE_CHECKING:
     from api.game.player import Player
@@ -22,27 +26,70 @@ class AiPolicy(Protocol):
     def choose_shot(self, player: Player, room: Room) -> List[int]:
         ...
 
+    def choose_double(self, player: Player, room: Room, personality: Optional[PersonalityMode] = None) -> int:
+        ...
+
 
 class RuleBasedPolicy:
     """Current svzdev heuristic AI, kept as the reliable fallback."""
 
     def choose_rob(self, player: Player) -> int:
         high_cards = [poker for poker in (54, 53, 2, 15, 28, 41) if poker in player.hand_pokers]
-        return int(len(high_cards) >= 4)
+        decision = int(len(high_cards) >= 4)
+        get_decision_logger().log(decision_event(
+            'rule',
+            'rob',
+            player,
+            decision=decision,
+            high_cards=high_cards,
+        ))
+        return decision
 
     def choose_shot(self, player: Player, room: Room) -> List[int]:
         if not room.last_shot_poker or room.last_shot_seat == player.seat:
-            return rule.find_best_shot(player.hand_pokers)
+            decision = rule.find_best_shot(player.hand_pokers)
+            get_decision_logger().log(decision_event('rule', 'shot', player, room, decision=decision))
+            return decision
 
         last_player = self._last_shot_player(room)
         ally = bool(last_player and last_player.landlord == player.landlord)
         left_pokers = len(last_player.hand_pokers) if last_player else 17
         if ally and left_pokers <= 4 and len(player.hand_pokers) - len(room.last_shot_poker) > 4:
+            get_decision_logger().log(decision_event(
+                'rule',
+                'shot',
+                player,
+                room,
+                decision=[],
+                reason='ally_has_few_cards_left',
+                ally=ally,
+                last_player_left_pokers=left_pokers,
+            ))
             return []
 
         pokers = rule.find_best_follow(player.hand_pokers, room.last_shot_poker, ally)
         if 53 in pokers and 54 in pokers and left_pokers > 10:
+            get_decision_logger().log(decision_event(
+                'rule',
+                'shot',
+                player,
+                room,
+                decision=[],
+                candidate=pokers,
+                reason='hold_rocket_while_opponent_has_many_cards',
+                ally=ally,
+                last_player_left_pokers=left_pokers,
+            ))
             return []
+        get_decision_logger().log(decision_event(
+            'rule',
+            'shot',
+            player,
+            room,
+            decision=pokers,
+            ally=ally,
+            last_player_left_pokers=left_pokers,
+        ))
         return pokers
 
     @staticmethod
@@ -50,6 +97,42 @@ class RuleBasedPolicy:
         if 0 <= room.last_shot_seat < len(room.players):
             return room.players[room.last_shot_seat]
         return None
+
+    def choose_double(self, player: Player, room: Room, personality: Optional[PersonalityMode] = None) -> int:
+        """Decide whether to double at the start of the playing phase.
+
+        Strength is a quick heuristic on hand size + high cards (2/A/w/W). The
+        ``PersonalityConfig.double_bias`` shifts the threshold: aggressive
+        personalities double on weaker hands, conservative on stronger ones.
+        """
+        cfg = resolve_personality(personality)
+        high_set = {2, 15, 28, 41, 53, 54}
+        hand_size = len(player.hand_pokers)
+        high_cards = sum(1 for p in player.hand_pokers if p in high_set)
+        # Normalize: 0 (no cards) to ~1 (4+ high cards at full hand length)
+        strength = max(0.0, min(1.0, (20 - hand_size) / 20.0 + high_cards / 6.0))
+        # Map [strength in 0..1, bias in -1..1] to probability in 0..1
+        prob = max(0.0, min(1.0, strength * 0.5 + cfg.double_bias * 0.5 + 0.25))
+
+        if cfg.err_rate > 0:
+            import random
+            if random.random() < cfg.err_rate:
+                prob = 1.0 - prob
+
+        decision = 1 if prob >= 0.5 else 0
+        get_decision_logger().log(decision_event(
+            'rule',
+            'double',
+            player,
+            room,
+            decision=decision,
+            personality=cfg.mode.value,
+            strength=round(strength, 3),
+            prob=round(prob, 3),
+            hand_size=hand_size,
+            high_cards=high_cards,
+        ))
+        return decision
 
 
 @dataclass(frozen=True)
@@ -67,9 +150,8 @@ class DouZeroPolicy:
     """Adapter boundary for kwai/DouZero.
 
     The room server keeps using svzdev poker ids (1..54). This policy owns all
-    DouZero concerns: dependency loading, model path validation, and later the
-    infoset/card-id conversion. Until the full state adapter is enabled, it
-    delegates to the rule policy so robots remain playable.
+    DouZero concerns: dependency loading, model path validation, InfoSet/card-id
+    conversion, and rule-AI fallback whenever the optional model path fails.
     """
 
     def __init__(self, config: DouZeroConfig, fallback: Optional[AiPolicy] = None):
@@ -119,14 +201,44 @@ class DouZeroPolicy:
         # bidding deterministic until we add/verify a bidding model.
         return self.fallback.choose_rob(player)
 
+    def choose_double(self, player: Player, room: Room, personality: Optional[PersonalityMode] = None) -> int:
+        # DouZero's public project has no trained double model. Delegate to the
+        # personality-aware RuleBasedPolicy until a double checkpoint is added.
+        return self.fallback.choose_double(player, room, personality)
+
     def choose_shot(self, player: Player, room: Room) -> List[int]:
         if not self.available:
             return self.fallback.choose_shot(player, room)
 
-        # TODO: Build a DouZero InfoSet from Room state and map selected env
-        # cards back to svzdev poker ids. The fallback keeps gameplay stable
-        # while the model assets and state adapter are wired in.
-        return self.fallback.choose_shot(player, room)
+        try:
+            position = seat_to_douzero_position(player.seat, room.landlord_seat)
+            legal_actions = get_douzero_legal_actions(player, room)
+            infoset = build_douzero_infoset(player, room, legal_actions)
+            action = self._agents[position].act(infoset)
+            decision = douzero_cards_to_pokers(action, player.hand_pokers)
+            get_decision_logger().log(decision_event(
+                'douzero',
+                'shot',
+                player,
+                room,
+                decision=decision,
+                douzero_action=action,
+                position=position,
+                legal_action_count=len(legal_actions),
+            ))
+            return decision
+        except Exception as exc:
+            logger.warning('DouZero action failed; falling back to rule AI', exc_info=True)
+            get_decision_logger().log(decision_event(
+                'douzero',
+                'shot',
+                player,
+                room,
+                decision=None,
+                fallback=True,
+                fallback_reason=str(exc),
+            ))
+            return self.fallback.choose_shot(player, room)
 
 
 @lru_cache(maxsize=1)

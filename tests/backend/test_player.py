@@ -15,6 +15,12 @@ class SocketStub:
         self.messages.append(packet)
 
 
+class PlayerBalanceTest(unittest.TestCase):
+    def test_player_uses_persisted_account_point(self):
+        self.assertEqual(Player(1, 'saved', point=1280).point, 1280)
+        self.assertEqual(Player(2, 'legacy', point='bad').point, 1000)
+
+
 class RoomStub:
     def __init__(self, on_shot_error=''):
         self.whose_turn = 0
@@ -27,6 +33,7 @@ class RoomStub:
         self.next_turns = 0
         self.game_over_winner = None
         self.saved_rounds = 0
+        self.saved_points = 0
         self.players = []
 
     def on_shot(self, seat, pokers):
@@ -50,6 +57,9 @@ class RoomStub:
 
     async def save_shot_round(self):
         self.saved_rounds += 1
+
+    async def save_player_points(self):
+        self.saved_points += 1
 
 
 class WaitingRoomStub:
@@ -96,6 +106,7 @@ class CallScoreRoomStub:
         self.players = []
         self.broadcasts = []
         self.on_rob_calls = []
+        self.start_double_phase_calls = []
         self._is_end = is_end
         self._landlord = landlord
 
@@ -103,11 +114,24 @@ class CallScoreRoomStub:
         self.on_rob_calls.append(player)
         return self._is_end
 
+    def start_double_phase(self):
+        # Stubbed for GDD v0.2 G 章节 integration; real implementation moves
+        # the room into State.DOUBLE; tests that exercise this path will assert
+        # start_double_phase_calls.
+        self.start_double_phase_calls.append(True)
+
     @property
     def turn_player(self):
         if 0 <= self.whose_turn < len(self.players):
             return self.players[self.whose_turn]
         return None
+
+    # GDD v0.2 G 章节：加倍阶段 stub 配套
+    def on_double(self, target, choice):
+        return False  # 默认 not end；测试可覆盖
+
+    def _log_player_double(self, target, choice):
+        pass
 
     @property
     def landlord(self):
@@ -115,6 +139,60 @@ class CallScoreRoomStub:
 
     def broadcast(self, packet):
         self.broadcasts.append(packet)
+
+
+class DoubleRoomStub:
+    """GDD v0.2 G 章节：加倍阶段专用 stub，支持 on_double / double_turn_seat / timer 等。"""
+    def __init__(self, double_turn_seat=0, on_double_returns=False):
+        self.double_turn_seat = double_turn_seat
+        self.whose_turn = 0
+        self.landlord_seat = 0
+        self.broadcasts = []
+        self.on_double_calls = []
+        self.timer_started = []
+        self._on_double_returns = on_double_returns
+        self._multiple_details = {'landlord': 1, 'farmer': 1}
+        self._log_double_calls = []
+        # 玩家清单（seat 0/1/2）
+        self.players = []
+        self.turn_player_cache = None
+
+    def on_double(self, target, choice):
+        self.on_double_calls.append((target, choice))
+        return self._on_double_returns
+
+    def _log_player_double(self, target, choice):
+        self._log_double_calls.append((target.uid if hasattr(target, 'uid') else target, choice))
+
+    def broadcast(self, packet):
+        self.broadcasts.append(packet)
+
+    @property
+    def timer(self):
+        return _TimerStub(self.timer_started)
+
+    @property
+    def turn_player(self):
+        return self.turn_player_cache
+
+
+class _TimerStub:
+    def __init__(self, started_list):
+        self._started = started_list
+    def start_timing(self, timeout):
+        self._started.append(timeout)
+
+
+def make_double_player(seat=0, double_turn_seat=0, on_double_returns=False):
+    room = DoubleRoomStub(double_turn_seat=double_turn_seat, on_double_returns=on_double_returns)
+    player = Player(1, 'probe')
+    player.socket = SocketStub()
+    player.seat = seat
+    player.state = State.DOUBLE
+    player.room = room
+    room.players = [player]
+    room.turn_player_cache = player
+    return player, room
 
 
 def make_player(hand_pokers, room=None):
@@ -189,6 +267,67 @@ class PlayerWriteMessageTest(unittest.TestCase):
         self.assertEqual(player.socket.messages, [[Pt.RSP_READY, {'uid': 1, 'ready': 1}]])
 
 
+class PlayerHandleInitTest(unittest.TestCase):
+    def setUp(self):
+        self.logger_patch = patch('api.game.player.logger')
+        self.logger_patch.start()
+
+    def tearDown(self):
+        self.logger_patch.stop()
+
+    def test_low_point_player_cannot_join_locked_room_level(self):
+        player = Player(1, 'low-point', point=999)
+        player.socket = SocketStub()
+
+        with patch('api.game.globalvar.GlobalVar.find_room') as find_room:
+            player.handle_init(Pt.REQ_JOIN_ROOM, {'room': -1, 'level': 2})
+
+        find_room.assert_not_called()
+        self.assertEqual(player.state, State.INIT)
+        self.assertIsNone(player.room)
+        self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'Insufficient point for room level'}]])
+
+
+class PlayerExplicitLeaveTest(unittest.TestCase):
+    def setUp(self):
+        self.logger_patch = patch('api.game.player.logger')
+        self.logger_patch.start()
+
+    def tearDown(self):
+        self.logger_patch.stop()
+
+    def test_waiting_player_explicit_leave_frees_room_seat(self):
+        room = LeaveRoomStub(room_id=7)
+        player = Player(1, 'probe')
+        player.socket = SocketStub()
+        player.room = room
+        player.seat = 0
+        player._ready = 1
+        player.state = State.WAITING
+
+        left = player.leave_room()
+
+        self.assertTrue(left)
+        self.assertIsNone(player.room)
+        self.assertEqual(player.seat, -1)
+        self.assertEqual(player.state, State.INIT)
+        self.assertEqual(player.ready, 0)
+        self.assertEqual(player.is_left(), False)
+        self.assertEqual(room.left_players, [player])
+        self.assertEqual(room.broadcasts, [[Pt.RSP_LEAVE_ROOM, {'uid': 1}]])
+        self.assertEqual(room.synced, 1)
+
+    def test_playing_player_explicit_leave_preserves_rejoinable_room_slot(self):
+        player, room = make_player([3, 4])
+
+        left = player.leave_room()
+
+        self.assertFalse(left)
+        self.assertTrue(player.is_left())
+        self.assertIs(player.room, room)
+        self.assertEqual(room.broadcasts, [[Pt.RSP_LEAVE_ROOM, {'uid': 1}]])
+
+
 class PlayerHandleLeaveTest(unittest.TestCase):
     def setUp(self):
         self.logger_patch = patch('api.game.player.logger')
@@ -245,7 +384,7 @@ class PlayerHandleLeaveTest(unittest.TestCase):
         self.assertEqual(room.left_players, [player])
 
 
-class PlayerHandleWaitingTest(unittest.TestCase):
+class PlayerHandleWaitingTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.logger_patch = patch('api.game.player.logger')
         self.logger_patch.start()
@@ -307,6 +446,33 @@ class PlayerHandleWaitingTest(unittest.TestCase):
         self.assertEqual(room.broadcasts, [])
         self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'STATE[State.WAITING]'}]])
 
+    async def test_chat_message_broadcasts_to_room_from_waiting_state(self):
+        player, room = make_waiting_player()
+
+        await player.on_message(Pt.REQ_CHAT, {'message': ' 大家好 '})
+
+        self.assertEqual(room.broadcasts, [[Pt.RSP_CHAT, {'uid': 1, 'message': '大家好'}]])
+        self.assertEqual(player.socket.messages, [])
+
+    async def test_invalid_chat_message_is_rejected(self):
+        for message in ('', 'x' * 25, None):
+            with self.subTest(message=message):
+                player, room = make_waiting_player()
+
+                await player.on_message(Pt.REQ_CHAT, {'message': message})
+
+                self.assertEqual(room.broadcasts, [])
+                self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'Invalid chat message'}]])
+
+    async def test_chat_without_room_is_rejected(self):
+        player = Player(1, 'probe')
+        player.socket = SocketStub()
+        player.state = State.INIT
+
+        await player.on_message(Pt.REQ_CHAT, {'message': '大家好'})
+
+        self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'Room not joined'}]])
+
 
 class PlayerHandleCallScoreTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -332,7 +498,7 @@ class PlayerHandleCallScoreTest(unittest.IsolatedAsyncioTestCase):
             'pokers': [],
         }]])
 
-    async def test_finished_call_score_switches_room_to_playing_and_broadcasts_landlord(self):
+    async def test_finished_call_score_switches_room_to_double_phase_then_broadcasts_landlord(self):
         player, room = make_call_score_player(CallScoreRoomStub(is_end=True))
         other = Player(2, 'other')
         other.state = State.CALL_SCORE
@@ -341,8 +507,10 @@ class PlayerHandleCallScoreTest(unittest.IsolatedAsyncioTestCase):
         await player.handle_call_score(Pt.REQ_CALL_SCORE, {'rob': 0})
 
         self.assertEqual(player.rob, 0)
-        self.assertEqual(player.state, State.PLAYING)
-        self.assertEqual(other.state, State.PLAYING)
+        # GDD v0.2 G 章节：抢地主结束 → 进 DOUBLE 阶段（不再直接 PLAYING）
+        self.assertEqual(player.state, State.DOUBLE)
+        self.assertEqual(other.state, State.DOUBLE)
+        self.assertEqual(room.start_double_phase_calls, [True])
         self.assertEqual(room.broadcasts, [[Pt.RSP_CALL_SCORE, {
             'uid': 1,
             'rob': 0,
@@ -359,8 +527,9 @@ class PlayerHandleCallScoreTest(unittest.IsolatedAsyncioTestCase):
 
         await player.handle_call_score(Pt.REQ_CALL_SCORE, {'rob': 0})
 
-        self.assertEqual(player.state, State.PLAYING)
-        self.assertEqual(other.state, State.PLAYING)
+        # GDD v0.2 G 章节：所有在场玩家都进 DOUBLE 阶段
+        self.assertEqual(player.state, State.DOUBLE)
+        self.assertEqual(other.state, State.DOUBLE)
         self.assertEqual(room.players[1], None)
 
     async def test_non_call_score_message_reports_state_error(self):
@@ -552,6 +721,7 @@ class PlayerHandlePlayingTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(player.hand_pokers, [])
         self.assertEqual(player.state, State.GAME_OVER)
         self.assertEqual(room.game_over_winner, player)
+        self.assertEqual(room.saved_points, 1)
         self.assertEqual(room.saved_rounds, 1)
         self.assertEqual(room.next_turns, 0)
 
@@ -562,6 +732,97 @@ class PlayerHandlePlayingTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(room.shots, [])
         self.assertEqual(player.socket.messages, [[Pt.ERROR, {'reason': 'STATE[State.PLAYING]'}]])
+
+
+class PlayerHandleDoubleTest(unittest.IsolatedAsyncioTestCase):
+    """GDD v0.2 G 章节：Player.handle_double 单元测试。"""
+
+    def setUp(self):
+        self.logger_patch = patch('api.game.player.logger')
+        self.logger = self.logger_patch.start()
+
+    def tearDown(self):
+        self.logger_patch.stop()
+
+    async def test_double_turn_error_when_not_your_seat(self):
+        # player at seat 0, but room.double_turn_seat is 1
+        player, room = make_double_player(seat=0, double_turn_seat=1)
+
+        await player.handle_double(Pt.REQ_DOUBLE, {'double': 1})
+
+        self.assertEqual(room.on_double_calls, [])
+        self.assertEqual(room.broadcasts, [])
+        self.assertEqual(
+            player.socket.messages,
+            [[Pt.ERROR, {'reason': 'TURN ERROR (double phase)'}]],
+        )
+
+    async def test_double_invalid_value_rejected(self):
+        player, room = make_double_player(seat=0, double_turn_seat=0)
+
+        await player.handle_double(Pt.REQ_DOUBLE, {'double': 2})  # not 0/1
+
+        self.assertEqual(room.on_double_calls, [])
+        self.assertEqual(
+            player.socket.messages,
+            [[Pt.ERROR, {'reason': 'Invalid double value'}]],
+        )
+
+    async def test_double_non_double_message_reports_state_error(self):
+        player, room = make_double_player(seat=0, double_turn_seat=0)
+
+        await player.handle_double(Pt.REQ_SHOT_POKER, {'pokers': [3]})
+
+        self.assertEqual(room.on_double_calls, [])
+        self.assertEqual(
+            player.socket.messages,
+            [[Pt.ERROR, {'reason': 'STATE[State.DOUBLE]'}]],
+        )
+
+    async def test_double_continues_phase_keeps_playing_state(self):
+        # on_double returns False (not end) → player stays in DOUBLE
+        player, room = make_double_player(seat=0, double_turn_seat=0, on_double_returns=False)
+
+        await player.handle_double(Pt.REQ_DOUBLE, {'double': 1})
+
+        self.assertEqual(room.on_double_calls, [(player, 1)])
+        self.assertEqual(len(room.broadcasts), 1)
+        broadcast = room.broadcasts[0]
+        self.assertEqual(broadcast[0], Pt.RSP_DOUBLE)
+        self.assertEqual(broadcast[1]['uid'], player.uid)
+        self.assertEqual(broadcast[1]['double'], 1)
+        self.assertEqual(broadcast[1]['phase'], 'continue')
+        self.assertEqual(player.state, State.DOUBLE)
+        self.assertEqual(room.timer_started, [])  # not end, no timer reset
+
+    async def test_double_ends_phase_transitions_to_playing(self):
+        # on_double returns True (end) → player transitions to PLAYING + timer reset
+        player, room = make_double_player(seat=0, double_turn_seat=0, on_double_returns=True)
+
+        await player.handle_double(Pt.REQ_DOUBLE, {'double': 0})
+
+        self.assertEqual(room.on_double_calls, [(player, 0)])
+        broadcast = room.broadcasts[0]
+        self.assertEqual(broadcast[1]['phase'], 'end')
+        self.assertEqual(player.state, State.PLAYING)
+        self.assertEqual(room.timer_started, [20])  # timer reset for shot phase
+        self.assertEqual(room.whose_turn, room.landlord_seat)
+
+    async def test_double_zero_and_one_both_accepted(self):
+        for choice in (0, 1):
+            with self.subTest(choice=choice):
+                player, room = make_double_player(seat=0, double_turn_seat=0)
+                await player.handle_double(Pt.REQ_DOUBLE, {'double': choice})
+                self.assertEqual(room.on_double_calls, [(player, choice)])
+                # clear socket messages for next subtest
+                player.socket.messages = []
+
+    async def test_double_timeout_defaults_to_decline(self):
+        player, room = make_double_player(seat=0, double_turn_seat=0)
+
+        await player.handle_timeout()
+
+        self.assertEqual(room.on_double_calls, [(player, 0)])
 
 
 if __name__ == '__main__':

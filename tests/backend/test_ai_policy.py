@@ -31,7 +31,20 @@ class RoomStub:
     def __init__(self):
         self.last_shot_poker = []
         self.last_shot_seat = -1
+        self.landlord_seat = 0
+        self.pokers = []
+        self.shot_round = []
         self.players = []
+
+
+class StubAgent:
+    def __init__(self, action):
+        self.action = action
+        self.infosets = []
+
+    def act(self, infoset):
+        self.infosets.append(infoset)
+        return self.action
 
 
 class DouZeroConfigTest(unittest.TestCase):
@@ -90,6 +103,37 @@ class DouZeroPolicyTest(unittest.TestCase):
         self.assertFalse(policy.available)
         self.assertIn('landlord_up.ckpt', policy.disabled_reason)
         self.assertIn('landlord_down.ckpt', policy.disabled_reason)
+
+    def test_available_policy_uses_douzero_agent_action(self):
+        policy = DouZeroPolicy(DouZeroConfig(enabled=False, model_dir=None), fallback=StubFallback())
+        agent = StubAgent([3, 3])
+        policy.available = True
+        policy._agents = {'landlord': agent}
+        player = PlayerStub([3, 16, 4], seat=0)
+        room = RoomStub()
+        room.players = [player, PlayerStub([], seat=1), PlayerStub([], seat=2)]
+
+        with patch('ai.policy.get_douzero_legal_actions', return_value=[[3, 3], []]):
+            self.assertEqual(policy.choose_shot(player, room), [3, 16])
+
+        self.assertEqual(len(agent.infosets), 1)
+        self.assertEqual(agent.infosets[0].player_position, 'landlord')
+        self.assertEqual(agent.infosets[0].legal_actions, [[3, 3], []])
+
+    def test_available_policy_falls_back_when_agent_action_cannot_be_mapped(self):
+        fallback = StubFallback()
+        policy = DouZeroPolicy(DouZeroConfig(enabled=False, model_dir=None), fallback=fallback)
+        policy.available = True
+        policy._agents = {'landlord': StubAgent([30])}
+        player = PlayerStub([3, 16], seat=0)
+        room = RoomStub()
+        room.players = [player, PlayerStub([], seat=1), PlayerStub([], seat=2)]
+
+        with patch('ai.policy.get_douzero_legal_actions', return_value=[[30]]), \
+                patch('ai.policy.logger.warning'):
+            self.assertEqual(policy.choose_shot(player, room), [3, 4, 5])
+
+        self.assertEqual(fallback.shot_calls, [(player, room)])
 
 
 class RuleBasedPolicyTest(unittest.TestCase):

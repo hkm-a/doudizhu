@@ -10,6 +10,12 @@ class Player {
     constructor(seat) {
         this.uid = seat;
         this.seat = seat;
+        this.name = '等待玩家加入';
+        this.ready = false;
+        this.left = false;
+        this.point = 0;
+        this.cardCount = 0;
+        this.turnActive = false;
 
         this.pokerInHand = [];
         this._pokerPic = {};
@@ -19,23 +25,112 @@ class Player {
         this.isDraging = false;
     }
 
+    attachProfileUI(profileUI) {
+        this.head = profileUI.head;
+        this.nameText = profileUI.nameText;
+        this.readyText = profileUI.readyText;
+        this.cardCountText = profileUI.cardCountText;
+        this.sayText = profileUI.sayText;
+        this.game = profileUI.game || this.game;
+        this.updateInfo(this.uid, this.name);
+        this.setReady(this.ready);
+        this.setLeft(this.left);
+        this.setCardCount(this.cardCount);
+        this.setTurnActive(this.turnActive);
+    }
+
+    updateInfo(uid, name) {
+        this.uid = uid;
+        this.name = name || '等待玩家加入';
+        if (this.nameText) {
+            this.nameText.setText(this.name);
+        }
+    }
+
+    setPoint(point) {
+        const nextPoint = Number(point);
+        this.point = Number.isFinite(nextPoint) ? nextPoint : 0;
+    }
+
+    setReady(isReady) {
+        this.ready = Boolean(isReady);
+        if (this.readyText) {
+            this.readyText.setText(this.ready ? '已准备' : '');
+            this.readyText.setVisible(this.ready);
+        }
+        if (this.left) {
+            this.setLeft(true);
+        }
+    }
+
+    setLeft(isLeft) {
+        this.left = Boolean(isLeft);
+        if (this.nameText && this.nameText.setColor) {
+            this.nameText.setColor(this.left ? '#ff9b72' : (this.turnActive ? '#ffd56d' : '#ffe7a8'));
+        }
+        if (this.readyText && this.left) {
+            this.readyText.setText('暂离');
+            this.readyText.setVisible(true);
+        } else if (this.readyText) {
+            this.readyText.setText(this.ready ? '已准备' : '');
+            this.readyText.setVisible(this.ready);
+        }
+    }
+
+    setCardCount(count) {
+        const nextCount = Math.max(Number(count) || 0, 0);
+        this.cardCount = nextCount;
+        if (this.cardCountText) {
+            this.cardCountText.setText(nextCount > 0 ? nextCount + '张' : '');
+            this.cardCountText.setVisible(nextCount > 0);
+        }
+    }
+
+    setTurnActive(isActive) {
+        this.turnActive = Boolean(isActive);
+        if (this.head) {
+            if (this.turnActive && this.head.setTint) {
+                this.head.setTint(0xffd56d);
+            } else if (!this.turnActive && this.head.clearTint) {
+                this.head.clearTint();
+            }
+        }
+        if (this.nameText && this.nameText.setColor) {
+            this.nameText.setColor(this.left ? '#ff9b72' : (this.turnActive ? '#ffd56d' : '#ffe7a8'));
+        }
+    }
+
+    say(words) {
+        if (!this.sayText) {
+            return;
+        }
+
+        this.sayText.setText(words || '');
+        this.sayText.setVisible(Boolean(words));
+        if (words && this.game && this.game.time && this.game.time.delayedCall) {
+            this.game.time.delayedCall(2000, this.sayText.setVisible, [false], this.sayText);
+        }
+    }
 
     cleanPokers() {
         const length = this.pokerInHand.length;
         for (let i = 0; i < length; i++) {
             const pid = this.pokerInHand[i];
-            const p = this.findAPoker(pid);
+            const p = this._pokerPic[pid];
             if (p) {
                 p.kill();
             }
         }
         this.pokerInHand = [];
         this._pokerPic = {};
+        this.setCardCount(0);
     }
 
-    setLandlord() {
-        this.isLandlord = true;
-        this.head.setFrame('icon_landlord.png');
+    setLandlord(isLandlord = true) {
+        this.isLandlord = Boolean(isLandlord);
+        if (this.head) {
+            this.head.setFrame(this.isLandlord ? 'icon_landlord.png' : 'icon_default.png');
+        }
     };
 
     onInputDown(poker, pointer) {

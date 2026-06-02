@@ -1,0 +1,66 @@
+name: Linux Alpha Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: "Release name used for the uploaded artifact bundle"
+        required: true
+        default: "v0.2.0-alpha"
+
+jobs:
+  build-deb:
+    name: Build Ubuntu/Debian alpha package
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install desktop dependencies
+        run: npm ci
+
+      - name: Verify desktop startup chain
+        run: npm run verify:desktop
+
+      - name: Build Debian package
+        run: npm run tauri:build
+
+      - name: Smoke Debian package
+        run: npm run desktop:artifact-smoke
+
+      - name: Generate artifact manifest
+        run: npm run desktop:artifact-manifest
+
+      - name: Prepare release bundle
+        run: npm run desktop:release-bundle -- ${{ inputs.release_name }}
+
+      - name: Check release bundle
+        run: npm run desktop:release-check -- ${{ inputs.release_name }}
+
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: doudizhu-linux-alpha-${{ inputs.release_name }}
+          path: dist/linux-alpha/${{ inputs.release_name }}/*
+          if-no-files-found: error
+          retention-days: 14
