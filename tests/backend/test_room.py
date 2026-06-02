@@ -39,6 +39,9 @@ class PlayerStub:
     def on_timeout(self):
         self.timeouts += 1
 
+    def change_state(self, state):
+        self.state = state
+
     def write_message(self, packet):
         self.messages.append(packet)
 
@@ -607,6 +610,276 @@ class RoomMultipleTest(unittest.TestCase):
         room.re_multiple()
 
         self.assertEqual(room._multiple_details['di'], 2)
+
+
+class RoomRobEndTest(unittest.TestCase):
+    def setUp(self):
+        self.room = Room(1)
+        self.players = [PlayerStub(i + 1, i) for i in range(3)]
+        self.room.players = self.players
+        self.room.landlord_seat = 0
+
+    def test_not_ended_when_next_player_has_not_robbed(self):
+        self.room.whose_turn = 1
+        self.players[1].rob = 0
+
+        self.assertFalse(self.room._is_rob_end())
+
+    def test_ended_when_next_player_declined_and_circle_complete(self):
+        self.room.whose_turn = 0
+        for p in self.players:
+            p.rob = 0
+
+        self.assertTrue(self.room._is_rob_end())
+
+    def test_ended_when_all_declined_and_first_player_is_landlord(self):
+        self.room.whose_turn = 2
+        for p in self.players:
+            p.rob = 0
+
+        self.assertTrue(self.room._is_rob_end())
+
+    def test_not_ended_when_first_player_can_rob_again(self):
+        self.room.whose_turn = 2
+        self.players[0].rob = 1
+        self.players[1].rob = 0
+        self.players[2].rob = 1
+
+        self.assertFalse(self.room._is_rob_end())
+
+    def test_not_ended_when_next_player_still_needs_to_decide(self):
+        self.room.whose_turn = 2
+        self.players[0].rob = 1
+        self.players[1].rob = -1
+        self.players[2].rob = 0
+
+        self.assertFalse(self.room._is_rob_end())
+
+    def test_ended_when_first_player_also_robbed_and_circle_complete(self):
+        self.room.whose_turn = 0
+        for p in self.players:
+            p.rob = 1
+
+        self.assertTrue(self.room._is_rob_end())
+
+    def test_ended_when_first_player_declined_and_circle_complete(self):
+        self.room.whose_turn = 2
+        self.players[0].rob = 0
+        self.players[1].rob = 0
+        self.players[2].rob = 0
+
+        self.assertTrue(self.room._is_rob_end())
+
+
+class RoomOnRobEndTest(unittest.TestCase):
+    def test_rob_end_sets_landlord_and_distributes_bottom_cards(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        players = [PlayerStub(i + 1, i) for i in range(3)]
+        room.players = players
+        room.landlord_seat = 0
+        room.whose_turn = 1
+        room.pokers = [52, 53, 54]
+        players[0].rob = 1
+        players[1].rob = 1
+        players[2].rob = 0
+
+        is_end = room.on_rob(players[1])
+
+        self.assertTrue(is_end)
+        self.assertEqual(players[1].landlord, 1)
+        self.assertEqual(players[1].hand_pokers, [52, 53, 54])
+
+
+class RoomDoublePhaseTest(unittest.TestCase):
+    def _make_players(self):
+        return [PlayerStub(101 + i, i) for i in range(3)]
+
+    def test_on_double_returns_true_when_no_landlord(self):
+        room = Room(1)
+        room.players = self._make_players()
+
+        done = room.on_double(room.players[0], 0)
+
+        self.assertTrue(done)
+
+    def test_on_double_records_landlord_decision(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        players = self._make_players()
+        players[0].landlord = 1
+        room.players = players
+        room.landlord_seat = 0
+        room.double_turn_seat = 0
+
+        done = room.on_double(players[0], 1)
+
+        self.assertFalse(done)
+        self.assertEqual(room._double_decisions, {101: 1})
+        self.assertEqual(room._multiple_details['landlord'], 2)
+
+    def test_on_double_records_farmer_decision(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        players = self._make_players()
+        players[0].landlord = 1
+        room.players = players
+        room.landlord_seat = 0
+        room.double_turn_seat = 0
+
+        room.on_double(players[1], 1)
+
+        self.assertEqual(room._multiple_details['farmer'], 2)
+
+    def test_on_double_returns_true_when_all_decided(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        players = self._make_players()
+        players[0].landlord = 1
+        room.players = players
+        room.landlord_seat = 0
+        room.double_turn_seat = 0
+
+        not_done = room.on_double(players[0], 0)
+        self.assertFalse(not_done)
+
+        not_done = room.on_double(players[1], 0)
+        self.assertFalse(not_done)
+
+        done = room.on_double(players[2], 0)
+        self.assertTrue(done)
+
+    def test_skip_double_to_playing_resets_state(self):
+        room = Room(1)
+        room.timer = TimerStub()
+        from api.game.player import State
+        players = [PlayerStub(1, i) for i in range(3)]
+        room.players = players
+        room.landlord_seat = 0
+        room.double_turn_seat = 1
+        room._double_decisions = {1: 0}
+
+        room._skip_double_to_playing()
+
+        self.assertEqual(room.double_turn_seat, -1)
+        self.assertEqual(room._double_decisions, {})
+        self.assertEqual(room.whose_turn, 0)
+        for player in players:
+            self.assertEqual(player.state, State.PLAYING)
+
+
+class RoomNextDoubleSeatTest(unittest.TestCase):
+    def test_next_double_seat_skips_players_who_already_decided(self):
+        room = Room(1)
+        room.players = [PlayerStub(101, 0), PlayerStub(102, 1), PlayerStub(103, 2)]
+        room._double_decisions = {101: 0}
+
+        next_seat = room._next_double_seat(0)
+
+        self.assertEqual(next_seat, 1)
+
+    def test_next_double_seat_returns_none_when_all_decided(self):
+        room = Room(1)
+        room.players = [PlayerStub(101, 0), PlayerStub(102, 1), PlayerStub(103, 2)]
+        room._double_decisions = {101: 0, 102: 0, 103: 0}
+
+        next_seat = room._next_double_seat(2)
+
+        self.assertIsNone(next_seat)
+
+    def test_next_double_seat_skips_left_players(self):
+        room = Room(1)
+        room.players = [PlayerStub(101, 0), PlayerStub(102, 1), PlayerStub(103, 2)]
+        room.players[1].left = 1
+        room._double_decisions = {101: 0}
+
+        next_seat = room._next_double_seat(0)
+
+        self.assertEqual(next_seat, 2)
+
+
+class RoomLeaveTest(unittest.TestCase):
+    def test_on_leave_removes_target_player(self):
+        room = Room(1)
+        players = [PlayerStub(101, 0), PlayerStub(102, 1), PlayerStub(103, 2)]
+        room.players = list(players)
+
+        room.on_leave(players[1])
+
+        self.assertIsNone(room.players[1])
+        self.assertIsNotNone(room.players[0])
+
+    def test_on_leave_handles_player_not_found_gracefully(self):
+        room = Room(1)
+        room.players = [PlayerStub(101, 0), None, None]
+        unknown = PlayerStub(999, 5)
+
+        result = room.on_leave(unknown)
+
+        self.assertTrue(result)
+        self.assertIsNotNone(room.players[0])
+
+    def test_has_robot_detects_robot_player(self):
+        from api.game.components.simple import RobotPlayer
+        room = Room(1)
+        room.players = [PlayerStub(101, 0), None, None]
+
+        self.assertFalse(room.has_robot())
+
+        room.players[1] = RobotPlayer(10001, 'bot')
+        self.assertTrue(room.has_robot())
+
+    def test_is_empty_returns_true_when_no_players(self):
+        room = Room(1)
+        room.players = [None, None, None]
+
+        self.assertTrue(room.is_empty())
+        self.assertEqual(room.size(), 0)
+
+    def test_is_full_includes_robots(self):
+        from api.game.components.simple import RobotPlayer
+        room = Room(1)
+        room.players = [
+            PlayerStub(101, 0),
+            RobotPlayer(10001, 'bot'),
+            PlayerStub(103, 2),
+        ]
+
+        self.assertTrue(room.is_full())
+
+    def test_level_profile_unknown_level_falls_back_to_default(self):
+        profile = Room.level_profile(99)
+
+        self.assertEqual(profile['label'], '99 档')
+        self.assertEqual(profile['origin'], 10)
+        self.assertEqual(profile['min_point'], 0)
+
+
+class RoomMetadataTest(unittest.TestCase):
+    def test_str_repr(self):
+        room = Room(1)
+        room.players = [PlayerStub(1, 0), None, None]
+
+        self.assertIn('1', str(room))
+        self.assertIn('1', str(room))
+
+    def test_hash_and_equality(self):
+        r1 = Room(1)
+        r2 = Room(2)
+        r1_copy = Room(1)
+
+        self.assertEqual(hash(r1), hash(r1_copy))
+        self.assertNotEqual(hash(r1), hash(r2))
+        self.assertEqual(r1, r1_copy)
+        self.assertNotEqual(r1, r2)
+        self.assertFalse(r1 != r1_copy)
+
+    def test_multiple_property(self):
+        room = Room(1)
+        room._multiple_details['rob'] = 2
+        room._multiple_details['landlord'] = 2
+
+        self.assertEqual(room.multiple, 60)
 
 
 if __name__ == '__main__':
