@@ -1,0 +1,76 @@
+name: Multi-Platform Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: 'Release name (e.g. v1.0.0-rc)'
+        required: true
+        default: 'v1.0.0-rc'
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: linux
+            bundle: deb
+            artifact-name: doudizhu-linux
+          - os: macos-13
+            target: macos
+            bundle: dmg
+            artifact-name: doudizhu-macos-intel
+          - os: macos-14
+            target: macos
+            bundle: dmg
+            artifact-name: doudizhu-macos-arm
+          - os: windows-latest
+            target: windows
+            bundle: msi
+            artifact-name: doudizhu-windows
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Linux system deps
+        if: matrix.target == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build web frontend
+        run: npm --prefix client ci && npm --prefix client run build
+
+      - name: Build Tauri ${{ matrix.bundle }}
+        run: npm run tauri:build
+
+      - name: Upload ${{ matrix.bundle }} artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}-${{ inputs.release_name }}
+          path: src-tauri/target/release/bundle/${{ matrix.bundle }}/*
+          if-no-files-found: warn
+          retention-days: 30

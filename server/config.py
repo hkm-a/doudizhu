@@ -1,3 +1,4 @@
+import logging
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -47,7 +48,11 @@ def env_int(name: str, default: int) -> int:
 
 DEBUG = env_bool('TORNADO_DEBUG')
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'fiDSpuZ7QFe8fm0XP9Jb7ZIPNsOegkHYtgKSd4I83Hs=')
+SECRET_KEY = os.getenv('SECRET_KEY', '')
+if not SECRET_KEY:
+    import base64
+    logging.warning('SECRET_KEY not set in environment; generating ephemeral key (sessions will be invalidated on restart)')
+    SECRET_KEY = base64.b64encode(os.urandom(32)).decode()
 
 PORT = env_int('PORT', 8081)
 
