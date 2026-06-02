@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import functools
 import logging
-from enum import IntEnum
 from typing import TYPE_CHECKING, List, Optional, Dict, Any
 
 from tornado.ioloop import IOLoop
 
+from game.player import PureGamePlayer
+from game.state import State
 from .protocol import Protocol as Pt
 from .rule import rule
 
@@ -29,42 +30,16 @@ def shot_turn(func):
     return wrapper
 
 
-class State(IntEnum):
-    INIT = 0
-    WAITING = 1
-    CALL_SCORE = 2
-    PLAYING = 3
-    GAME_OVER = 4
-    DOUBLE = 5  # GDD v0.2 G 章节：抢地主结束 → 加倍阶段 → PLAYING
-
-
-class Player(object):
+class Player(PureGamePlayer):
 
     def __init__(self, uid: int, name: str, sex: int = 1, avatar: str = '', point: int = 1000, **kwargs):
-        self.uid = uid
-        self.name = name
-        self.sex = sex
-        self.avatar = avatar
-        self.point = self.normalize_point(point)
+        super().__init__(uid, name, sex, avatar, point)
         self.room: Optional[Room] = None
-        self.seat = -1
         self.state = State.INIT
-
-        self._ready = 0
-        self._leave = 0
-
-        self.rob = -1
-        self.landlord = 0
-        self._hand_pokers: List[int] = []
-
         self.socket: Optional[SocketHandler] = None
 
     def restart(self):
-        self._ready = 0
-        self._hand_pokers: List[int] = []
-
-        self.rob = -1
-        self.landlord = 0
+        super().restart()
         self.state = State.WAITING
 
     def sync_data(self, real=True) -> Dict[str, str]:
@@ -82,7 +57,7 @@ class Player(object):
         }
 
     def push_pokers(self, pokers: List[int]):
-        self._hand_pokers += pokers
+        super().push_pokers(pokers)
 
         def compare_single_poker(poker: int):
             if poker == 53 or poker == 54:
@@ -93,10 +68,6 @@ class Player(object):
             return poker
 
         self._hand_pokers.sort(key=compare_single_poker)
-
-    @property
-    def hand_pokers(self) -> List[int]:
-        return self._hand_pokers
 
     async def on_message(self, code: int, packet: Dict[str, Any]):
         if self.is_left():
@@ -220,7 +191,6 @@ class Player(object):
                 self.write_error('Insufficient point for room level')
                 return
 
-            # GDD v0.2 F 章节：房间 personality（房主创建时设置；其他人可改）
             personality_str = packet.get('personality', 'balanced')
             try:
                 personality = PersonalityMode(personality_str)
@@ -232,9 +202,7 @@ class Player(object):
                 self.write_error('Room[%s] Not Found' % room_id)
                 return
 
-            # GDD v0.2 F 章节：玩家加入时设定 personality（同一房间所有人共用）
             if room.personality != personality:
-                # 房主已设性格；保持房主设定，避免被后续玩家覆盖
                 pass
 
             self.state = State.WAITING
@@ -274,7 +242,6 @@ class Player(object):
 
             is_end = self.room.on_rob(self)
             if is_end:
-                # GDD v0.2 G 章节：抢地主结束 → 进 DOUBLE 阶段 → 阶段内切到 PLAYING
                 self.room.start_double_phase()
                 self.change_state(State.DOUBLE)
                 logger.info('ROB END LANDLORD[%s] -> DOUBLE phase', self.room.landlord)
@@ -291,7 +258,6 @@ class Player(object):
             self.write_error('STATE[%s]' % self.state)
 
     async def handle_double(self, code, packet):
-        """加倍阶段：仅在 State.DOUBLE 接受 REQ_DOUBLE。"""
         if not self.room:
             self.write_error('Room not joined')
             return
@@ -351,6 +317,13 @@ class Player(object):
             self.write_error('STATE[%s]' % self.state)
 
     @staticmethod
+    def normalize_point(point) -> int:
+        try:
+            return int(point)
+        except (TypeError, ValueError):
+            return 1000
+
+    @staticmethod
     def _is_valid_poker_list(pokers) -> bool:
         return (
             isinstance(pokers, list)
@@ -360,13 +333,6 @@ class Player(object):
     @staticmethod
     def _is_protocol_bit(value) -> bool:
         return type(value) is int and value in (0, 1)
-
-    @staticmethod
-    def normalize_point(point) -> int:
-        try:
-            return int(point)
-        except (TypeError, ValueError):
-            return 1000
 
     def handle_game_over(self, code: int, packet: Dict[str, Any]):
         self.write_error('STATE[%s]' % self.state)
@@ -398,9 +364,6 @@ class Player(object):
         if self.room:
             self.room.broadcast([Pt.RSP_READY, {'uid': self.uid, 'ready': self._ready}])
 
-    def is_left(self) -> bool:
-        return self._leave == 1
-
     @property
     def timeout(self):
         return 5 if self.is_left() else 20
@@ -425,16 +388,4 @@ class Player(object):
 
         self.set_left(0)
         self.room = room
-        return room.on_join(self)
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __str__(self):
-        return f'{self.uid}-{self.name}'
-
-    def __eq__(self, other):
-        return other and self.uid == other.uid
-
-    def __ne__(self, other):
-        return not (self == other)
+        return room._on_join(self)

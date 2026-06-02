@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import logging
 import random
-from functools import reduce
-from operator import mul
 from typing import Optional, List, Dict
 from typing import TYPE_CHECKING
 
 from tornado.ioloop import IOLoop
 
+from game.round import GameRound
 from models import Record
 from .protocol import Protocol as Pt
 from .rule import rule
@@ -21,94 +20,26 @@ ROBOT_FIRST_JOIN_DELAY = 1
 ROBOT_SECOND_JOIN_DELAY = 1
 
 
-class Room(object):
+class Room(GameRound):
     robot_no = 0
-    level_profiles = {
-        1: {'label': '新手场', 'origin': 10, 'min_point': 0},
-        2: {'label': '进阶场', 'origin': 30, 'min_point': 1000},
-        3: {'label': '高手场', 'origin': 60, 'min_point': 2000},
-    }
 
     def __init__(self, room_id, level=1, allow_robot=True, personality=None):
         from ai.personality import PersonalityMode, resolve_personality
-        self.room_id = room_id
-        self.level = level
-        level_profile = self.level_profile(level)
-        # GDD v0.2 F 章节：AI 性格注入层。房主创建房间时设定。
-        self.personality: PersonalityMode = personality if isinstance(personality, PersonalityMode) else resolve_personality(personality).mode
-        self._multiple_details: Dict[str, int] = {
-            'origin': level_profile['origin'],
-            'origin_multiple': 15,
-            'di': 1,
-            'ming': 1,
-            'bomb': 1,
-            'rob': 1,
-            'spring': 1,
-            'landlord': 1,
-            'farmer': 1,
-        }
-
-        self.players: List[Optional[Player]] = [None, None, None]
-        self.pokers: List[int] = []
-
+        resolved = personality if isinstance(personality, PersonalityMode) else resolve_personality(personality).mode
+        super().__init__(room_id, level, resolved)
         self.timer = Timer(self.on_timeout)
-        self.whose_turn = 0
-        self.landlord_seat = 0
-        self.bomb_multiple = 2
-
-        # GDD v0.2 G 章节：加倍阶段状态
-        self.double_turn_seat: int = -1
-        self._double_decisions: Dict[int, int] = {}
-
-        # GDD v0.2 onboarding 实施层：首局标记
-        self.first_session: bool = True
-
-        self.last_shot_seat = 0
-        self.last_shot_poker: List[int] = []
-        self.shot_round: List[List[int]] = []
-
         self.allow_robot = allow_robot
 
-    @classmethod
-    def level_profile(cls, level):
-        return cls.level_profiles.get(level, {
-            'label': '%s 档' % level,
-            'origin': cls.level_profiles[1]['origin'],
-            'min_point': 0,
-        })
-
     def restart(self):
-        for key, val in self._multiple_details.items():
-            if key.startswith('origin'):
-                continue
-            self._multiple_details[key] = 1
-
-        self.pokers: List[int] = []
-
         self.timer.stop_timing()
-        self.whose_turn = 0
         self.landlord_seat = (self.landlord_seat + 1) % 3
-        self.bomb_multiple = 2
-
-        self.last_shot_seat = 0
-        self.last_shot_poker = []
-        self.shot_round = []
-        self._rob_record = []
-
-        # GDD v0.2 G 章节：重置加倍阶段状态
-        self.double_turn_seat = -1
-        self._double_decisions = {}
-
-        # GDD v0.2 onboarding 实施层：第一局标记
         self.first_session = False
-
+        super().restart()
         for player in self.players:
             if player is None:
                 continue
             if player.is_left():
                 IOLoop.current().add_callback(self.on_leave, player, True)
-            else:
-                player.restart()
 
     @property
     def room_state(self):
@@ -133,11 +64,8 @@ class Room(object):
             'pokers': list(self.pokers),
             'last_shot_uid': self.seat_to_uid(self.last_shot_seat),
             'last_shot_poker': self.last_shot_poker,
-            # GDD v0.2 G 章节：加倍阶段状态
             'double_turn_uid': self.seat_to_uid(self.double_turn_seat) if self.double_turn_seat >= 0 else -1,
-            # GDD v0.2 F 章节：AI 性格
             'personality': self.personality.value if self.personality else 'balanced',
-            # GDD v0.2 onboarding 实施层：首局标记 + 引导提示
             'first_session': self.first_session,
             'onboarding_hints': {
                 'call_score_available': True,
@@ -166,11 +94,9 @@ class Room(object):
             return
 
         if size == 2 and nth == 1:
-            # only allow [human robot robot]
             return
 
         if nth == 1 and self.robot_no > 5:
-            # limit robot number
             return
 
         from .components.simple import RobotPlayer
@@ -202,29 +128,9 @@ class Room(object):
             self.timer.stop_timing()
             return False
 
-        if target.rob == 1:
-            self._multiple_details['rob'] *= 2
-
-        if not self._is_rob_end():
-            self.go_next_turn()
-            return False
-
-        for i in range(3):
-            # 每个人都抢地主, 第一个人是地主
-            if self.turn_player.rob == 1 or i == 2:
-                self.turn_player.landlord = 1
-                self.turn_player.push_pokers(self.pokers)
-                self.last_shot_seat = self.whose_turn
-                self.re_multiple()
-                return True
-            self.go_prev_turn()
-        return True
+        return super().on_rob(target)
 
     def start_double_phase(self) -> None:
-        """抢地主结束 → 开启加倍阶段。
-
-        顺序：依 seat 顺序从第一个非地主玩家开始。2 个农民先，地主最后。
-        """
         if not self.landlord:
             self._skip_double_to_playing()
             return
@@ -235,11 +141,9 @@ class Room(object):
                 self._double_decisions = {}
                 self.timer.start_timing(player.timeout)
                 return
-        # 极端情况（无人非地主）：跳过加倍
         self._skip_double_to_playing()
 
     def _skip_double_to_playing(self) -> None:
-        """无加倍阶段（房间不满等）→ 直接进 PLAYING。"""
         from .player import State
         self.double_turn_seat = -1
         self._double_decisions = {}
@@ -251,40 +155,20 @@ class Room(object):
             self.timer.start_timing(self.turn_player.timeout)
 
     def on_double(self, target: Player, choice: int) -> bool:
-        """记录 target 的加倍选择；返回是否所有玩家都已决策。"""
         if not self.landlord:
             return True
-        self._double_decisions[target.uid] = choice
-        if choice == 1:
-            if target.landlord == 1:
-                self._multiple_details['landlord'] *= 2
-            else:
-                self._multiple_details['farmer'] *= 2
-        # GDD v0.2 行为日志：玩家加倍决策写入 player_event_log
+        is_end = super().on_double(target, choice)
         self._log_player_double(target, choice)
-        next_seat = self._next_double_seat(target.seat)
-        if next_seat is None:
-            return True  # 全部 3 人都已决策
-        self.double_turn_seat = next_seat
-        self.timer.start_timing(self.players[next_seat].timeout)
-        return False
-
-    def _next_double_seat(self, current_seat: int) -> Optional[int]:
-        for i in range(1, 4):
-            candidate = (current_seat + i) % 3
-            player = self.players[candidate]
-            if player and not player.is_left() and player.uid not in self._double_decisions:
-                return candidate
-        return None
+        if not is_end:
+            self.timer.start_timing(self.players[self.double_turn_seat].timeout)
+        return is_end
 
     def _log_player_double(self, target: Player, choice: int) -> None:
-        """GDD v0.2 行为日志：玩家加倍决策写入 JSONL。"""
         try:
             from api.player_event import get_player_event_logger, new_session_id
             logger = get_player_event_logger()
             if not logger.enabled:
                 return
-            # 会话 id：跨加倍 / 出牌全程唯一；优先复用 room 上的 _session_id
             session_id = getattr(self, '_session_id', None) or new_session_id()
             self._session_id = session_id
             payload = {
@@ -304,10 +188,6 @@ class Room(object):
             logging.warning('Room[%d] player double log failed', self.room_id, exc_info=True)
 
     async def _auto_apply_segment(self, winner: Player) -> None:
-        """GDD v0.2 H.5：on_game_over 自动给 3 个玩家应用段位变更 + 推 RSP_SEGMENT_CHANGE。
-
-        异步执行，避开 on_game_over 同步路径。失败不重试（避免雪崩）。
-        """
         try:
             from sqlalchemy import select as _select, update as _update
             from config import DATABASE_URI
@@ -363,7 +243,6 @@ class Room(object):
         finally:
             await engine.dispose()
 
-        # 推送 RSP_SEGMENT_CHANGE 给每个玩家
         for player, old, result, is_winner, is_landlord in updates:
             try:
                 player.write_message([_Pt.RSP_SEGMENT_CHANGE, {
@@ -379,7 +258,6 @@ class Room(object):
             except Exception:
                 logging.warning('segment push to player=%d failed', player.uid, exc_info=True)
 
-            # 写 player_event_log
             try:
                 from api.player_event import get_player_event_logger
                 logger = get_player_event_logger()
@@ -441,27 +319,6 @@ class Room(object):
             logging.info('ROOM[%s] DEAL[%s]', self.room_id, response)
         return True
 
-    def on_shot(self, seat: int, pokers: List[int]) -> str:
-        if pokers:
-            spec = rule.get_poker_spec(pokers)
-            if spec is None:
-                return 'Poker does not comply with the rules'
-
-            if seat != self.last_shot_seat and rule.compare_pokers(pokers, self.last_shot_poker) <= 0:
-                return 'Poker small than last shot'
-
-            if spec == 'bomb' or spec == 'rocket':
-                self._multiple_details['bomb'] *= 2
-
-            self.last_shot_seat = seat
-            self.last_shot_poker = pokers
-        else:
-            if seat == self.last_shot_seat:
-                return 'Last shot player does not allow pass'
-
-        self.shot_round.append(pokers)
-        return ''
-
     def on_leave(self, target: Player, is_restart=False):
         from .components.simple import RobotPlayer
         from .globalvar import GlobalVar
@@ -504,7 +361,6 @@ class Room(object):
                 'point': point,
                 'balance': player.point,
                 'pokers': player.hand_pokers,
-                # GDD v0.2 H.5：RSP_GAME_OVER 带 segment 字段让前端 HUD 拿到
                 'segment': getattr(player, 'segment', None) or 'gold',
                 'segment_points': int(getattr(player, 'segment_points', 0) or 0),
             })
@@ -512,7 +368,6 @@ class Room(object):
         logging.info('Room[%d] GameOver', self.room_id)
 
         self.timer.stop_timing()
-        # GDD v0.2 H.5：on_game_over 自动给 3 个玩家应用段位变更
         IOLoop.current().add_callback(self._auto_apply_segment, winner)
         IOLoop.current().add_callback(self.restart)
 
@@ -566,162 +421,13 @@ class Room(object):
             return True
         return False
 
-    @property
-    def multiple(self) -> int:
-        return reduce(mul, self._multiple_details.values(), 1) // self._multiple_details['origin']
-
-    def re_multiple(self):
-        joker_number = rule.get_joker_no(self.pokers)
-        if joker_number > 0:
-            self._multiple_details['di'] *= 2 * joker_number
-            return
-
-        if rule.is_same_color(self.pokers):
-            self._multiple_details['di'] *= 2
-
-        if rule.is_short_seq(self.pokers):
-            self._multiple_details['di'] *= 2
-
-    def get_point(self, winner: Player, player: Player) -> int:
-        point = reduce(mul, self._multiple_details.values(), 1)
-        if self.landlord == winner:
-            if winner == player:
-                return point * 2
-            else:
-                return -point
-        else:
-            if player.landlord == 0:
-                return point
-            else:
-                return -point * 2
-
-    def is_spring(self, winner: Player) -> bool:
-        if self.landlord == winner:
-            for i, poker in enumerate(self.shot_round):
-                if i % 3 == 0:
-                    continue
-                if poker:
-                    return False
-            return True
-        return False
-
-    def anti_spring(self, winner: Player) -> bool:
-        if self.landlord == winner:
-            return False
-
-        for i, poker in enumerate(self.shot_round):
-            if i == 0:
-                continue
-            if i % 3 == 0 and poker:
-                return False
-        return True
-
-    def _on_join(self, target: Player):
-        for i, player in enumerate(self.players):
-            if player:
-                continue
-            target.seat = i
-            self.players[i] = target
-            return True
-        return False
-
     def go_next_turn(self):
-        for _ in range(3):
-            self.whose_turn += 1
-            if self.whose_turn == 3:
-                self.whose_turn = 0
-            if self.turn_player:
-                break
+        super().go_next_turn()
+        if self.turn_player:
+            self.timer.start_timing(self.turn_player.timeout)
         else:
             self.timer.stop_timing()
-            return
-        self.timer.start_timing(self.turn_player.timeout)
-
-    def go_prev_turn(self):
-        self.whose_turn -= 1
-        if self.whose_turn == -1:
-            self.whose_turn = 2
-
-    def seat_to_uid(self, seat):
-        if self.players[seat]:
-            return self.players[seat].uid
-        return -1
-
-    @property
-    def landlord(self):
-        for player in self.players:
-            if player and player.landlord == 1:
-                return player
-        return None
-
-    @property
-    def prev_player(self):
-        prev_seat = (self.whose_turn - 1) % 3
-        return self.players[prev_seat]
-
-    @property
-    def turn_player(self):
-        return self.players[self.whose_turn]
-
-    @property
-    def next_player(self):
-        next_seat = (self.whose_turn + 1) % 3
-        return self.players[next_seat]
-
-    def _is_rob_end(self) -> bool:
-        """
-        每人都可以抢一次地主, 第一个人可以多抢一次
-        :return: 抢地主是否结束
-        """
-        # 下一个人没有抢地主, 继续抢地主
-        if self.next_player.rob == -1:
-            return False
-
-        # 抢了一圈, 处理第一个人多抢一次
-        if self.next_player.seat == self.landlord_seat:
-            # 第一个人第一次没有抢, 结束
-            if self.next_player.rob == 0:
-                return True
-
-            if self.turn_player.rob == 0:
-                # 当前用户没有抢
-                if self.prev_player.rob == 0:
-                    # 前一个用户也没有抢, 第一个人是地主, 结束
-                    return True
-                else:
-                    # 前一个用户抢了, 第一个人可以多抢一次, 继续抢
-                    return False
-            else:
-                # 当前用户抢了, 第一个人可以多抢一次, 继续抢
-                return False
-
-        # 第一个人也抢了, 结束
-        return True
-
-    def is_ready(self) -> bool:
-        return self.is_full() and all([p.ready for p in self.players])
-
-    def is_full(self) -> bool:
-        return self.size() == 3
-
-    def is_empty(self) -> bool:
-        return self.size() == 0
 
     def has_robot(self) -> bool:
         from .components.simple import RobotPlayer
         return any([isinstance(p, RobotPlayer) for p in self.players])
-
-    def size(self):
-        return sum([p is not None for p in self.players])
-
-    def __str__(self):
-        return f'[{self.room_id}{[p or "-" for p in self.players]}]'
-
-    def __hash__(self):
-        return self.room_id
-
-    def __eq__(self, other):
-        return self.room_id == other.room_id
-
-    def __ne__(self, other):
-        return not (self == other)
