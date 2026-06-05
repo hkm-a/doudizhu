@@ -1,12 +1,12 @@
 # Scene Descriptions: Doudizhu
 
-**Tag:** v0.1.0
+**Tag:** v0.3.0
 
 ## Scene: Main
 
 - **Type:** gameplay
 - **Resolution reference:** 1280x720
-- **Layout:** fixed table UI with edge-anchored player hand and centered trick area
+- **Layout:** responsive desktop table UI with edge-anchored player hand and centered trick/status/action bands
 - **Background:** Procedural green table surface with restrained contrast; no bitmap background required
 - **Mood:** Clear, calm, readable desktop card table
 
@@ -15,14 +15,14 @@
 | Element | Position | Size | Description |
 |---------|----------|------|-------------|
 | Table background | full viewport | 100%w x 100%h | Green table surface behind all UI |
-| AI Left panel | top-left | 24%w x 18%h | Seat name, role, card count, active marker, recent play |
-| AI Right panel | top-right | 24%w x 18%h | Seat name, role, card count, active marker, recent play |
-| Bottom cards area | top-center | 20%w x 10%h | Three bottom cards, hidden before landlord and visible after assignment |
-| Current trick area | center | 48%w x 22%h | Most recent valid play as procedural card faces plus owner label |
-| Status message | center-below trick | 60%w x 6%h | Current phase, validation errors, and AI/pass messages |
-| Player hand | bottom-center | 92%w x 22%h | Human cards sorted horizontally; selected cards lift/highlight |
-| Action bar | bottom-right above hand | 42%w x 8%h | Context buttons for Call Landlord, Do Not Call, Play, Pass, Hint, New Round |
-| Result banner | center overlay | 46%w x 18%h | Win/loss result and New Round action during result phase |
+| AI Left panel | top-left | up to 28%w x 132 scaled px | Seat name, role, card count, active marker, recent play |
+| AI Right panel | top-right | up to 28%w x 132 scaled px | Seat name, role, card count, active marker, recent play |
+| Bottom cards area | top-center | 3 scaled card widths | Three bottom cards, hidden before landlord and visible after assignment |
+| Current trick area | center | 46%w, clamped | Most recent valid play as procedural card faces plus owner label |
+| Status message | center-below trick | 62%w, clamped | Current phase, validation errors, and AI/pass messages |
+| Player hand | bottom-center | viewport width minus margins | Human cards sorted horizontally; selected cards lift/highlight |
+| Action bar | bottom-right above hand | clamped to viewport margins | Context buttons for Call Landlord, Do Not Call, Play, Pass, Hint |
+| Result banner | center overlay | scaled 440x142 px | Win/loss result and New Round action during result phase |
 
 ### Asset bindings
 
@@ -36,6 +36,7 @@
 | Player hand cards | procedural card UI | about 56x78 px each, compressed if needed | All hand cards visible or consistently fanned; selected state obvious |
 | Action buttons | UI text/procedural | 42%w x 8%h | Buttons fit labels and enable/disable by phase |
 | Result banner | UI text/procedural panel | 46%w x 18%h | Winner side and replay action prominent |
+| v0.3.0 reference screenshots | `e2e/screenshots/scene_main/v0_3_0_*.png` | 1280x720 | Launch, selected-card, and result states captured for visual QA |
 
 ### Acceptance criteria
 
@@ -49,6 +50,9 @@
 - [v0.1.0-M7] is visible through AI recent play text/card display and card count changes.
 - [v0.1.0-M8] is visible through a result banner and New Round button.
 - No text overlaps action buttons, cards, or seat panels at 1280x720.
+- [v0.3.0-M1] Card spacing, selected-card highlight/lift, panel contrast, and result banner are visible in screenshots.
+- [v0.3.0-M2] AI panels, trick, status, action bar, and hand do not overlap at 1280x720, 1366x768, or 1600x900.
+- [v0.3.0-M3] Reference screenshots exist for launch, selected-card, and result states under `e2e/screenshots/scene_main/`.
 
 ### Transitions
 
