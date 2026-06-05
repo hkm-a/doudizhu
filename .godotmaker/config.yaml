@@ -1,0 +1,41 @@
+# GodotMaker project configuration
+# Edit these values to customize behavior
+# Deployed to .godotmaker/config.yaml by publish script
+
+# Selected coding-agent runtime for this project.
+# publish.py updates this value on each publish.
+agent: codex
+
+# Visual quality assessment model.
+# Supported values:
+# - native: active agent runtime image inspection
+# - codex: Codex image inspection
+# - gemini:<model>: Gemini API through visual_qa.py
+# - openai:<model>: OpenAI Responses API through visual_qa.py
+vqa_model: native
+
+# Fallback when vqa_model is unavailable.
+# Supported values: native, codex, none
+vqa_fallback_model: native
+
+# Asset image generation model.
+# Supported values:
+# - native: active agent runtime image generation
+# - codex: Codex image generation
+# - gemini:<model>: tools/asset_gen.py Gemini backend
+# - openai:<model>: tools/asset_gen.py OpenAI Images backend
+# - grok:<model>: tools/asset_gen.py xAI Grok backend
+asset_image_model: native
+
+# Asset video generation model.
+# Supported values: none, grok:<model>
+asset_video_model: none
+
+# Agent model configuration. All roles default to sonnet; raise
+# worker_model to opus for games that need heavier implementation reasoning.
+worker_model: sonnet
+verifier_model: sonnet
+reviewer_model: sonnet
+analyst_model: sonnet
+auditor_model: sonnet
+decomposer_model: sonnet

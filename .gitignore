@@ -1,6 +1,32 @@
-_GodotMaker/
+# Godot
 .godot/
-.import/
+*.import
+export_presets.cfg
+reports/
+
+# GodotMaker tooling
+.claude/
+_GodotMaker/
+.agents/godotmaker.yaml
+.godotmaker/current_role
+.godotmaker/metrics_current.jsonl
+.godotmaker/usage.current.json
+.godotmaker/pipeline_state*.json*
+.godotmaker/state.json
+.godotmaker/hooks/**/__pycache__/
+__pycache__/
+
+# Build artifacts
+*.translation
 *.tmp
 *.log
 
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+*.swp
+*~
