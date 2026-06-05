@@ -126,6 +126,43 @@ func force_finish_for_human_win() -> void:
 	_finish_if_needed(HUMAN)
 
 
+func debug_configure_expanded_rule_fixture() -> void:
+	cards_by_id.clear()
+	for card in CardRules.create_deck():
+		cards_by_id[int(card.id)] = card
+	roles = ["farmer", "landlord", "farmer"]
+	landlord_seat = AI_LEFT
+	phase = "play"
+	current_seat = HUMAN
+	initiative_seat = AI_LEFT
+	consecutive_passes = 0
+	selected_cards = []
+	winner_side = ""
+	hands[HUMAN] = [
+		cards_by_id[5],
+		cards_by_id[9],
+		cards_by_id[13],
+		cards_by_id[17],
+		cards_by_id[21],
+		cards_by_id[24],
+	]
+	hands[AI_LEFT] = [cards_by_id[48], cards_by_id[49], cards_by_id[50]]
+	hands[AI_RIGHT] = [cards_by_id[44], cards_by_id[45], cards_by_id[46]]
+	bottom_cards = [cards_by_id[47], cards_by_id[52], cards_by_id[53]]
+	var active_cards: Array[Dictionary] = [
+		cards_by_id[0],
+		cards_by_id[4],
+		cards_by_id[8],
+		cards_by_id[12],
+		cards_by_id[16],
+	]
+	active_trick = CardRules.classify(active_cards)
+	active_trick["cards"] = active_cards
+	active_trick["owner_seat"] = AI_LEFT
+	recent_plays = ["", CardRules.labels(active_cards), ""]
+	message = "Expanded rule fixture: beat the straight."
+
+
 func get_hand_ids(seat: int) -> Array[int]:
 	var ids: Array[int] = []
 	for card in hands[seat]:

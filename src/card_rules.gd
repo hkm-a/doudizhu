@@ -5,6 +5,11 @@ const TYPE_INVALID := "invalid"
 const TYPE_SINGLE := "single"
 const TYPE_PAIR := "pair"
 const TYPE_TRIPLE := "triple"
+const TYPE_THREE_WITH_ONE := "three_with_one"
+const TYPE_THREE_WITH_PAIR := "three_with_pair"
+const TYPE_STRAIGHT := "straight"
+const TYPE_CONSECUTIVE_PAIRS := "consecutive_pairs"
+const TYPE_AIRPLANE := "airplane"
 const TYPE_BOMB := "bomb"
 const TYPE_JOKER_BOMB := "joker_bomb"
 
@@ -75,6 +80,21 @@ static func classify(cards: Array[Dictionary]) -> Dictionary:
 		return _result(TYPE_TRIPLE, ranks[0], 3)
 	if cards.size() == 4 and ranks.size() == 1 and int(counts[ranks[0]]) == 4:
 		return _result(TYPE_BOMB, ranks[0], 4)
+	if cards.size() == 4:
+		for rank in ranks:
+			if int(counts[rank]) == 3:
+				return _result(TYPE_THREE_WITH_ONE, rank, 4)
+	if cards.size() == 5:
+		var triple_rank := _rank_with_count(counts, 3)
+		var pair_rank := _rank_with_count(counts, 2)
+		if triple_rank != -1 and pair_rank != -1:
+			return _result(TYPE_THREE_WITH_PAIR, triple_rank, 5)
+	if _is_straight(ranks, counts, cards.size()):
+		return _result(TYPE_STRAIGHT, ranks.back(), cards.size())
+	if _is_consecutive_pairs(ranks, counts, cards.size()):
+		return _result(TYPE_CONSECUTIVE_PAIRS, ranks.back(), cards.size())
+	if _is_airplane(ranks, counts, cards.size()):
+		return _result(TYPE_AIRPLANE, ranks.back(), cards.size())
 	return _invalid()
 
 
@@ -91,6 +111,8 @@ static func can_beat(candidate: Dictionary, active: Dictionary) -> bool:
 		return true
 	if String(candidate.play_type) != String(active.play_type):
 		return false
+	if int(candidate.length) != int(active.length):
+		return false
 	return int(candidate.primary_rank) > int(active.primary_rank)
 
 
@@ -98,8 +120,15 @@ static func find_smallest_legal(hand: Array, active: Dictionary, has_initiative:
 	var sorted_hand := hand.duplicate()
 	sorted_hand.sort_custom(CardRules.card_sort)
 	var search_sets: Array[Array] = []
-	for size in [1, 2, 3, 4]:
-		search_sets.append(_group_by_size(sorted_hand, size))
+	search_sets.append(_group_by_size(sorted_hand, 1))
+	search_sets.append(_group_by_size(sorted_hand, 2))
+	search_sets.append(_group_by_size(sorted_hand, 3))
+	search_sets.append(_three_with_one(sorted_hand))
+	search_sets.append(_three_with_pair(sorted_hand))
+	search_sets.append(_straights(sorted_hand))
+	search_sets.append(_consecutive_pairs(sorted_hand))
+	search_sets.append(_airplanes(sorted_hand))
+	search_sets.append(_group_by_size(sorted_hand, 4))
 	search_sets.append(_joker_bomb(sorted_hand))
 
 	var active_play := {} if has_initiative else active
@@ -121,12 +150,7 @@ static func labels(cards: Array[Dictionary]) -> String:
 
 
 static func _group_by_size(hand: Array, size: int) -> Array[Array]:
-	var by_rank := {}
-	for card in hand:
-		var rank := int(card.rank)
-		if not by_rank.has(rank):
-			by_rank[rank] = []
-		by_rank[rank].append(card)
+	var by_rank := _cards_by_rank(hand)
 	var ranks := by_rank.keys()
 	ranks.sort()
 	var result: Array[Array] = []
@@ -135,6 +159,149 @@ static func _group_by_size(hand: Array, size: int) -> Array[Array]:
 		if group.size() >= size:
 			result.append(group.slice(0, size))
 	return result
+
+
+static func _three_with_one(hand: Array) -> Array[Array]:
+	var by_rank := _cards_by_rank(hand)
+	var ranks := by_rank.keys()
+	ranks.sort()
+	var result: Array[Array] = []
+	for triple_rank in ranks:
+		if by_rank[triple_rank].size() < 3:
+			continue
+		for kicker_rank in ranks:
+			if kicker_rank == triple_rank:
+				continue
+			result.append(by_rank[triple_rank].slice(0, 3) + [by_rank[kicker_rank][0]])
+			break
+	return result
+
+
+static func _three_with_pair(hand: Array) -> Array[Array]:
+	var by_rank := _cards_by_rank(hand)
+	var ranks := by_rank.keys()
+	ranks.sort()
+	var result: Array[Array] = []
+	for triple_rank in ranks:
+		if by_rank[triple_rank].size() < 3:
+			continue
+		for pair_rank in ranks:
+			if pair_rank == triple_rank or by_rank[pair_rank].size() < 2:
+				continue
+			result.append(by_rank[triple_rank].slice(0, 3) + by_rank[pair_rank].slice(0, 2))
+			break
+	return result
+
+
+static func _straights(hand: Array) -> Array[Array]:
+	var by_rank := _cards_by_rank(hand)
+	var runs := _consecutive_rank_runs(_eligible_chain_ranks(by_rank, 1))
+	var result: Array[Array] = []
+	for run in runs:
+		for length in range(5, run.size() + 1):
+			for start in range(0, run.size() - length + 1):
+				var group: Array = []
+				for rank in run.slice(start, start + length):
+					group.append(by_rank[rank][0])
+				result.append(group)
+	return result
+
+
+static func _consecutive_pairs(hand: Array) -> Array[Array]:
+	var by_rank := _cards_by_rank(hand)
+	var runs := _consecutive_rank_runs(_eligible_chain_ranks(by_rank, 2))
+	var result: Array[Array] = []
+	for run in runs:
+		for pair_count in range(3, run.size() + 1):
+			for start in range(0, run.size() - pair_count + 1):
+				var group: Array = []
+				for rank in run.slice(start, start + pair_count):
+					group.append_array(by_rank[rank].slice(0, 2))
+				result.append(group)
+	return result
+
+
+static func _airplanes(hand: Array) -> Array[Array]:
+	var by_rank := _cards_by_rank(hand)
+	var runs := _consecutive_rank_runs(_eligible_chain_ranks(by_rank, 3))
+	var result: Array[Array] = []
+	for run in runs:
+		for triple_count in range(2, run.size() + 1):
+			for start in range(0, run.size() - triple_count + 1):
+				var group: Array = []
+				for rank in run.slice(start, start + triple_count):
+					group.append_array(by_rank[rank].slice(0, 3))
+				result.append(group)
+	return result
+
+
+static func _cards_by_rank(hand: Array) -> Dictionary:
+	var by_rank := {}
+	for card in hand:
+		var rank := int(card.rank)
+		if not by_rank.has(rank):
+			by_rank[rank] = []
+		by_rank[rank].append(card)
+	return by_rank
+
+
+static func _rank_with_count(counts: Dictionary, count: int) -> int:
+	for rank in counts.keys():
+		if int(counts[rank]) == count:
+			return int(rank)
+	return -1
+
+
+static func _is_straight(ranks: Array[int], counts: Dictionary, card_count: int) -> bool:
+	if card_count < 5 or ranks.size() != card_count:
+		return false
+	return _is_valid_chain(ranks, counts, 1)
+
+
+static func _is_consecutive_pairs(ranks: Array[int], counts: Dictionary, card_count: int) -> bool:
+	if card_count < 6 or card_count % 2 != 0 or ranks.size() != card_count / 2:
+		return false
+	return _is_valid_chain(ranks, counts, 2)
+
+
+static func _is_airplane(ranks: Array[int], counts: Dictionary, card_count: int) -> bool:
+	if card_count < 6 or card_count % 3 != 0 or ranks.size() != card_count / 3:
+		return false
+	return _is_valid_chain(ranks, counts, 3)
+
+
+static func _is_valid_chain(ranks: Array[int], counts: Dictionary, count_per_rank: int) -> bool:
+	for index in range(ranks.size()):
+		var rank := ranks[index]
+		if rank >= 15 or int(counts[rank]) != count_per_rank:
+			return false
+		if index > 0 and ranks[index - 1] + 1 != rank:
+			return false
+	return true
+
+
+static func _eligible_chain_ranks(by_rank: Dictionary, count_per_rank: int) -> Array[int]:
+	var ranks := by_rank.keys()
+	ranks.sort()
+	var result: Array[int] = []
+	for rank in ranks:
+		if int(rank) < 15 and by_rank[rank].size() >= count_per_rank:
+			result.append(int(rank))
+	return result
+
+
+static func _consecutive_rank_runs(ranks: Array[int]) -> Array[Array]:
+	var runs: Array[Array] = []
+	var current: Array[int] = []
+	for rank in ranks:
+		if current.is_empty() or current.back() + 1 == rank:
+			current.append(rank)
+		else:
+			runs.append(current)
+			current = [rank]
+	if not current.is_empty():
+		runs.append(current)
+	return runs
 
 
 static func _joker_bomb(hand: Array) -> Array[Array]:

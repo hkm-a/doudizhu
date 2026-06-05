@@ -294,6 +294,11 @@ func debug_finish_human_win() -> void:
 	_refresh()
 
 
+func debug_configure_expanded_rule_fixture() -> void:
+	game.debug_configure_expanded_rule_fixture()
+	_refresh()
+
+
 func debug_selected_count() -> int:
 	return game.selected_cards.size()
 
@@ -304,3 +309,7 @@ func debug_human_card_count() -> int:
 
 func debug_status_text() -> String:
 	return game.message
+
+
+func debug_active_trick_type() -> String:
+	return String(game.active_trick.get("play_type", ""))
