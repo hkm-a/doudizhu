@@ -2,7 +2,7 @@
 """Asset Generator CLI - creates images and GLBs (Tripo3D).
 
 Subcommands:
-  image   Generate a PNG from a prompt (Gemini / OpenAI / xAI Grok)
+  image   Generate a PNG from a prompt (Gemini / OpenAI / xAI Grok / Agnes)
   video   Generate MP4 video from prompt + reference image (5 cents/sec, Grok)
   glb     Convert a PNG to a GLB 3D model via Tripo3D (30-60 cents)
 
@@ -13,6 +13,7 @@ import argparse
 import base64
 import io
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -167,6 +168,9 @@ ALL_SIZES = ["512", "1K", "2K", "4K"]
 ALL_ASPECT_RATIOS = sorted(set(GEMINI_ASPECT_RATIOS + GROK_ASPECT_RATIOS))
 OPENAI_MODEL = "gpt-image-2"
 OPENAI_COSTS = {"1:1": 5, "portrait": 7, "landscape": 7}
+AGNES_MODEL = "agnes-image-1.2"
+AGNES_BASE_URL = "https://apihub.agnes-ai.com/v1"
+AGNES_COST = 0
 
 
 def _split_model_selector(selector: str, *, default_provider: str,
@@ -182,11 +186,12 @@ def _split_model_selector(selector: str, *, default_provider: str,
         model = model.strip()
         if provider and model:
             return provider, model
-    if raw in {"gemini", "openai", "grok", "native", "codex", "none"}:
+    if raw in {"gemini", "openai", "grok", "agnes", "native", "codex", "none"}:
         defaults = {
             "gemini": GEMINI_MODEL,
             "openai": OPENAI_MODEL,
             "grok": GROK_MODEL,
+            "agnes": AGNES_MODEL,
             "native": "native",
             "codex": "codex",
             "none": "none",
@@ -362,6 +367,97 @@ def _generate_openai(args, output: Path, cost: int, model_name: str):
     finish_image_output(args, output, cost, "openai")
 
 
+def _agnes_size(size: str, aspect_ratio: str) -> str:
+    """Return a conservative Agnes image size string.
+
+    Agnes exposes an OpenAI-style image endpoint. Keep the default at roughly
+    1K output and preserve the requested scene-reference aspect ratio when it
+    is one of the project-standard shapes.
+    """
+    if size not in {"512", "1K", "2K"}:
+        result_json(False, error="Agnes image generation supports size 512, 1K, or 2K in this tool.")
+        sys.exit(1)
+    if size == "512":
+        base = {
+            "1:1": "512x512",
+            "16:9": "768x432",
+            "9:16": "432x768",
+            "4:3": "640x480",
+            "3:4": "480x640",
+        }
+    elif size == "2K":
+        base = {
+            "1:1": "2048x2048",
+            "16:9": "2048x1152",
+            "9:16": "1152x2048",
+            "4:3": "2048x1536",
+            "3:4": "1536x2048",
+        }
+    else:
+        base = {
+            "1:1": "1024x1024",
+            "16:9": "1024x576",
+            "9:16": "576x1024",
+            "4:3": "1024x768",
+            "3:4": "768x1024",
+        }
+    return base.get(aspect_ratio, base["1:1"])
+
+
+def _generate_agnes(args, output: Path, cost: int, model_name: str):
+    import requests
+    from PIL import Image
+
+    api_key = os.environ.get("AGNES_API_KEY")
+    if not api_key:
+        result_json(False, error="AGNES_API_KEY is not set")
+        sys.exit(1)
+    if args.image:
+        result_json(False, error="Agnes backend in this tool only supports text-to-image generation")
+        sys.exit(1)
+
+    payload = {
+        "model": model_name,
+        "prompt": args.prompt,
+        "n": 1,
+        "size": _agnes_size(args.size, args.aspect_ratio),
+    }
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    try:
+        response = requests.post(
+            f"{AGNES_BASE_URL}/images/generations",
+            headers=headers,
+            json=payload,
+            timeout=180,
+        )
+        response.raise_for_status()
+        data = response.json()
+        items = data.get("data") or []
+        if not items:
+            result_json(False, error=f"No image returned by Agnes: {data}")
+            sys.exit(1)
+        first = items[0]
+        if first.get("b64_json"):
+            raw = base64.b64decode(first["b64_json"])
+        elif first.get("url"):
+            img_response = requests.get(first["url"], timeout=180)
+            img_response.raise_for_status()
+            raw = img_response.content
+        else:
+            result_json(False, error=f"Agnes response had no b64_json or url: {data}")
+            sys.exit(1)
+        img = Image.open(io.BytesIO(raw))
+        img.save(output, format="PNG")
+    except Exception as e:
+        result_json(False, error=str(e))
+        sys.exit(1)
+
+    finish_image_output(args, output, cost, "agnes")
+
+
 def cmd_image(args):
     config = _load_project_config()
     selector = (
@@ -374,7 +470,7 @@ def cmd_image(args):
             "No API-backed asset image model selected. The project default is "
             "asset_image_model: native, which is handled by /gm-asset through "
             "the active agent runtime. Pass --model gemini:<model>, "
-            "openai:<model>, or grok:<model> to use tools/asset_gen.py directly."
+            "openai:<model>, grok:<model>, or agnes:<model> to use tools/asset_gen.py directly."
         ))
         sys.exit(1)
     backend, model_name = _split_model_selector(
@@ -387,14 +483,14 @@ def cmd_image(args):
             f"asset_image_model {backend!r} is handled by the agent runtime, "
             "not tools/asset_gen.py. Use /gm-asset with a runtime that supports "
             "the selected provider, or choose gemini:<model>, openai:<model>, "
-            "or grok:<model>."
+            "grok:<model>, or agnes:<model>."
         ))
         sys.exit(1)
-    if backend not in {"gemini", "openai", "grok"}:
+    if backend not in {"gemini", "openai", "grok", "agnes"}:
         result_json(False, error=(
             "Invalid asset_image_model in .godotmaker/config.yaml: "
             f"{selector!r}. Use 'native', 'codex', 'gemini:<model>', "
-            "'openai:<model>', or 'grok:<model>'."
+            "'openai:<model>', 'grok:<model>', or 'agnes:<model>'."
         ))
         sys.exit(1)
     size = args.size
@@ -409,6 +505,11 @@ def cmd_image(args):
             result_json(False, error=f"Grok does not support size {size}. Use: {', '.join(GROK_SIZES)}")
             sys.exit(1)
         cost = GROK_COST
+    elif backend == "agnes":
+        if size not in {"512", "1K", "2K"}:
+            result_json(False, error="Agnes does not support this tool size. Use: 512, 1K, 2K")
+            sys.exit(1)
+        cost = AGNES_COST
     else:
         _, cost = _openai_size(size, args.aspect_ratio)
 
@@ -425,6 +526,8 @@ def cmd_image(args):
         _generate_gemini(args, output, cost, model_name)
     elif backend == "grok":
         _generate_grok(args, output, cost, model_name)
+    elif backend == "agnes":
+        _generate_agnes(args, output, cost, model_name)
     else:
         _generate_openai(args, output, cost, model_name)
 
@@ -537,16 +640,16 @@ def cmd_set_budget(args):
 def main():
     parser = argparse.ArgumentParser(
         description=(
-            "Asset Generator - images (Gemini / OpenAI / xAI Grok) "
+            "Asset Generator - images (Gemini / OpenAI / xAI Grok / Agnes) "
             "and GLBs (Tripo3D)"
         )
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_img = sub.add_parser("image", help="Generate a PNG image (Gemini / OpenAI / xAI Grok)")
+    p_img = sub.add_parser("image", help="Generate a PNG image (Gemini / OpenAI / xAI Grok / Agnes)")
     p_img.add_argument("--prompt", required=True, help="Full image generation prompt")
     p_img.add_argument("--model", default=None,
-                       help="Model override: gemini[:model], openai[:model], or grok[:model].")
+                       help="Model override: gemini[:model], openai[:model], grok[:model], or agnes[:model].")
     p_img.add_argument("--size", choices=ALL_SIZES, default="1K",
                        help="Resolution. OpenAI: 1K. Grok: 1K, 2K. Gemini: 512, 1K, 2K, 4K. Default: 1K.")
     p_img.add_argument("--aspect-ratio", choices=ALL_ASPECT_RATIOS, default="1:1",

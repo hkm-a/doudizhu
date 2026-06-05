@@ -1,0 +1,25 @@
+{
+  "ok": true,
+  "provider": "native:agnes-image-2.1-flash",
+  "group_id": "scene_refs_001",
+  "kind": "scene_reference",
+  "contract_summary": "SCENES.md Main scene for tag v0.1.0: fixed 1280x720 gameplay table UI with green procedural background, AI Left and AI Right panels, bottom cards, center trick/status area, bottom player hand, action bar, and result overlay. ASSETS.md Visual Asset Contract binds all visible gameplay objects to procedural card/UI assets: readable 56x78-ish card faces, clear AI counts and role labels, obvious selected-card lift/highlight, visible active turn/pass/status text, AI recent play/count changes, and prominent result/replay UI.",
+  "assets": [
+    {
+      "ok": true,
+      "asset_id": "scene_main",
+      "path": "references/scene_main.png",
+      "source": "references/origin/scene_main.png",
+      "bytes": 1169208,
+      "width": 1280,
+      "height": 720,
+      "format": "PNG",
+      "mode": "RGBA",
+      "generation_params": {
+        "model": "agnes-image-2.1-flash",
+        "size": "1K",
+        "aspect_ratio": "16:9"
+      }
+    }
+  ]
+}
