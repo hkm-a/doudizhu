@@ -1,0 +1,6 @@
+_GodotMaker/
+.godot/
+.import/
+*.tmp
+*.log
+
