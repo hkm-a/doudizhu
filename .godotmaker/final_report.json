@@ -1,42 +1,24 @@
 {
   "status": "tag_sealed",
-  "tag": "v0.1.0",
-  "completed_at": "2026-06-05T19:13:35Z",
-  "archive_path": "docs/tags/v0.1.0/",
+  "tag": "v0.2.0",
+  "completed_at": "2026-06-05T19:44:45Z",
+  "archive_path": "docs/tags/v0.2.0/",
   "git_tagged": true,
   "summary": {
     "tag_mechanics": [
-      "v0.1.0-M1",
-      "v0.1.0-M2",
-      "v0.1.0-M3",
-      "v0.1.0-M4",
-      "v0.1.0-M5",
-      "v0.1.0-M6",
-      "v0.1.0-M7",
-      "v0.1.0-M8"
+      "v0.2.0-M1"
     ],
-    "systems_added": [
-      "S_RoundFlow"
-    ],
-    "components_added": [
-      "C_Hand",
-      "C_Message",
-      "C_PlayerSeat",
-      "C_Role",
-      "C_RoundState",
-      "C_Selection",
-      "C_TrickState",
-      "C_TurnState"
-    ],
+    "systems_added": [],
+    "components_added": [],
     "test_count": {
       "unit": 3,
-      "e2e_tag": 9,
-      "e2e_regression": 0
+      "e2e_tag": 1,
+      "e2e_regression": 9
     }
   },
   "evidence": {
-    "archive_path": "docs/tags/v0.1.0/evidence/",
-    "e2e_files": 23,
+    "archive_path": "docs/tags/v0.2.0/evidence/",
+    "e2e_files": 25,
     "screenshots": 2
   },
   "doc_updates": [
@@ -44,7 +26,6 @@
     "MEMORY.md"
   ],
   "known_limitations": [
-    "Expanded Doudizhu combinations such as straights, consecutive pairs, three-with-one, three-with-pair, and airplane are intentionally deferred to v0.2.0.",
-    "Presentation polish, animation, audio, and improved AI are intentionally deferred to later roadmap tags."
+    "Airplane with wings and four-with-two remain outside the v0.2.0 roadmap scope."
   ]
 }

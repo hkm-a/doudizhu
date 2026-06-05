@@ -1,0 +1,101 @@
+{
+  "tag": "v0.2.0",
+  "result": "approve",
+  "playable_closed_loop": {
+    "builds_clean": true,
+    "boots_main_scene": true,
+    "playable_unit_coverage": true,
+    "completion_fail_or_exit_reached": true
+  },
+  "playable_unit": {
+    "result": "pass",
+    "rows": {
+      "v0.2.0-M1": {
+        "result": "pass",
+        "test": "e2e/test_v0_2_0_M1_expanded_rules.py",
+        "evidence": [
+          "pytest passed: expanded straight response is selected by Hint, played through UI, and recorded as a straight trick",
+          "gdUnit passed: three-with-one, three-with-pair, straight, consecutive pairs, airplane, chain exclusions, comparison, and hint search"
+        ]
+      },
+      "v0.1.0-M1..M8": {
+        "result": "pass",
+        "test": "e2e/test_v0_1_0_playable_unit_full_loop.py",
+        "evidence": [
+          "pytest passed: inherited v0.1.0 setup, landlord, selection, play, pass, hint, AI, result, and replay flow"
+        ]
+      }
+    }
+  },
+  "tag_mechanics": {
+    "v0.2.0-M1": "pass"
+  },
+  "inherited_mechanics": {
+    "v0.1.0-M1": "pass",
+    "v0.1.0-M2": "pass",
+    "v0.1.0-M3": "pass",
+    "v0.1.0-M4": "pass",
+    "v0.1.0-M5": "pass",
+    "v0.1.0-M6": "pass",
+    "v0.1.0-M7": "pass",
+    "v0.1.0-M8": "pass"
+  },
+  "visual_checks": {
+    "main": {
+      "screenshot": "e2e/screenshots/scene_main.png",
+      "captures": [
+        "e2e/screenshots/scene_main.png"
+      ],
+      "reference": "references/scene_main.png",
+      "vqa_log": "e2e/screenshots/vqa.log",
+      "result": "pass",
+      "notes": "v0.2.0 adds no new visual assets; expanded rules use the existing procedural card, trick, status, and hand UI.",
+      "vqa_calls": [
+        {
+          "ts": "2026-06-05T19:39:10Z",
+          "mode": "static",
+          "backend": "native",
+          "model": "native",
+          "files": [
+            "references/scene_main.png",
+            "e2e/screenshots/scene_main.png"
+          ],
+          "log": "e2e/screenshots/vqa.log",
+          "context": "Goal: v0.2.0 keeps the v0.1.0 readable Main table while expanded Doudizhu rules run through existing procedural card UI. Requirements: no new bitmap assets; procedural table background, AI panels, bottom cards, current trick/status, player hand, action buttons, and result banner remain bound as in SCENES.md and ASSETS.md. Verify: Main scene shows AI Left/Right panels, center trick/status area, bottom player hand area, action bar; no text overlaps action buttons, cards, or seat panels at 1280x720; v0.2.0 visual requirements are non-regression of existing procedural card/trick/status presentation.",
+          "verdict": "pass",
+          "output_summary": "v0.2.0 preserves the readable procedural Main table UI with no missing assets or layout regression."
+        }
+      ]
+    }
+  },
+  "phase4_review": [
+    {
+      "category": "rule_depth",
+      "verdict": "ok"
+    },
+    {
+      "category": "hint_and_ai_legality",
+      "verdict": "ok"
+    },
+    {
+      "category": "inherited_loop_stability",
+      "verdict": "ok"
+    },
+    {
+      "category": "scene_readability",
+      "verdict": "ok"
+    }
+  ],
+  "e2e_tests": {
+    "total": 10,
+    "passed": 10,
+    "failed": 0
+  },
+  "orphan_tests": [],
+  "gameplay_issues": [],
+  "critical_issues": [],
+  "major_issues": [],
+  "minor_issues": [
+    "Airplane with wings and four-with-two remain outside the v0.2.0 roadmap scope."
+  ]
+}
