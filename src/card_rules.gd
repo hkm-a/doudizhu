@@ -117,6 +117,20 @@ static func can_beat(candidate: Dictionary, active: Dictionary) -> bool:
 
 
 static func find_smallest_legal(hand: Array, active: Dictionary, has_initiative: bool) -> Array[Dictionary]:
+	var candidate := find_best_legal_candidate(hand, active, has_initiative)
+	if candidate.is_empty():
+		return []
+	return candidate.cards
+
+
+static func find_best_legal_candidate(hand: Array, active: Dictionary, has_initiative: bool) -> Dictionary:
+	var candidates := find_legal_candidates(hand, active, has_initiative)
+	if candidates.is_empty():
+		return {}
+	return candidates[0]
+
+
+static func find_legal_candidates(hand: Array, active: Dictionary, has_initiative: bool) -> Array[Dictionary]:
 	var sorted_hand := hand.duplicate()
 	sorted_hand.sort_custom(CardRules.card_sort)
 	var search_sets: Array[Array] = []
@@ -132,14 +146,46 @@ static func find_smallest_legal(hand: Array, active: Dictionary, has_initiative:
 	search_sets.append(_joker_bomb(sorted_hand))
 
 	var active_play := {} if has_initiative else active
+	var candidates: Array[Dictionary] = []
 	for groups in search_sets:
 		for group in groups:
 			var typed_group: Array[Dictionary] = []
 			for card in group:
 				typed_group.append(card)
-			if can_beat(classify(typed_group), active_play):
-				return typed_group
-	return []
+			var classification := classify(typed_group)
+			if can_beat(classification, active_play):
+				candidates.append(_candidate(typed_group, classification, active_play, has_initiative))
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if int(a.score) == int(b.score):
+			return int(a.classification.primary_rank) < int(b.classification.primary_rank)
+		return int(a.score) < int(b.score)
+	)
+	return candidates
+
+
+static func describe_play_type(play_type: String) -> String:
+	match play_type:
+		TYPE_SINGLE:
+			return "single"
+		TYPE_PAIR:
+			return "pair"
+		TYPE_TRIPLE:
+			return "triple"
+		TYPE_THREE_WITH_ONE:
+			return "three with one"
+		TYPE_THREE_WITH_PAIR:
+			return "three with pair"
+		TYPE_STRAIGHT:
+			return "straight"
+		TYPE_CONSECUTIVE_PAIRS:
+			return "consecutive pairs"
+		TYPE_AIRPLANE:
+			return "airplane"
+		TYPE_BOMB:
+			return "bomb"
+		TYPE_JOKER_BOMB:
+			return "joker bomb"
+	return "invalid"
 
 
 static func labels(cards: Array[Dictionary]) -> String:
@@ -147,6 +193,46 @@ static func labels(cards: Array[Dictionary]) -> String:
 	for card in cards:
 		parts.append(String(card.label))
 	return " ".join(parts)
+
+
+static func _candidate(
+	cards: Array[Dictionary],
+	classification: Dictionary,
+	active: Dictionary,
+	has_initiative: bool
+) -> Dictionary:
+	var score := _candidate_score(classification, active, has_initiative)
+	return {
+		"cards": cards,
+		"classification": classification,
+		"score": score,
+		"reason": _candidate_reason(classification, active, has_initiative),
+	}
+
+
+static func _candidate_score(classification: Dictionary, active: Dictionary, has_initiative: bool) -> int:
+	var play_type := String(classification.play_type)
+	var score := int(classification.primary_rank) * 10 + int(classification.length)
+	if play_type == TYPE_JOKER_BOMB:
+		score += 20000
+	elif play_type == TYPE_BOMB:
+		score += 10000
+	elif play_type in [TYPE_STRAIGHT, TYPE_CONSECUTIVE_PAIRS, TYPE_AIRPLANE]:
+		score += 20
+	elif play_type in [TYPE_THREE_WITH_ONE, TYPE_THREE_WITH_PAIR]:
+		score += 40
+	if not has_initiative and not active.is_empty():
+		score += 100
+	return score
+
+
+static func _candidate_reason(classification: Dictionary, active: Dictionary, has_initiative: bool) -> String:
+	var play_type := describe_play_type(String(classification.play_type))
+	if String(classification.play_type) in [TYPE_BOMB, TYPE_JOKER_BOMB]:
+		return "%s used because it is the cheapest legal override" % play_type.capitalize()
+	if has_initiative or active.is_empty():
+		return "Low-cost %s lead" % play_type
+	return "Lowest legal %s response; bombs conserved" % play_type
 
 
 static func _group_by_size(hand: Array, size: int) -> Array[Array]:

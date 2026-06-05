@@ -79,3 +79,22 @@ func test_find_smallest_legal_can_follow_expanded_patterns() -> void:
 	var legal := CardRules.find_smallest_legal(hand, active_straight, false)
 	assert_that(CardRules.classify(legal).play_type).is_equal(CardRules.TYPE_STRAIGHT)
 	assert_that(CardRules.classify(legal).primary_rank).is_equal(8)
+
+
+func test_low_cost_candidate_scoring_conserves_bombs_when_single_can_follow() -> void:
+	var deck := CardRules.create_deck()
+	var active_single := CardRules.classify([deck[0]])
+	var hand := [deck[4], deck[0], deck[1], deck[2], deck[3]]
+	var candidate := CardRules.find_best_legal_candidate(hand, active_single, false)
+	assert_that(CardRules.classify(candidate.cards).play_type).is_equal(CardRules.TYPE_SINGLE)
+	assert_that(CardRules.labels(candidate.cards)).is_equal("4S")
+	assert_that(String(candidate.reason).contains("bombs conserved")).is_equal(true)
+
+
+func test_low_cost_candidate_scoring_uses_bomb_when_required() -> void:
+	var deck := CardRules.create_deck()
+	var active_single := CardRules.classify([deck[44]])
+	var hand := [deck[0], deck[1], deck[2], deck[3]]
+	var candidate := CardRules.find_best_legal_candidate(hand, active_single, false)
+	assert_that(CardRules.classify(candidate.cards).play_type).is_equal(CardRules.TYPE_BOMB)
+	assert_that(String(candidate.reason).contains("override")).is_equal(true)

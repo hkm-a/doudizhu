@@ -18,6 +18,8 @@ var consecutive_passes := 0
 var landlord_seat := -1
 var active_trick := {}
 var recent_plays: Array[String] = ["", "", ""]
+var ai_reasons: Array[String] = ["", "", ""]
+var hint_reason := ""
 var message := ""
 var winner_side := ""
 var seed := 7
@@ -37,6 +39,8 @@ func new_round(round_seed: int = 7) -> void:
 	landlord_seat = -1
 	active_trick = {}
 	recent_plays = ["", "", ""]
+	ai_reasons = ["", "", ""]
+	hint_reason = ""
 	winner_side = ""
 
 	var deck := CardRules.create_deck()
@@ -82,14 +86,17 @@ func hint() -> void:
 	if phase != "play" or current_seat != HUMAN:
 		message = "Hint is available on your turn."
 		return
-	var legal := CardRules.find_smallest_legal(hands[HUMAN], active_trick, _has_initiative(HUMAN))
+	var candidate := CardRules.find_best_legal_candidate(hands[HUMAN], active_trick, _has_initiative(HUMAN))
 	selected_cards = []
+	if candidate.is_empty():
+		hint_reason = "No valid play is available."
+		message = hint_reason
+		return
+	var legal: Array = candidate.cards
 	for card in legal:
 		selected_cards.append(int(card.id))
-	if selected_cards.is_empty():
-		message = "No valid play is available."
-	else:
-		message = "Hint: %s" % CardRules.labels(legal)
+	hint_reason = "%s: %s" % [String(candidate.reason), CardRules.labels(legal)]
+	message = "Hint: %s" % hint_reason
 
 
 func play_selected() -> bool:
@@ -160,7 +167,51 @@ func debug_configure_expanded_rule_fixture() -> void:
 	active_trick["cards"] = active_cards
 	active_trick["owner_seat"] = AI_LEFT
 	recent_plays = ["", CardRules.labels(active_cards), ""]
+	ai_reasons = ["", "Fixture straight lead", ""]
+	hint_reason = ""
 	message = "Expanded rule fixture: beat the straight."
+
+
+func debug_configure_bomb_conservation_fixture() -> void:
+	cards_by_id.clear()
+	for card in CardRules.create_deck():
+		cards_by_id[int(card.id)] = card
+	roles = ["landlord", "farmer", "farmer"]
+	landlord_seat = HUMAN
+	phase = "play"
+	current_seat = AI_LEFT
+	initiative_seat = HUMAN
+	consecutive_passes = 0
+	selected_cards = []
+	winner_side = ""
+	hands[HUMAN] = [cards_by_id[48], cards_by_id[49], cards_by_id[50]]
+	hands[AI_LEFT] = [
+		cards_by_id[4],
+		cards_by_id[8],
+		cards_by_id[9],
+		cards_by_id[0],
+		cards_by_id[1],
+		cards_by_id[2],
+		cards_by_id[3],
+	]
+	hands[AI_RIGHT] = [cards_by_id[12], cards_by_id[13], cards_by_id[14]]
+	bottom_cards = [cards_by_id[20], cards_by_id[21], cards_by_id[22]]
+	var active_cards: Array[Dictionary] = [cards_by_id[0]]
+	active_trick = CardRules.classify(active_cards)
+	active_trick["cards"] = active_cards
+	active_trick["owner_seat"] = HUMAN
+	recent_plays = ["3S", "", ""]
+	ai_reasons = ["", "", ""]
+	hint_reason = ""
+	message = "Bomb conservation fixture: AI should answer with 4S, not bomb."
+
+
+func hand_summary_text() -> String:
+	return _hand_summary_for(DoudizhuGame.HUMAN)
+
+
+func rules_help_text() -> String:
+	return "Supported: single, pair, triple, three with one, three with pair, straight, consecutive pairs, airplane, bomb, joker bomb.\nPass only when following another play. If both opponents pass, the last player leads.\nHint selects the lowest-cost legal play and conserves bombs unless needed.\nFirst side to empty a hand wins; New Round starts another hand."
 
 
 func get_hand_ids(seat: int) -> Array[int]:
@@ -183,11 +234,13 @@ func process_ai_until_human(max_steps: int = 12) -> void:
 
 func _ai_step() -> void:
 	var seat := current_seat
-	var play_cards := CardRules.find_smallest_legal(hands[seat], active_trick, _has_initiative(seat))
-	if play_cards.is_empty():
+	var candidate := CardRules.find_best_legal_candidate(hands[seat], active_trick, _has_initiative(seat))
+	if candidate.is_empty():
+		ai_reasons[seat] = "No legal response"
 		_apply_pass(seat)
 		return
-	_apply_play(seat, play_cards, CardRules.classify(play_cards))
+	ai_reasons[seat] = String(candidate.reason)
+	_apply_play(seat, candidate.cards, candidate.classification)
 
 
 func _apply_play(seat: int, play_cards: Array[Dictionary], candidate: Dictionary) -> void:
@@ -201,6 +254,8 @@ func _apply_play(seat: int, play_cards: Array[Dictionary], candidate: Dictionary
 	consecutive_passes = 0
 	initiative_seat = seat
 	message = "%s played %s." % [SEAT_NAMES[seat], CardRules.labels(play_cards)]
+	if seat != HUMAN and ai_reasons[seat] != "":
+		message = "%s %s" % [message, ai_reasons[seat]]
 	if _finish_if_needed(seat):
 		return
 	current_seat = (seat + 1) % 3
@@ -208,6 +263,8 @@ func _apply_play(seat: int, play_cards: Array[Dictionary], candidate: Dictionary
 
 func _apply_pass(seat: int) -> void:
 	recent_plays[seat] = "Pass"
+	if seat != HUMAN and ai_reasons[seat] == "":
+		ai_reasons[seat] = "No low-cost legal play"
 	consecutive_passes += 1
 	message = "%s passed." % SEAT_NAMES[seat]
 	if consecutive_passes >= 2 and not active_trick.is_empty():
@@ -256,6 +313,62 @@ func _sort_selection() -> void:
 	selected_cards.sort_custom(func(a: int, b: int) -> bool:
 		return int(cards_by_id[a].rank) < int(cards_by_id[b].rank)
 	)
+
+
+func _hand_summary_for(seat: int) -> String:
+	var by_rank := {}
+	for card in hands[seat]:
+		var rank := int(card.rank)
+		if not by_rank.has(rank):
+			by_rank[rank] = 0
+		by_rank[rank] += 1
+	var singles := 0
+	var pairs := 0
+	var triples := 0
+	var bombs := 0
+	for rank in by_rank.keys():
+		var count := int(by_rank[rank])
+		if count == 1:
+			singles += 1
+		elif count == 2:
+			pairs += 1
+		elif count == 3:
+			triples += 1
+		elif count >= 4:
+			bombs += 1
+	var chains := _chain_count(hands[seat])
+	return "Hand: %d cards | singles %d | pairs %d | triples %d | bombs %d | chains %d" % [
+		hands[seat].size(),
+		singles,
+		pairs,
+		triples,
+		bombs,
+		chains,
+	]
+
+
+func _chain_count(hand: Array) -> int:
+	var ranks: Array[int] = []
+	for card in hand:
+		var rank := int(card.rank)
+		if rank >= 15 or ranks.has(rank):
+			continue
+		ranks.append(rank)
+	ranks.sort()
+	var chains := 0
+	var run := 0
+	var previous := -99
+	for rank in ranks:
+		if rank == previous + 1:
+			run += 1
+		else:
+			if run >= 5:
+				chains += 1
+			run = 1
+		previous = rank
+	if run >= 5:
+		chains += 1
+	return chains
 
 
 func _sort_hand(seat: int) -> void:

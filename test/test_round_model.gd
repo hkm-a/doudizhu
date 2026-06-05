@@ -54,6 +54,33 @@ func test_hint_selects_a_legal_play() -> void:
 	game.hint()
 	assert_that(game.selected_cards.is_empty()).is_equal(false)
 	assert_that(CardRules.classify(game.selected_card_dicts()).valid).is_equal(true)
+	assert_that(game.message.contains("Hint")).is_equal(true)
+	assert_that(game.hint_reason.length() > 0).is_equal(true)
+
+
+func test_ai_policy_conserves_bomb_and_records_reason() -> void:
+	var game := DoudizhuGame.new()
+	game.debug_configure_bomb_conservation_fixture()
+	game.process_ai_until_human(1)
+	assert_that(game.recent_plays[DoudizhuGame.AI_LEFT]).is_equal("4S")
+	assert_that(game.ai_reasons[DoudizhuGame.AI_LEFT].contains("bombs conserved")).is_equal(true)
+
+
+func test_hand_summary_reports_count_groups_and_chains() -> void:
+	var game := DoudizhuGame.new()
+	game.new_round(42)
+	var summary := game.hand_summary_text()
+	assert_that(summary.contains("Hand: 17 cards")).is_equal(true)
+	assert_that(summary.contains("singles")).is_equal(true)
+	assert_that(summary.contains("chains")).is_equal(true)
+
+
+func test_rules_help_describes_supported_flow() -> void:
+	var game := DoudizhuGame.new()
+	var help := game.rules_help_text()
+	assert_that(help.contains("Supported: single")).is_equal(true)
+	assert_that(help.contains("Hint selects")).is_equal(true)
+	assert_that(help.contains("New Round")).is_equal(true)
 
 
 func test_result_and_replay_state() -> void:

@@ -22,6 +22,7 @@ var trick_panel: PanelContainer
 var trick_box: HBoxContainer
 var trick_owner_label: Label
 var status_label: Label
+var hand_summary_label: Label
 var hand_area: Control
 var action_bar: HBoxContainer
 var call_button: Button
@@ -29,9 +30,14 @@ var decline_button: Button
 var play_button: Button
 var pass_button: Button
 var hint_button: Button
+var help_button: Button
 var new_round_button: Button
 var result_panel: PanelContainer
 var result_label: Label
+var help_blocker: ColorRect
+var help_panel: PanelContainer
+var help_label: Label
+var help_visible := false
 
 
 func _ready() -> void:
@@ -100,6 +106,14 @@ func _build_ui() -> void:
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(status_label)
 
+	hand_summary_label = Label.new()
+	hand_summary_label.name = "HandSummary"
+	_pin_top_left(hand_summary_label)
+	hand_summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hand_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hand_summary_label.add_theme_color_override("font_color", Color(0.92, 0.96, 0.9))
+	add_child(hand_summary_label)
+
 	action_bar = HBoxContainer.new()
 	action_bar.name = "ActionBar"
 	_pin_top_left(action_bar)
@@ -110,6 +124,7 @@ func _build_ui() -> void:
 	play_button = _action_button("PlayButton", "Play", _on_play_pressed)
 	pass_button = _action_button("PassButton", "Pass", _on_pass_pressed)
 	hint_button = _action_button("HintButton", "Hint", _on_hint_pressed)
+	help_button = _action_button("HelpButton", "Help", _on_help_pressed)
 	new_round_button = _action_button("NewRoundButton", "New Round", _on_new_round_pressed)
 
 	hand_area = Control.new()
@@ -143,6 +158,37 @@ func _build_ui() -> void:
 	result_new_round.pressed.connect(_on_new_round_pressed)
 	result_vbox.add_child(result_new_round)
 
+	help_blocker = ColorRect.new()
+	help_blocker.name = "HelpModalBlocker"
+	help_blocker.color = Color(0, 0, 0, 0.18)
+	help_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+	help_blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(help_blocker)
+
+	help_panel = PanelContainer.new()
+	help_panel.name = "HelpPanel"
+	_pin_top_left(help_panel)
+	help_panel.add_theme_stylebox_override("panel", _box_style(RESULT_PANEL_COLOR, ACTIVE_BORDER_COLOR, 2))
+	add_child(help_panel)
+	var help_vbox := VBoxContainer.new()
+	help_vbox.name = "HelpLayout"
+	help_vbox.add_theme_constant_override("separation", 10)
+	help_panel.add_child(help_vbox)
+	help_label = Label.new()
+	help_label.name = "HelpText"
+	help_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	help_label.add_theme_color_override("font_color", Color.WHITE)
+	help_vbox.add_child(help_label)
+	var close_button := Button.new()
+	close_button.name = "HelpCloseButton"
+	close_button.text = "Close"
+	close_button.focus_mode = Control.FOCUS_NONE
+	close_button.add_theme_stylebox_override("normal", _button_style(false))
+	close_button.add_theme_stylebox_override("hover", _button_style(true))
+	close_button.add_theme_stylebox_override("pressed", _button_style(true))
+	close_button.pressed.connect(_on_help_close_pressed)
+	help_vbox.add_child(close_button)
+
 
 func _layout_ui() -> void:
 	for control in [
@@ -151,11 +197,15 @@ func _layout_ui() -> void:
 		bottom_cards_box,
 		trick_panel,
 		status_label,
+		hand_summary_label,
 		action_bar,
 		hand_area,
 		result_panel,
+		help_blocker,
+		help_panel,
 	]:
 		_pin_top_left(control)
+	help_blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var viewport_size := get_viewport_rect().size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = BASE_VIEWPORT
@@ -190,24 +240,40 @@ func _layout_ui() -> void:
 	status_label.size = status_size
 	status_label.add_theme_font_size_override("font_size", int(18.0 * layout_scale))
 
+	var summary_size := Vector2(clampf(viewport_size.x * 0.62, 560.0 * layout_scale, 820.0 * layout_scale), 34.0 * layout_scale)
+	hand_summary_label.position = Vector2(
+		(viewport_size.x - summary_size.x) * 0.5,
+		status_label.position.y + status_size.y + 4.0 * layout_scale
+	)
+	hand_summary_label.custom_minimum_size = summary_size
+	hand_summary_label.size = summary_size
+	hand_summary_label.add_theme_font_size_override("font_size", int(14.0 * layout_scale))
+
 	var hand_size := Vector2(viewport_size.x - (margin * 2.0), 128.0 * layout_scale)
 	hand_area.position = Vector2(margin, viewport_size.y - margin - hand_size.y)
 	hand_area.custom_minimum_size = hand_size
 	hand_area.size = hand_size
 
-	var action_size := Vector2(min(530.0 * layout_scale, viewport_size.x - margin * 2.0), 48.0 * layout_scale)
+	var action_size := Vector2(min(620.0 * layout_scale, viewport_size.x - margin * 2.0), 48.0 * layout_scale)
 	action_bar.position = Vector2(viewport_size.x - margin - action_size.x, hand_area.position.y - action_size.y - 14.0 * layout_scale)
 	action_bar.custom_minimum_size = action_size
 	action_bar.size = action_size
 	action_bar.add_theme_constant_override("separation", int(8.0 * layout_scale))
-	for button in [call_button, decline_button, play_button, pass_button, hint_button, new_round_button]:
-		button.custom_minimum_size = Vector2(96.0 * layout_scale, 42.0 * layout_scale)
+	for button in [call_button, decline_button, play_button, pass_button, hint_button, help_button, new_round_button]:
+		button.custom_minimum_size = Vector2(88.0 * layout_scale, 42.0 * layout_scale)
 
 	var result_size := Vector2(440.0 * layout_scale, 142.0 * layout_scale)
 	result_panel.position = Vector2((viewport_size.x - result_size.x) * 0.5, (viewport_size.y - result_size.y) * 0.43)
 	result_panel.custom_minimum_size = result_size
 	result_panel.size = result_size
 	result_label.add_theme_font_size_override("font_size", int(26.0 * layout_scale))
+
+	var help_size := Vector2(clampf(viewport_size.x * 0.54, 520.0 * layout_scale, 680.0 * layout_scale), 230.0 * layout_scale)
+	help_panel.position = Vector2((viewport_size.x - help_size.x) * 0.5, (viewport_size.y - help_size.y) * 0.38)
+	help_panel.custom_minimum_size = help_size
+	help_panel.size = help_size
+	help_label.custom_minimum_size = Vector2(help_size.x - 32.0 * layout_scale, 160.0 * layout_scale)
+	help_label.add_theme_font_size_override("font_size", int(14.0 * layout_scale))
 
 
 func _seat_panel(node_name: String) -> Panel:
@@ -218,7 +284,7 @@ func _seat_panel(node_name: String) -> Panel:
 	_pin_top_left(box)
 	box.add_theme_constant_override("separation", 3)
 	panel.add_child(box)
-	for label_name in ["Name", "Role", "Count", "Turn", "Recent"]:
+	for label_name in ["Name", "Role", "Count", "Turn", "Recent", "Reason"]:
 		var label := Label.new()
 		label.name = label_name
 		label.text = label_name
@@ -257,9 +323,13 @@ func _refresh() -> void:
 	_refresh_hand()
 	_refresh_actions()
 	status_label.text = game.message
+	hand_summary_label.text = game.hand_summary_text()
 	trick_panel.visible = game.phase != "result"
 	result_panel.visible = game.phase == "result"
 	result_label.text = "%s win" % game.winner_side.capitalize()
+	help_label.text = game.rules_help_text()
+	help_blocker.visible = help_visible
+	help_panel.visible = help_visible
 
 
 func _refresh_seat(panel: Panel, seat: int) -> void:
@@ -269,6 +339,7 @@ func _refresh_seat(panel: Panel, seat: int) -> void:
 	box.get_node("Count").text = "Cards: %d" % game.hands[seat].size()
 	box.get_node("Turn").text = "TURN" if game.current_seat == seat and game.phase == "play" else ""
 	box.get_node("Recent").text = "Recent: %s" % (game.recent_plays[seat] if game.recent_plays[seat] != "" else "-")
+	box.get_node("Reason").text = "Why: %s" % (game.ai_reasons[seat] if game.ai_reasons[seat] != "" else "-")
 	var active := game.current_seat == seat and game.phase == "play"
 	panel.add_theme_stylebox_override("panel", _panel_style(active))
 
@@ -321,8 +392,9 @@ func _refresh_actions() -> void:
 	play_button.visible = player_turn
 	pass_button.visible = player_turn
 	hint_button.visible = player_turn
+	help_button.visible = game.phase != "result"
 	new_round_button.visible = false
-	for button in [call_button, decline_button, play_button, pass_button, hint_button, new_round_button]:
+	for button in [call_button, decline_button, play_button, pass_button, hint_button, help_button, new_round_button]:
 		button.focus_mode = Control.FOCUS_NONE if not button.visible else Control.FOCUS_ALL
 
 
@@ -461,7 +533,18 @@ func _on_hint_pressed() -> void:
 	_refresh()
 
 
+func _on_help_pressed() -> void:
+	help_visible = true
+	_refresh()
+
+
+func _on_help_close_pressed() -> void:
+	help_visible = false
+	_refresh()
+
+
 func _on_new_round_pressed() -> void:
+	help_visible = false
 	_start_new_round()
 
 
@@ -472,6 +555,11 @@ func debug_finish_human_win() -> void:
 
 func debug_configure_expanded_rule_fixture() -> void:
 	game.debug_configure_expanded_rule_fixture()
+	_refresh()
+
+
+func debug_configure_bomb_conservation_fixture() -> void:
+	game.debug_configure_bomb_conservation_fixture()
 	_refresh()
 
 
@@ -491,6 +579,18 @@ func debug_active_trick_type() -> String:
 	return String(game.active_trick.get("play_type", ""))
 
 
+func debug_hand_summary_text() -> String:
+	return game.hand_summary_text()
+
+
+func debug_ai_reason(seat: int) -> String:
+	return game.ai_reasons[seat]
+
+
+func debug_help_visible() -> bool:
+	return help_panel.visible
+
+
 func debug_layout_snapshot() -> Dictionary:
 	return {
 		"viewport": get_viewport_rect().size,
@@ -498,10 +598,12 @@ func debug_layout_snapshot() -> Dictionary:
 		"hand_rect": Rect2(hand_area.global_position, hand_area.size),
 		"action_rect": Rect2(action_bar.global_position, action_bar.size),
 		"status_rect": Rect2(status_label.global_position, status_label.size),
+		"summary_rect": Rect2(hand_summary_label.global_position, hand_summary_label.size),
 		"trick_rect": Rect2(trick_panel.global_position, trick_panel.size),
 		"ai_left_rect": Rect2(ai_left_panel.global_position, ai_left_panel.size),
 		"ai_right_rect": Rect2(ai_right_panel.global_position, ai_right_panel.size),
 		"result_rect": Rect2(result_panel.global_position, result_panel.size),
+		"help_rect": Rect2(help_panel.global_position, help_panel.size),
 	}
 
 

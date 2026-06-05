@@ -100,9 +100,9 @@ Doudizhu is a 2D desktop card game where one human player completes a readable D
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| P01 | Candidate scoring helper | pending | Add legal candidate scoring without changing rule classification. |
-| P02 | Hint explanation | pending | Status text should name play type and low-cost rationale. |
-| P03 | AI policy and reason text | pending | AI recent play should include concise reason. |
-| P04 | Hand summary | pending | Summary updates from game state after each refresh. |
-| P05 | Rule/help affordance | pending | Help opens/closes inside Main scene. |
-| P06 | Regression coverage | pending | Full gdUnit/e2e suites remain green. |
+| P01 | Candidate scoring helper | verified | `CardRules` legal candidate scoring added; gdUnit covers bomb conservation and required bomb override. |
+| P02 | Hint explanation | verified | Hint status keeps inherited `Hint:` prefix and adds low-cost rationale; gdUnit/e2e pass. |
+| P03 | AI policy and reason text | verified | AI uses scored candidates, conserves bombs in fixture, and exposes concise reason text; gdUnit/e2e pass. |
+| P04 | Hand summary | verified | Summary text reports count groups and chains; gdUnit/e2e pass. |
+| P05 | Rule/help affordance | verified | Help button, modal blocker, close action, and rules text added in Main scene; headless/e2e pass. |
+| P06 | Regression coverage | verified | Headless build passes; gdUnit 19/19 and e2e 16/16 pass. |
