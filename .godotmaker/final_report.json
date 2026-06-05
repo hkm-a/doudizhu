@@ -1,31 +1,35 @@
 {
   "status": "tag_sealed",
-  "tag": "v0.2.0",
-  "completed_at": "2026-06-05T19:44:45Z",
-  "archive_path": "docs/tags/v0.2.0/",
+  "tag": "v0.3.0",
+  "completed_at": "2026-06-05T21:34:02Z",
+  "archive_path": "docs/tags/v0.3.0/",
   "git_tagged": true,
   "summary": {
     "tag_mechanics": [
-      "v0.2.0-M1"
+      "v0.3.0-M1",
+      "v0.3.0-M2",
+      "v0.3.0-M3"
     ],
     "systems_added": [],
     "components_added": [],
     "test_count": {
       "unit": 3,
-      "e2e_tag": 1,
-      "e2e_regression": 9
+      "e2e_tag": 3,
+      "e2e_regression": 10
     }
   },
   "evidence": {
-    "archive_path": "docs/tags/v0.2.0/evidence/",
-    "e2e_files": 25,
-    "screenshots": 2
+    "archive_path": "docs/tags/v0.3.0/evidence/",
+    "e2e_files": 32,
+    "screenshots": 5
   },
   "doc_updates": [
-    "PLAN.md",
-    "MEMORY.md"
+    "MEMORY.md",
+    "STRUCTURE.md"
   ],
   "known_limitations": [
-    "Airplane with wings and four-with-two remain outside the v0.2.0 roadmap scope."
+    "v0.3.0 uses procedural presentation polish and static selection feedback; broader animation/audio polish remains deferred to later roadmap tags.",
+    "Special combinations beyond the roadmap scope, such as airplane with wings and four-with-two, remain deferred.",
+    "Animation, audio, and improved AI are intentionally deferred to later roadmap tags."
   ]
 }

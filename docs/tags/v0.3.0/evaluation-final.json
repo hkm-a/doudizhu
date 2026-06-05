@@ -1,0 +1,121 @@
+{
+  "tag": "v0.3.0",
+  "result": "approve",
+  "playable_closed_loop": {
+    "builds_clean": true,
+    "boots_main_scene": true,
+    "playable_unit_coverage": true,
+    "completion_fail_or_exit_reached": true
+  },
+  "playable_unit": {
+    "result": "pass",
+    "rows": {
+      "v0.3.0-M1": {
+        "result": "pass",
+        "test": "e2e/test_v0_3_0_M1_presentation_layout.py",
+        "evidence": [
+          "pytest passed: table layout bands remain ordered, selected cards remain visible, and all 17 hand cards stay inside the viewport after selection.",
+          "screenshot evidence: e2e/screenshots/scene_main/v0_3_0_02_selected.png"
+        ]
+      },
+      "v0.3.0-M2": {
+        "result": "pass",
+        "test": "e2e/test_v0_3_0_M2_responsive_result_layout.py",
+        "evidence": [
+          "pytest passed: 1280x720, 1366x768, and 1600x900 launches keep AI panels, trick, status, action bar, and hand non-overlapping.",
+          "pytest passed: result banner is centered, visible, and clear above the hand."
+        ]
+      },
+      "v0.3.0-M3": {
+        "result": "pass",
+        "test": "e2e/test_v0_3_0_M3_visual_qa_references.py",
+        "evidence": [
+          "pytest passed: launch, selected-card, and result reference screenshots exist as 1280x720 PNG files.",
+          "screenshot evidence: e2e/screenshots/scene_main/v0_3_0_01_initial.png, e2e/screenshots/scene_main/v0_3_0_02_selected.png, e2e/screenshots/scene_main/v0_3_0_03_result.png"
+        ]
+      }
+    }
+  },
+  "tag_mechanics": {
+    "v0.3.0-M1": "pass",
+    "v0.3.0-M2": "pass",
+    "v0.3.0-M3": "pass"
+  },
+  "inherited_mechanics": {
+    "v0.2.0-M1": "pass",
+    "v0.1.0-M1": "pass",
+    "v0.1.0-M2": "pass",
+    "v0.1.0-M3": "pass",
+    "v0.1.0-M4": "pass",
+    "v0.1.0-M5": "pass",
+    "v0.1.0-M6": "pass",
+    "v0.1.0-M7": "pass",
+    "v0.1.0-M8": "pass"
+  },
+  "visual_checks": {
+    "main": {
+      "screenshot": "e2e/screenshots/scene_main/v0_3_0_01_initial.png",
+      "captures": [
+        "e2e/screenshots/scene_main/v0_3_0_01_initial.png",
+        "e2e/screenshots/scene_main/v0_3_0_02_selected.png",
+        "e2e/screenshots/scene_main/v0_3_0_03_result.png"
+      ],
+      "reference": "references/scene_main.png",
+      "vqa_log": "e2e/screenshots/vqa.log",
+      "result": "pass",
+      "notes": "Dynamic VQA covered launch, selected-card, and result states. The captures show readable cards/text, visible selected-card lift/highlight, visible bottom-card reveal, and a centered result banner with no action/status/hand overlap at 1280x720.",
+      "vqa_calls": [
+        {
+          "ts": "2026-06-05T21:17:53Z",
+          "mode": "dynamic",
+          "backend": "native",
+          "model": "native",
+          "files": [
+            "references/scene_main.png",
+            "e2e/screenshots/scene_main/v0_3_0_01_initial.png",
+            "e2e/screenshots/scene_main/v0_3_0_02_selected.png",
+            "e2e/screenshots/scene_main/v0_3_0_03_result.png"
+          ],
+          "log": "e2e/screenshots/vqa.log",
+          "context": "Goal: v0.3.0 Main table presentation, responsive layout, and visual QA references. Requirements: procedural table panels, card faces, status/action UI, result banner, and v0.3.0 screenshot assets from SCENES.md and ASSETS.md. Verify: launch, selected-card, and result states are readable; AI panels, trick, status, action bar, and hand do not overlap; selected-card highlight/lift and result banner are visible.",
+          "verdict": "pass",
+          "output_summary": "v0.3.0 captures preserve readable, non-overlapping Main table layout across launch, selected-card, and result states."
+        }
+      ]
+    }
+  },
+  "phase4_review": [
+    {
+      "category": "scene_readability",
+      "verdict": "ok"
+    },
+    {
+      "category": "responsive_layout",
+      "verdict": "ok"
+    },
+    {
+      "category": "selection_feedback",
+      "verdict": "ok"
+    },
+    {
+      "category": "result_clarity",
+      "verdict": "ok"
+    },
+    {
+      "category": "inherited_loop_stability",
+      "verdict": "ok"
+    }
+  ],
+  "e2e_tests": {
+    "total": 15,
+    "passed": 15,
+    "failed": 0
+  },
+  "orphan_tests": [],
+  "gameplay_issues": [],
+  "critical_issues": [],
+  "major_issues": [],
+  "minor_issues": [
+    "v0.3.0 uses procedural presentation polish and static selection feedback; broader animation/audio polish remains deferred to later roadmap tags."
+  ]
+}
