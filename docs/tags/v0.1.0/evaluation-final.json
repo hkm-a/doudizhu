@@ -1,0 +1,146 @@
+{
+  "tag": "v0.1.0",
+  "result": "approve",
+  "playable_closed_loop": {
+    "builds_clean": true,
+    "boots_main_scene": true,
+    "playable_unit_coverage": true,
+    "completion_fail_or_exit_reached": true
+  },
+  "playable_unit": {
+    "result": "pass",
+    "rows": {
+      "v0.1.0-M1": {
+        "result": "pass",
+        "test": "e2e/test_v0_1_0_M1_round_setup.py",
+        "evidence": [
+          "pytest passed: round setup shows player hand, AI counts, bottom-card placeholders, and landlord prompt",
+          "screenshot: e2e/screenshots/scene_main.png"
+        ]
+      },
+      "v0.1.0-M2": {
+        "result": "pass",
+        "test": "e2e/test_v0_1_0_M2_landlord_selection.py",
+        "evidence": [
+          "pytest passed: Call Landlord updates role labels, grants bottom cards, and enters play"
+        ]
+      },
+      "v0.1.0-M3": {
+        "result": "pass",
+        "test": "e2e/test_v0_1_0_M3_card_selection.py",
+        "evidence": [
+          "pytest passed: clicking a hand card toggles selected state"
+        ]
+      },
+      "v0.1.0-M4": {
+        "result": "pass",
+        "test": "e2e/test_v0_1_0_M4_core_legal_play.py",
+        "evidence": [
+          "pytest passed: hint-selected supported play applies legally and updates trick state"
+        ]
+      },
+      "v0.1.0-M5": {
+        "result": "pass",
+        "test": "e2e/test_v0_1_0_M5_pass_flow.py",
+        "evidence": [
+          "pytest passed: legal pass advances turn and updates status"
+        ]
+      },
+      "v0.1.0-M6": {
+        "result": "pass",
+        "test": "e2e/test_v0_1_0_M6_hint_action.py",
+        "evidence": [
+          "pytest passed: Hint selects a legal supported response or reports no valid play"
+        ]
+      },
+      "v0.1.0-M7": {
+        "result": "pass",
+        "test": "e2e/test_v0_1_0_M7_ai_turns.py",
+        "evidence": [
+          "pytest passed: AI turns update recent play text and card counts"
+        ]
+      },
+      "v0.1.0-M8": {
+        "result": "pass",
+        "test": "e2e/test_v0_1_0_M8_result_replay.py",
+        "evidence": [
+          "pytest passed: result banner appears and New Round resets the hand"
+        ]
+      },
+      "playable_unit_full_loop": {
+        "result": "pass",
+        "test": "e2e/test_v0_1_0_playable_unit_full_loop.py",
+        "evidence": [
+          "pytest passed: launch, landlord selection, legal play, AI/pass/hint interaction, result, and replay path complete"
+        ]
+      }
+    }
+  },
+  "tag_mechanics": {
+    "v0.1.0-M1": "pass",
+    "v0.1.0-M2": "pass",
+    "v0.1.0-M3": "pass",
+    "v0.1.0-M4": "pass",
+    "v0.1.0-M5": "pass",
+    "v0.1.0-M6": "pass",
+    "v0.1.0-M7": "pass",
+    "v0.1.0-M8": "pass"
+  },
+  "inherited_mechanics": {},
+  "visual_checks": {
+    "main": {
+      "screenshot": "e2e/screenshots/scene_main.png",
+      "captures": [
+        "e2e/screenshots/scene_main.png"
+      ],
+      "reference": "references/scene_main.png",
+      "vqa_log": "e2e/screenshots/vqa.log",
+      "result": "pass",
+      "notes": "Procedural UI assets are complete for v0.1.0; no external bitmap asset bindings are required.",
+      "vqa_calls": [
+        {
+          "ts": "2026-06-05T19:04:51Z",
+          "mode": "static",
+          "backend": "native",
+          "model": "native",
+          "files": [
+            "references/scene_main.png",
+            "e2e/screenshots/scene_main.png"
+          ],
+          "log": "e2e/screenshots/vqa.log",
+          "context": "Goal: Main gameplay table for v0.1.0 playable Doudizhu hand. Requirements: procedural table background, AI panels, bottom cards, current trick/status, player hand, action buttons, result banner contracts from SCENES.md and ASSETS.md. Verify: Main scene shows AI Left/Right panels, center trick/status area, bottom player hand area, action bar; v0.1.0-M1 through M8 visible through dealt state, landlord roles, selection highlight, trick/error state, pass/turn status, hint result, AI recent/count changes, result/replay; no text overlaps action buttons, cards, or seat panels at 1280x720. Visible state only; do not infer prior play history.",
+          "verdict": "pass",
+          "output_summary": "Main scene capture satisfies SCENES.md acceptance criteria for readable procedural table UI at 1280x720."
+        }
+      ]
+    }
+  },
+  "phase4_review": [
+    {
+      "category": "scene_readability",
+      "verdict": "ok"
+    },
+    {
+      "category": "control_flow",
+      "verdict": "ok"
+    },
+    {
+      "category": "fresh_player_guidance",
+      "verdict": "ok"
+    },
+    {
+      "category": "completion_and_replay",
+      "verdict": "ok"
+    }
+  ],
+  "e2e_tests": {
+    "total": 9,
+    "passed": 9,
+    "failed": 0
+  },
+  "orphan_tests": [],
+  "gameplay_issues": [],
+  "critical_issues": [],
+  "major_issues": [],
+  "minor_issues": []
+}
