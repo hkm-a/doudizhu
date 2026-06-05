@@ -1,82 +1,200 @@
-# 斗地主 Godot 游戏设计文档
+# Game Design Document: Doudizhu
 
-## 1. 概述
+## 1. Game Overview
 
-本项目是一款 Godot 4.x 制作的 2D 单机斗地主。目标是先完成一个规则清晰、可完整游玩一局的桌面版原型，后续再扩展视觉、动画、音效和更强 AI。
+- **Title:** Doudizhu
+- **Genre:** 2D card game / turn-based strategy / single-player
+- **Perspective:** 2D fixed table layout
+- **Platform:** Godot 4.x desktop
+- **Primary input:** Mouse
+- **Target resolution:** 1280x720 windowed desktop
+- **One-line pitch:** A readable single-player Doudizhu prototype where the player can complete a full three-player hand against simple AI.
+- **Target session length:** 5-10 minutes per hand.
 
-## 2. 平台与技术
+## 2. Core Gameplay Loop
 
-- 引擎：Godot 4.x
-- 类型：2D 棋牌 / 回合制 / 单机
-- 输入：鼠标点击为主
-- 分辨率：1280x720，支持窗口化
+- **Moment-to-moment:** The player inspects their hand, selects cards, and chooses Play, Pass, Hint, Call Landlord, Do Not Call, or New Round depending on the current phase.
+- **Session loop:** Start a new hand -> shuffle and deal -> determine landlord -> landlord receives bottom cards -> players take turns playing legal combinations or passing -> first side to empty a hand wins -> show result -> allow replay.
+- **Progression loop:** No persistent progression in the first version. Later tags improve rules coverage, AI quality, presentation, animation, and audio.
 
-## 3. 玩家体验
+## 3. Mechanics
 
-玩家进入游戏后自动发牌，经过叫地主阶段后进入出牌阶段。玩家在底部选择手牌并点击“出牌”，也可以点击“提示”自动选出可压过当前牌型的组合，或者点击“不要”。任意一方手牌出完后显示胜负结算，并提供“再来一局”。
+### Core Mechanics
 
-## 4. 游戏规则范围
+| Mechanic | Player Action | Game Response / Feedback |
+|----------|---------------|--------------------------|
+| Deal and round start | Click New Round or launch the scene | Three seats receive cards, bottom cards are reserved, and the phase prompt updates |
+| Landlord selection | Click Call Landlord or Do Not Call | A landlord is assigned, the landlord receives bottom cards, role labels update |
+| Card selection | Click cards in the player's hand | Selected cards lift/highlight; clicking again deselects |
+| Play cards | Select cards and click Play | Legal play moves to the table, updates current trick and turn; illegal play keeps state and shows a message |
+| Pass | Click Pass when following another play | The player passes if allowed; turn advances |
+| Hint | Click Hint | The smallest currently valid playable response is selected, or a "no valid play" message appears |
+| AI turn | Wait during AI seats | AI plays the smallest legal response or passes; visible recent-play area updates |
+| Win/loss resolution | Any side empties a hand | Result banner appears with winner side and New Round action |
 
-### 4.1 牌组
+### Supported Card Rules
 
-- 使用 54 张牌：3 到 A、2，每种四张，加小王和大王。
-- 牌力从小到大：3,4,5,6,7,8,9,10,J,Q,K,A,2,小王,大王。
+The full game targets normal three-player Doudizhu with a 54-card deck. The final rule set includes:
 
-### 4.2 玩家与身份
+- Single card
+- Pair
+- Three of a kind
+- Three with one
+- Three with pair
+- Straight of at least 5 cards, excluding 2 and jokers
+- Consecutive pairs of at least 3 pairs, excluding 2 and jokers
+- Airplane without wings as the first airplane variant
+- Bomb
+- Joker bomb
 
-- 三名玩家：Human、AI Left、AI Right。
-- 叫地主阶段选出一名地主，地主获得三张底牌。
-- 地主一方单独对抗两名农民。
+For `v0.1.0`, the playable core loop intentionally supports a smaller rule set:
 
-### 4.3 牌型
+- Single card
+- Pair
+- Three of a kind
+- Bomb
+- Joker bomb
 
-首个版本支持：
+The first tag prioritizes full state flow, legal comparison, turns, AI, and win/loss over complete card-pattern coverage.
 
-- 单张
-- 对子
-- 三张
-- 三带一
-- 三带二
-- 顺子：至少 5 张，不含 2 和王
-- 连对：至少 3 对，不含 2 和王
-- 飞机：连续三张，首版可先支持不带翼
-- 炸弹：四张同点数
-- 王炸：小王 + 大王
+### Rule Comparison
 
-### 4.4 出牌比较
+- Plays of the same type and same structural length compare by their primary rank.
+- Bombs beat non-bombs.
+- Joker bomb beats all other plays.
+- If all other active players pass, the last player who made a play gains initiative and may lead any legal supported combination.
 
-- 同牌型、同长度才能比较大小，比较主牌点数。
-- 炸弹可以压非炸弹。
-- 王炸最大。
-- 当前轮无人压过上家后，最后出牌者获得新的主动出牌权。
+### Additional Mechanics
 
-## 5. AI
+- Expanded combinations: Three with attachments, straights, consecutive pairs, and airplane are deferred after the core loop.
+- Better AI: Later tags may search combinations more intelligently and avoid wasting strong cards.
+- Animation/audio polish: Deferred until the game is playable and testable.
 
-首版 AI 使用简单可解释策略：
+## 4. Game World & Setting
 
-- 主动出牌时优先出最小单张/对子/可用组合。
-- 跟牌时寻找能压过当前牌型的最小合法组合。
-- 没有合法组合则不要。
+- **Theme / Setting:** Clean desktop card table.
+- **Mood / Atmosphere:** Clear, calm, and readable rather than flashy.
+- **Art style:** Modern 2D card-table UI with crisp card faces, restrained colors, and strong contrast.
+- **Color palette:** Green table surface, light card faces, red/black card suits, amber highlights for selected cards and active turn.
+- **Visual references:** Traditional playing-card readability with modern board-game UI spacing.
 
-## 6. UI
+## 5. Characters & Entities
 
-- 桌面中央显示当前出牌区和状态提示。
-- 顶部/左右显示 AI 手牌数量、身份、最近出牌。
-- 底部显示玩家手牌，点击卡牌切换选中状态。
-- 操作按钮：出牌、不要、提示、叫地主、不叫、再来一局。
+### Player Seats
 
-## 7. 场景结构建议
+| Entity | Behavior | Visual |
+|--------|----------|--------|
+| Human | Selects and plays cards through mouse UI | Bottom seat with visible full hand |
+| AI Left | Simple automated opponent | Left/top-left seat with card count and recent play |
+| AI Right | Simple automated opponent | Right/top-right seat with card count and recent play |
 
-- `Main.tscn`：主游戏场景。
-- `Card.tscn`：单张牌 UI。
-- `GameManager.gd`：流程状态机。
-- `CardRules.gd`：牌型识别与比较。
-- `SimpleAI.gd`：AI 策略。
-- `Deck.gd`：牌组创建、洗牌、发牌。
+### Card Entities
 
-## 8. 验收标准
+- **Card:** Rank, suit/joker identity, owner, selected state, and visual position.
+- **Bottom cards:** Three reserved cards revealed when landlord is chosen.
+- **Current trick:** The active play that must be beaten or passed.
 
-- 能从空项目直接运行到主菜单/单局。
-- 能完成发牌、叫地主、地主拿底牌、轮流出牌、不要、结算。
-- 玩家非法出牌时不会改变游戏状态，并显示错误提示。
-- 至少包含规则相关单元测试或可复现的测试脚本。
+### Game State Entities
+
+- **Round state:** Shuffle, deal, landlord phase, play phase, result phase.
+- **Turn state:** Current player, last valid play, pass count, and initiative owner.
+- **Message state:** Short player-facing validation and status messages.
+
+## 6. Level / Scene Design
+
+There are no levels. The game has one main gameplay scene.
+
+| Scene | Objective | New Mechanic Introduced | Difficulty |
+|-------|-----------|-------------------------|------------|
+| Main | Complete one Doudizhu hand against two AI opponents | Deal, landlord choice, card selection, play/pass/hint, AI turns, result | Easy |
+
+**Difficulty progression:** The first release uses simple AI and no difficulty selection. Later versions improve AI behavior and rule depth.
+
+## 7. UI / UX Design
+
+### Table Layout
+
+- AI seats appear near the top-left and top-right, each showing name, role, remaining card count, and most recent play.
+- The center table area shows the active trick, bottom cards after landlord selection, and current status message.
+- The player's hand spans the bottom area with clickable cards.
+- A compact action bar contains context-sensitive buttons: Call Landlord, Do Not Call, Play, Pass, Hint, and New Round.
+
+### Menu Flow
+
+```text
+Launch Main -> New hand auto-starts -> Landlord phase -> Play phase -> Result -> New Round
+```
+
+### Feedback
+
+- Selected cards visibly lift or highlight.
+- The active player is highlighted.
+- Illegal plays show a short error message and do not mutate the round state.
+- Win/loss result is shown in a prominent banner.
+
+## 8. Audio Direction
+
+Audio is optional for `v0.1.0`. Later tags may add:
+
+| Scene/Context | Mood | Notes |
+|---------------|------|-------|
+| Gameplay table | Calm and light | Low-volume loop, should not distract from card reading |
+| Result | Short confirmation | Win/loss sting |
+
+Sound effects deferred after core gameplay:
+
+- Card select: soft tick
+- Play cards: short card slap
+- Pass: subtle click
+- Invalid play: gentle warning
+- Round result: short win/loss cue
+
+## 9. Art Asset Requirements
+
+### Required Assets
+
+| Category | Asset | Description | Provided by User? |
+|----------|-------|-------------|-------------------|
+| Card UI | Playing card face set | 54 readable card faces, including jokers | No |
+| Card UI | Card back | Back used for AI hidden cards if needed | No |
+| UI | Buttons and panels | Clean rectangular game controls and table panels | No |
+| Background | Table surface | Simple green felt/table background | No |
+
+### Asset Strategy
+
+For `v0.1.0`, cards may be rendered procedurally with Godot UI text, suit symbols, and simple rectangles. Dedicated bitmap card art is not required unless a later asset pass chooses to replace procedural card faces.
+
+### Art Style Constraints
+
+- Readability has priority over decorative detail.
+- Cards must be legible at desktop 1280x720.
+- UI text must fit Chinese or English labels without overlap.
+- Color cannot rely on one hue family only; red/black suits and amber/blue UI accents should break up the green table.
+
+## 10. Scope & Playable Units
+
+### Playable Unit Candidates
+
+| Candidate | Player Experience | Mechanics Included | Completion / Fail / Exit |
+|-----------|-------------------|--------------------|--------------------------|
+| v0.1.0 Core hand | Complete one simplified-rule hand against two AI players | Deal, landlord assignment, selected core card types, legal compare, AI turns, result, replay | One side empties hand and result appears |
+| v0.2.0 Full rule expansion | Use the complete planned Doudizhu pattern set | Three with attachments, straights, consecutive pairs, airplane, fuller validation tests | Complete hand with expanded legal plays |
+| v0.3.0 Presentation pass | Play with clearer card/table presentation | Card art refinement, animation, turn feedback, result polish | Same hand loop with improved visibility |
+| v0.4.0 AI and usability | Play against less naive AI and better support tools | Improved hint, better AI choice, basic difficulty tuning | Complete hand with more credible opponents |
+| v0.5.0 Audio and finish | Play a more finished desktop prototype | SFX, optional music, final UI consistency, settings | Complete hand with audiovisual polish |
+
+### Deferred
+
+- Multiplayer
+- Scorekeeping across multiple hands
+- Difficulty settings
+- Full animation/audio polish
+- Save/load
+- Mobile layout
+
+### Content Volume
+
+- **Scenes:** One gameplay scene for the first playable version.
+- **Players:** One human, two AI.
+- **Cards:** 54-card deck.
+- **Rules:** Simplified core subset in `v0.1.0`, full planned set in later tags.
