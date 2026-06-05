@@ -8,10 +8,7 @@ Doudizhu is a 2D desktop card game where one human player completes a readable D
 
 ## Tag Mechanics
 
-- [v0.2.0-M1] Three attachments: support three-with-one and three-with-pair classification, comparison, hint selection, and AI play.
-- [v0.2.0-M2] Chains: support straights and consecutive pairs while excluding 2 and jokers from chain membership.
-- [v0.2.0-M3] Airplane without wings: support consecutive triples without attachments, excluding 2 and jokers.
-- [v0.2.0-M4] Expanded play integration: player Play, Hint, and AI turns can use the expanded combinations without regressing the v0.1.0 loop.
+- [v0.2.0-M1] Expanded non-special combinations: support three-with-one, three-with-pair, straights, consecutive pairs, and airplane without wings; exclude 2/jokers from chains; integrate comparison, Hint, and AI candidate search without regressing the v0.1.0 hand loop.
 
 ## Inherited Mechanics
 
@@ -32,10 +29,7 @@ Doudizhu is a 2D desktop card game where one human player completes a readable D
 
 | Mechanic | Player operation / content | Expected effect | Required visible content | Evidence |
 |----------|----------------------------|-----------------|--------------------------|----------|
-| [v0.2.0-M1] | Select or receive hint for three-with-one / three-with-pair | Combination is accepted when legal and compared by triple rank | Center trick area and status text show the played cards | gdUnit card-rule tests |
-| [v0.2.0-M2] | Select or receive hint for straight / consecutive pairs | Chains compare only against same type and same length; chains containing 2/jokers are rejected | Hint selection or invalid-play status remains readable | gdUnit card-rule tests; e2e straight follow test |
-| [v0.2.0-M3] | Select or receive hint for airplane without wings | Consecutive triples are accepted and compared by highest triple rank | Center trick/status area shows the play outcome | gdUnit card-rule tests |
-| [v0.2.0-M4] | Use Hint and Play on an expanded-rule fixture | UI selects and plays an expanded straight response, then AI/pass flow continues | Selected cards, center trick type, hand count, and status update | e2e expanded-rule test |
+| [v0.2.0-M1] | Use expanded combinations through rules, Hint, Play, and AI candidate search | New combinations classify/compare correctly; UI selects and plays an expanded straight response; inherited flow continues | Selected cards, center trick type, hand count, and status update | gdUnit card-rule tests; e2e expanded-rule test |
 | [v0.1.0-M1..M8] | Existing hand-loop operations | Existing setup, landlord, selection, core play, pass, hint, AI, result, and replay still pass | Existing table UI remains readable | inherited e2e suite |
 
 - **Review focus:** Reviewers should inspect rule classification/comparison, chain length matching, exclusion of 2/jokers from chains, hint/AI candidate ordering, and that expanded rule support does not regress inherited hand flow.
@@ -81,7 +75,7 @@ Doudizhu is a 2D desktop card game where one human player completes a readable D
 
 | Task / Mechanic | Visible Content | Asset Row / Path | Runtime Size | Verification |
 |-----------------|-----------------|------------------|--------------|--------------|
-| E01-E04 / [v0.2.0-M1..M4] | Existing procedural cards, status text, trick area, and hand selection | procedural/UI text | Existing card and table sizes | Unit and e2e assertions |
+| E01-E04 / [v0.2.0-M1] | Existing procedural cards, status text, trick area, and hand selection | procedural/UI text | Existing card and table sizes | Unit and e2e assertions |
 
 ## Verify
 
