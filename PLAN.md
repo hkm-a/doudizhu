@@ -125,13 +125,13 @@ Doudizhu is a 2D desktop card game where one human player completes a simplified
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| R1 | Core card rules | pending | Pure rules first |
-| R2 | Round/turn state machine | pending | Pure flow before UI |
-| M01 | Component data model | pending | |
-| M02 | Deck/deal setup | pending | |
-| M03 | Landlord controls | pending | |
-| M04 | Hand selection/sorting | pending | |
-| M05 | Play/pass/hint actions | pending | |
-| M06 | Simple AI executor | pending | |
-| M07 | Table UI projection | pending | |
-| M08 | Result/replay | pending | |
+| R1 | Core card rules | done | `CardRules` covers singles, pairs, triples, bombs, joker bomb, invalid patterns, and comparison tests. |
+| R2 | Round/turn state machine | done | `DoudizhuGame` covers deterministic deal, landlord assignment, play/pass/hint, AI turns, result, and replay. |
+| M01 | Component data model | done | `src/components/` contains gecs component data for round, hands, seats, roles, turn, trick, selection, and message. |
+| M02 | Deck/deal setup | done | New rounds shuffle/deal 17/17/17 plus 3 bottom cards and update visible counts. |
+| M03 | Landlord controls | done | Call/decline buttons assign landlord, grant bottom cards, update roles, and enter play. |
+| M04 | Hand selection/sorting | done | Clickable procedural card buttons toggle selection with lift/highlight while preserving sorted order. |
+| M05 | Play/pass/hint actions | done | Play rejects invalid selections without mutation, Pass advances legal turns, and Hint selects the smallest legal response. |
+| M06 | Simple AI executor | done | AI seats play the smallest legal response or pass, with recent play/count UI updates. |
+| M07 | Table UI projection | done | `scenes/main.tscn` renders procedural table, AI panels, bottom cards, trick/status, action bar, hand, and result banner. |
+| M08 | Result/replay | done | Empty-hand detection shows winner banner and New Round resets the hand. |
