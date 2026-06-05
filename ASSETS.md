@@ -30,6 +30,10 @@ Visual prompt language lives in `STYLE.md`.
 | v0.3.0 | Main / [v0.3.0-M1] | Selected card and improved table spacing | `e2e/screenshots/scene_main/v0_3_0_02_selected.png` | 1280x720 | Reference selected-card presentation | Highlight/lift and hand readability clear | screenshot |
 | v0.3.0 | Main / [v0.3.0-M2] | Responsive table layout | procedural_panels_buttons / procedural | 1280x720, 1366x768, 1600x900 | Keep table bands non-overlapping | AI panels, trick, status, actions, and hand do not overlap | e2e |
 | v0.3.0 | Main / [v0.3.0-M3] | Launch and result visual references | `e2e/screenshots/scene_main/v0_3_0_01_initial.png`; `e2e/screenshots/scene_main/v0_3_0_03_result.png` | 1280x720 | Visual QA comparison baseline | Status, roles, hand, and result banner readable | screenshot |
+| v0.4.0 | Main / [v0.4.0-M1] | Hint explanation status text | procedural_panels_buttons / procedural | Status band | Explain selected play type and low-cost rationale | Text wraps/clamps without covering cards or buttons | procedural/UI |
+| v0.4.0 | Main / [v0.4.0-M2] | AI recent play reason | procedural_panels_buttons / procedural | AI panel recent row | Make AI choice readable | Reason text is concise and readable inside seat panels | procedural/UI |
+| v0.4.0 | Main / [v0.4.0-M3] | Hand summary | procedural_panels_buttons / procedural | Compact summary band/panel | Show hand composition and opportunities | Counts and chain opportunities readable at 1280x720 | procedural/UI |
+| v0.4.0 | Main / [v0.4.0-M4] | Rules/help panel | procedural_panels_buttons / procedural | Clamped overlay/panel | Explain supported combinations and flow | Help text wraps, close action is visible, table remains non-overlapping | procedural/UI |
 
 ## Animated Sprites
 
@@ -47,9 +51,11 @@ No audio assets are required for v0.1.0. Audio is deferred to a later tag.
 | procedural_table_background | v0.1.0 | Godot UI | $0.00 | No image generation |
 | procedural_panels_buttons | v0.1.0 | Godot UI | $0.00 | No image generation |
 | v0.3.0 reference screenshots | v0.3.0 | godot-e2e | $0.00 | Runtime captures only |
+| v0.4.0 help and summary UI | v0.4.0 | Godot UI | $0.00 | No image generation |
 | **Total** | — | | **$0.00** | |
 
 ## Post-Processing Notes
 
 - No post-processing required for v0.1.0.
 - No post-processing required for v0.3.0 screenshots.
+- No post-processing required for v0.4.0 procedural UI text.

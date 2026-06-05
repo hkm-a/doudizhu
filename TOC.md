@@ -8,11 +8,11 @@
 - `ASSETS.md` — Cross-tag asset manifest and visual asset contract.
 - `MEMORY.md` — Cross-tag discoveries and gotchas, created when needed by later stages.
 
-## Current-Tag (v0.1.0)
+## Current-Tag (v0.4.0)
 
-- `PLAN.md` — v0.1.0 task breakdown, mechanics, playable unit, verification expectations, and task status.
-- `STRUCTURE.md` — v0.1.0 ECS architecture and system/component plan.
-- `SCENES.md` — v0.1.0 scene and UI layout contract.
+- `PLAN.md` — v0.4.0 task breakdown, mechanics, playable unit, verification expectations, and task status.
+- `STRUCTURE.md` — v0.4.0 architecture and system/component plan.
+- `SCENES.md` — v0.4.0 scene and UI layout contract.
 
 ## Per-Tag Archives
 

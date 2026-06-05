@@ -2,9 +2,9 @@
 
 ## Current Tag
 
-- Tag: v0.3.0
-- Theme: Presentation Pass
-- Status: accepted; finalize in progress.
+- Tag: v0.4.0
+- Theme: AI And Usability
+- Status: GDD/planning in progress.
 
 ## Decisions
 
@@ -16,11 +16,14 @@
 - v0.2.0 adds a deterministic debug fixture for e2e coverage of expanded straight follow/play behavior.
 - v0.3.0 keeps procedural UI assets and improves table spacing, selected-card highlight/lift, active/result clarity, and responsive desktop layout without changing Doudizhu rules.
 - v0.3.0 adds evaluator screenshots for launch, selected-card, and result states under `e2e/screenshots/scene_main/`.
+- v0.4.0 should improve choice policy and usability without expanding the supported card-rule set.
+- Hint and AI policy changes must keep `CardRules.classify` and `CardRules.can_beat` as the legality gate.
 
 ## Known Limitations
 
 - Special combinations beyond the roadmap scope, such as airplane with wings and four-with-two, remain deferred.
 - Animation, audio, and improved AI are intentionally deferred to later roadmap tags.
+- v0.4.0 improves basic AI policy, but full expert Doudizhu AI and difficulty settings remain out of scope unless the roadmap is updated.
 
 ## Reviewer Triage Log
 

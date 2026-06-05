@@ -1,101 +1,62 @@
 # Doudizhu
 
-**Tag:** v0.3.0
+**Tag:** v0.4.0
 
 ## Dimension: 2D
 
 ## Input Actions
 
-This tag is mouse-driven through UI buttons and card controls. No custom `project.godot` input actions are required for v0.3.0.
-
-v0.3.0 is a presentation pass over the existing Doudizhu model and ECS boundary. It does not add new components or systems; the table projection in `src/main.gd` now handles clearer spacing, selection feedback, active/result styling, and common desktop viewport sizes.
+v0.4.0 remains mouse-driven through UI buttons and card controls. No custom `project.godot` input actions are required.
 
 | Action | Keys |
 |--------|------|
 | ui_accept | Enter / Space (Godot default, optional button activation) |
 | mouse_select | Mouse Left (handled by Control input) |
 
+## Architecture Delta
+
+v0.4.0 keeps the existing single-scene Doudizhu model and procedural UI. The main architecture change is policy and usability data flowing through the existing model:
+
+- `CardRules` gains legal candidate scoring helpers.
+- `DoudizhuGame` uses scored candidates for Hint and AI, stores concise AI reason text, and exposes hand-summary/help content.
+- `Main` renders the new summary/help/reason text through Control nodes without introducing new scenes.
+
+No new ECS component files are required unless build work chooses to materialize the new text fields as components. Existing component and system files remain valid.
+
 ## Component Registry
 
-### Core Components
+### Existing Components
 
-| Component | Field | Type | Default | Description |
-|-----------|-------|------|---------|-------------|
-| C_NodeRef | node | Node | null | Scene node bound to an ECS entity when a UI projection exists |
-| C_Position2D | position | Vector2 | Vector2.ZERO | Optional 2D table/layout position for projected card nodes |
+| Component | Field | Type | Default | v0.4.0 Use |
+|-----------|-------|------|---------|------------|
+| C_Hand | cards | Array[int] | [] | Source for candidate scoring and hand summary |
+| C_Message | text | String | "" | Source for Hint explanation and validation messages |
+| C_PlayerSeat | seat_index/display_name/is_human | mixed | existing defaults | Seat identity for AI reason display |
+| C_Role | role | String | "undecided" | Help/result context and side labels |
+| C_RoundState | phase/winner_side | mixed | existing defaults | Help/result visibility and replay flow |
+| C_Selection | selected_cards | Array[int] | [] | Hint-selected card ids |
+| C_TrickState | cards/play_type/primary_rank/owner_seat | mixed | existing defaults | Active trick for scoring legal responses |
+| C_TurnState | current_seat/initiative_seat/consecutive_passes | mixed | existing defaults | Determines lead/follow scoring and pass availability |
 
-### Game Components
+### Data Added In Model Layer
 
-| Component | Field | Type | Default | Description |
-|-----------|-------|------|---------|-------------|
-| C_Card | rank | int | 0 | Rank order from 3 through jokers |
-| C_Card | suit | String | "" | Suit label or joker type |
-| C_Card | card_id | int | -1 | Unique id for stable selection and sorting |
-| C_Hand | cards | Array | [] | Ordered card ids held by a seat |
-| C_PlayerSeat | seat_index | int | 0 | 0 human, 1 AI left, 2 AI right |
-| C_PlayerSeat | display_name | String | "" | Human-readable seat label |
-| C_PlayerSeat | is_human | bool | false | Whether the seat is player-controlled |
-| C_Role | role | String | "undecided" | landlord, farmer, or undecided |
-| C_RoundState | phase | String | "setup" | setup, landlord, play, result |
-| C_RoundState | winner_side | String | "" | landlord, farmers, or empty before result |
-| C_TurnState | current_seat | int | 0 | Seat whose action is active |
-| C_TurnState | initiative_seat | int | -1 | Seat allowed to lead any play |
-| C_TurnState | consecutive_passes | int | 0 | Passes since the last valid play |
-| C_TrickState | cards | Array | [] | Card ids in the active trick |
-| C_TrickState | play_type | String | "" | single, pair, triple, bomb, joker_bomb |
-| C_TrickState | primary_rank | int | -1 | Rank used for comparison |
-| C_TrickState | owner_seat | int | -1 | Seat that made the active trick |
-| C_BottomCards | cards | Array | [] | Three bottom cards before landlord assignment |
-| C_Selection | selected_cards | Array | [] | Human-selected card ids |
-| C_Message | text | String | "" | Current status or validation message |
-| C_AIProfile | strategy | String | "smallest_legal" | v0.1.0 AI behavior |
-
-### Tag Components
-
-| Tag | Purpose |
-|-----|---------|
-| T_HumanSeat | Identifies the player seat |
-| T_AISeat | Identifies AI seats |
-| T_TableUI | Identifies UI projection entity |
-| T_NewRoundRequested | Marks that a new hand should start on next logic tick |
+| Data | Owner | Type | Purpose |
+|------|-------|------|---------|
+| hint_reason | DoudizhuGame | String | Human-readable explanation for selected Hint cards |
+| ai_reasons | DoudizhuGame | Array[String] | Short reason for each AI play/pass visible in seat panel |
+| hand_summary | DoudizhuGame helper output | Dictionary/String | Counts singles, pairs, triples, bombs, and chains |
+| help_visible | Main UI | bool | Whether the rules/help panel is open |
 
 ## System Schedule
 
-### Phase: Setup
-
-| Order | System | Reads | Writes | Creates Node | Requires Node |
-|-------|--------|-------|--------|--------------|---------------|
-| 1 | RoundSetupSystem | C_RoundState | C_Card, C_Hand, C_PlayerSeat, C_BottomCards, C_TurnState, C_Message | — | — |
-
-### Phase: Input
-
-| Order | System | Reads | Writes | Creates Node | Requires Node |
-|-------|--------|-------|--------|--------------|---------------|
-| 10 | UIInputSystem | C_RoundState, C_TurnState, C_Hand | C_Selection, C_Message, T_NewRoundRequested | — | — |
-
 ### Phase: Logic
 
-| Order | System | Reads | Writes | Creates Node | Requires Node |
-|-------|--------|-------|--------|--------------|---------------|
-| 20 | LandlordSystem | C_RoundState, C_PlayerSeat, C_BottomCards, C_Hand | C_Role, C_Hand, C_TurnState, C_Message | — | — |
-| 30 | CardRulesSystem | C_Card, C_Selection, C_TrickState | C_Message | — | — |
-| 40 | PlaySystem | C_RoundState, C_TurnState, C_Selection, C_Hand, C_TrickState | C_Hand, C_TrickState, C_TurnState, C_Message | — | — |
-| 50 | PassSystem | C_RoundState, C_TurnState, C_TrickState | C_TurnState, C_TrickState, C_Message | — | — |
-| 60 | HintSystem | C_Hand, C_TrickState, C_TurnState | C_Selection, C_Message | — | — |
-| 70 | AISystem | C_AIProfile, C_Hand, C_TrickState, C_TurnState | C_Hand, C_TrickState, C_TurnState, C_Message | — | — |
-| 80 | ResultSystem | C_Hand, C_Role | C_RoundState, C_Message | — | — |
-
-### Phase: Materialization
-
-| Order | System | Reads | Writes | Creates Node | Requires Node |
-|-------|--------|-------|--------|--------------|---------------|
-| 90 | TableProjectionSystem | C_PlayerSeat, C_Role, C_Hand, C_Selection, C_BottomCards, C_TrickState, C_TurnState, C_Message, C_RoundState | C_NodeRef | Control/Card controls | Main UI root |
-
-### Phase: Cleanup
-
-| Order | System | Reads | Writes | Creates Node | Requires Node |
-|-------|--------|-------|--------|--------------|---------------|
-| 99 | NewRoundCleanupSystem | T_NewRoundRequested | C_RoundState, C_Selection, C_Message | — | — |
+| Order | System | Reads | Writes | Purpose |
+|-------|--------|--------|--------|---------|
+| 30 | CardRules candidate scoring | Hand cards, active trick, initiative | Scored legal candidates | Rank legal plays by low cost, chain quality, and bomb conservation |
+| 40 | HintSystem | Scored candidates, turn state | C_Selection, C_Message, hint_reason | Select best player response and explain it |
+| 70 | AISystem | Scored candidates, turn state | Hands, trick, turn state, ai_reasons, message | Choose less wasteful AI plays and explain them |
+| 90 | TableProjectionSystem | Game state, summary/help/reason text | Control nodes | Render summary, help, AI recent reason, and existing table UI |
 
 ## Scene Markers
 
@@ -122,25 +83,25 @@ v0.3.0 is a presentation pass over the existing Doudizhu model and ECS boundary.
 
 ## Node Projection
 
-| System | When Component Added | Node Created | Parent |
-|--------|----------------------|--------------|--------|
-| TableProjectionSystem | T_TableUI / C_NodeRef | Control containers for seats, hand, trick, actions, result | Main root |
-| TableProjectionSystem | C_Hand card ids | Button/Control card faces | PlayerHand or TrickArea |
-| TableProjectionSystem | C_Message | Label text update | Status area |
+| UI Area | Node Created/Updated | Parent | v0.4.0 Contract |
+|---------|----------------------|--------|-----------------|
+| AI panels | Recent/reason labels | AILeftPanel/AIRightPanel | Show latest play/pass plus concise reason without overflow |
+| Status band | StatusMessage | Main root | Show Hint explanation and validation messages |
+| Summary area | HandSummary label/panel | Main root near status/action bands | Stay compact and readable at 1280x720 |
+| Help affordance | HelpButton + HelpPanel | Action bar/Main overlay | Open/close supported rules and flow text without scene transition |
+| Player hand | Card buttons | PlayerHand | Existing selected-card feedback remains unchanged |
 
 ## Build Order
 
-1. Pure card/deck model and rule helpers.
-2. ECS component definitions.
-3. Pure round and turn flow systems.
-4. AI and hint helpers.
-5. Main UI projection and button/card event wiring.
-6. Result/replay flow.
-7. gdUnit coverage and deterministic test setup.
-8. E2E coverage for the playable loop.
+1. Add pure candidate scoring helpers to `CardRules`.
+2. Add gdUnit scoring tests for low-cost response, bomb conservation, and lead/follow behavior.
+3. Update `DoudizhuGame.hint()` and `_ai_step()` to use scored candidates and store reason text.
+4. Add hand summary helpers and unit coverage.
+5. Add summary/help/reason UI nodes in `src/main.gd`.
+6. Add v0.4.0 e2e coverage for Hint, AI reason, summary, and help overlay.
+7. Run full headless, gdUnit, lint, and e2e verification.
 
 ## Asset Hints
 
-- Procedural card face controls (56x78 px baseline, rank/suit text and color).
-- Procedural table background (green felt-like flat or subtle texture).
-- Procedural panels/buttons/status labels.
+- Use existing procedural panels/buttons and text labels.
+- Keep help text compact; if the content grows, use a constrained `PanelContainer` with wrapped labels rather than adding a new scene.
