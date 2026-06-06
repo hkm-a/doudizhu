@@ -22,11 +22,15 @@ var ai_reasons: Array[String] = ["", "", ""]
 var hint_reason := ""
 var message := ""
 var winner_side := ""
+var winner_seat := -1
+var hand_number := 0
+var result_key := ""
 var seed := 7
 
 
 func new_round(round_seed: int = 7) -> void:
 	seed = round_seed
+	hand_number += 1
 	cards_by_id.clear()
 	hands = [[], [], []]
 	bottom_cards = []
@@ -42,6 +46,8 @@ func new_round(round_seed: int = 7) -> void:
 	ai_reasons = ["", "", ""]
 	hint_reason = ""
 	winner_side = ""
+	winner_seat = -1
+	result_key = ""
 
 	var deck := CardRules.create_deck()
 	for card in deck:
@@ -133,6 +139,19 @@ func force_finish_for_human_win() -> void:
 	_finish_if_needed(HUMAN)
 
 
+func result_summary() -> Dictionary:
+	return {
+		"phase": phase,
+		"winner_side": winner_side,
+		"winner_seat": winner_seat,
+		"landlord_seat": landlord_seat,
+		"landlord_name": SEAT_NAMES[landlord_seat] if landlord_seat >= 0 else "",
+		"winner_name": SEAT_NAMES[winner_seat] if winner_seat >= 0 else "",
+		"hand_number": hand_number,
+		"result_key": result_key,
+	}
+
+
 func debug_configure_expanded_rule_fixture() -> void:
 	cards_by_id.clear()
 	for card in CardRules.create_deck():
@@ -145,6 +164,8 @@ func debug_configure_expanded_rule_fixture() -> void:
 	consecutive_passes = 0
 	selected_cards = []
 	winner_side = ""
+	winner_seat = -1
+	result_key = ""
 	hands[HUMAN] = [
 		cards_by_id[5],
 		cards_by_id[9],
@@ -184,6 +205,8 @@ func debug_configure_bomb_conservation_fixture() -> void:
 	consecutive_passes = 0
 	selected_cards = []
 	winner_side = ""
+	winner_seat = -1
+	result_key = ""
 	hands[HUMAN] = [cards_by_id[48], cards_by_id[49], cards_by_id[50]]
 	hands[AI_LEFT] = [
 		cards_by_id[4],
@@ -211,7 +234,7 @@ func hand_summary_text() -> String:
 
 
 func rules_help_text() -> String:
-	return "Supported: single, pair, triple, three with one, three with pair, straight, consecutive pairs, airplane, bomb, joker bomb.\nPass only when following another play. If both opponents pass, the last player leads.\nHint selects the lowest-cost legal play and conserves bombs unless needed.\nFirst side to empty a hand wins; New Round starts another hand."
+	return "Supported: single, pair, triple, three with one, three with pair, straight, consecutive pairs, airplane, bomb, joker bomb.\nPass only when following another play. If both opponents pass, the last player leads.\nHint selects the lowest-cost legal play and conserves bombs unless needed.\nFirst side to empty a hand wins; New Hand preserves scores; New Match clears them."
 
 
 func get_hand_ids(seat: int) -> Array[int]:
@@ -280,7 +303,9 @@ func _finish_if_needed(seat: int) -> bool:
 	if hands[seat].is_empty():
 		phase = "result"
 		winner_side = "landlord" if seat == landlord_seat else "farmers"
-		message = "%s win. New Round starts another hand." % winner_side.capitalize()
+		winner_seat = seat
+		result_key = "hand_%d_%s_%d" % [hand_number, winner_side, winner_seat]
+		message = "%s win. New Hand starts another hand." % winner_side.capitalize()
 		return true
 	return false
 
@@ -387,3 +412,4 @@ func _shuffle(deck: Array[Dictionary], round_seed: int) -> void:
 		var temp := deck[i]
 		deck[i] = deck[j]
 		deck[j] = temp
+

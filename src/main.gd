@@ -10,8 +10,10 @@ const ACTIVE_BORDER_COLOR := Color(0.95, 0.72, 0.25)
 const RESULT_PANEL_COLOR := Color(0.08, 0.11, 0.1, 0.96)
 const SELECTED_CARD_COLOR := Color(1.0, 0.94, 0.55)
 const AudioControllerScript := preload("res://src/audio_controller.gd")
+const ScoreStateScript := preload("res://src/score_state.gd")
 
 var game := DoudizhuGame.new()
+var score_state := ScoreStateScript.new()
 var audio_controller := AudioControllerScript.new()
 var round_counter := 0
 var layout_scale := 1.0
@@ -25,6 +27,8 @@ var trick_box: HBoxContainer
 var trick_owner_label: Label
 var status_label: Label
 var hand_summary_label: Label
+var scoreboard_panel: PanelContainer
+var scoreboard_label: Label
 var hand_area: Control
 var action_bar: HBoxContainer
 var call_button: Button
@@ -41,6 +45,8 @@ var music_toggle_button: Button
 var volume_button: Button
 var result_panel: PanelContainer
 var result_label: Label
+var result_new_hand_button: Button
+var result_new_match_button: Button
 var help_blocker: ColorRect
 var help_panel: PanelContainer
 var help_label: Label
@@ -69,8 +75,15 @@ func _notification(what: int) -> void:
 
 func _start_new_round() -> void:
 	round_counter += 1
+	score_state.start_new_hand()
 	game.new_round(100 + round_counter)
 	_refresh()
+
+
+func _start_new_match() -> void:
+	score_state.reset_match()
+	round_counter = 0
+	_start_new_round()
 
 
 func _build_ui() -> void:
@@ -128,6 +141,17 @@ func _build_ui() -> void:
 	hand_summary_label.add_theme_color_override("font_color", Color(0.92, 0.96, 0.9))
 	add_child(hand_summary_label)
 
+	scoreboard_panel = PanelContainer.new()
+	scoreboard_panel.name = "ScoreboardBand"
+	_pin_top_left(scoreboard_panel)
+	scoreboard_panel.add_theme_stylebox_override("panel", _box_style(Color(0.07, 0.13, 0.11, 0.88), ACTIVE_BORDER_COLOR, 1))
+	add_child(scoreboard_panel)
+	scoreboard_label = Label.new()
+	scoreboard_label.name = "ScoreboardText"
+	scoreboard_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	scoreboard_label.add_theme_color_override("font_color", Color(0.96, 0.94, 0.76))
+	scoreboard_panel.add_child(scoreboard_label)
+
 	action_bar = HBoxContainer.new()
 	action_bar.name = "ActionBar"
 	_pin_top_left(action_bar)
@@ -140,7 +164,7 @@ func _build_ui() -> void:
 	hint_button = _action_button("HintButton", "Hint", _on_hint_pressed)
 	help_button = _action_button("HelpButton", "Help", _on_help_pressed)
 	settings_button = _action_button("SettingsButton", "Audio", _on_settings_pressed)
-	new_round_button = _action_button("NewRoundButton", "New Round", _on_new_round_pressed)
+	new_round_button = _action_button("NewHandButton", "New Hand", _on_new_hand_pressed)
 
 	hand_area = Control.new()
 	hand_area.name = "PlayerHand"
@@ -162,16 +186,26 @@ func _build_ui() -> void:
 	result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result_label.add_theme_font_size_override("font_size", 24)
 	result_vbox.add_child(result_label)
-	var result_new_round := Button.new()
-	result_new_round.name = "ResultNewRoundButton"
-	result_new_round.text = "New Round"
-	result_new_round.focus_mode = Control.FOCUS_NONE
-	result_new_round.custom_minimum_size = Vector2(128, 42)
-	result_new_round.add_theme_stylebox_override("normal", _button_style(false))
-	result_new_round.add_theme_stylebox_override("hover", _button_style(true))
-	result_new_round.add_theme_stylebox_override("pressed", _button_style(true))
-	result_new_round.pressed.connect(_on_new_round_pressed)
-	result_vbox.add_child(result_new_round)
+	result_new_hand_button = Button.new()
+	result_new_hand_button.name = "ResultNewHandButton"
+	result_new_hand_button.text = "New Hand"
+	result_new_hand_button.focus_mode = Control.FOCUS_NONE
+	result_new_hand_button.custom_minimum_size = Vector2(128, 42)
+	result_new_hand_button.add_theme_stylebox_override("normal", _button_style(false))
+	result_new_hand_button.add_theme_stylebox_override("hover", _button_style(true))
+	result_new_hand_button.add_theme_stylebox_override("pressed", _button_style(true))
+	result_new_hand_button.pressed.connect(_on_new_hand_pressed)
+	result_vbox.add_child(result_new_hand_button)
+	result_new_match_button = Button.new()
+	result_new_match_button.name = "ResultNewMatchButton"
+	result_new_match_button.text = "New Match"
+	result_new_match_button.focus_mode = Control.FOCUS_NONE
+	result_new_match_button.custom_minimum_size = Vector2(128, 42)
+	result_new_match_button.add_theme_stylebox_override("normal", _button_style(false))
+	result_new_match_button.add_theme_stylebox_override("hover", _button_style(true))
+	result_new_match_button.add_theme_stylebox_override("pressed", _button_style(true))
+	result_new_match_button.pressed.connect(_on_new_match_pressed)
+	result_vbox.add_child(result_new_match_button)
 	quit_button = Button.new()
 	quit_button.name = "QuitButton"
 	quit_button.text = "Quit"
@@ -264,6 +298,7 @@ func _layout_ui() -> void:
 		trick_panel,
 		status_label,
 		hand_summary_label,
+		scoreboard_panel,
 		action_bar,
 		hand_area,
 		result_panel,
@@ -275,7 +310,9 @@ func _layout_ui() -> void:
 		_pin_top_left(control)
 	help_blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
 	settings_blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var viewport_size := get_viewport_rect().size
+	var viewport_size := BASE_VIEWPORT
+	if is_inside_tree():
+		viewport_size = get_viewport_rect().size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = BASE_VIEWPORT
 	layout_scale = clampf(min(viewport_size.x / BASE_VIEWPORT.x, viewport_size.y / BASE_VIEWPORT.y), 0.82, 1.14)
@@ -318,6 +355,14 @@ func _layout_ui() -> void:
 	hand_summary_label.size = summary_size
 	hand_summary_label.add_theme_font_size_override("font_size", int(14.0 * layout_scale))
 
+	var scoreboard_size := Vector2(clampf(viewport_size.x * 0.44, 460.0 * layout_scale, 620.0 * layout_scale), 34.0 * layout_scale)
+	scoreboard_panel.position = Vector2((viewport_size.x - scoreboard_size.x) * 0.5, bottom_cards_box.position.y + bottom_size.y + 8.0 * layout_scale)
+	scoreboard_panel.custom_minimum_size = scoreboard_size
+	scoreboard_panel.size = scoreboard_size
+	scoreboard_label.custom_minimum_size = scoreboard_size - Vector2(16.0 * layout_scale, 6.0 * layout_scale)
+	scoreboard_label.size = scoreboard_label.custom_minimum_size
+	scoreboard_label.add_theme_font_size_override("font_size", int(15.0 * layout_scale))
+
 	var hand_size := Vector2(viewport_size.x - (margin * 2.0), 128.0 * layout_scale)
 	hand_area.position = Vector2(margin, viewport_size.y - margin - hand_size.y)
 	hand_area.custom_minimum_size = hand_size
@@ -331,7 +376,7 @@ func _layout_ui() -> void:
 	for button in [call_button, decline_button, play_button, pass_button, hint_button, help_button, settings_button, new_round_button]:
 		button.custom_minimum_size = Vector2(88.0 * layout_scale, 42.0 * layout_scale)
 
-	var result_size := Vector2(440.0 * layout_scale, 142.0 * layout_scale)
+	var result_size := Vector2(500.0 * layout_scale, 210.0 * layout_scale)
 	result_panel.position = Vector2((viewport_size.x - result_size.x) * 0.5, (viewport_size.y - result_size.y) * 0.43)
 	result_panel.custom_minimum_size = result_size
 	result_panel.size = result_size
@@ -392,6 +437,7 @@ func _action_button(node_name: String, text: String, callback: Callable) -> Butt
 
 
 func _refresh() -> void:
+	_apply_result_score_once()
 	_refresh_seat(ai_left_panel, DoudizhuGame.AI_LEFT)
 	_refresh_seat(ai_right_panel, DoudizhuGame.AI_RIGHT)
 	_refresh_bottom_cards()
@@ -400,9 +446,12 @@ func _refresh() -> void:
 	_refresh_actions()
 	status_label.text = game.message
 	hand_summary_label.text = game.hand_summary_text()
+	scoreboard_label.text = score_state.score_line()
 	trick_panel.visible = game.phase != "result"
 	result_panel.visible = game.phase == "result"
-	result_label.text = "%s win" % game.winner_side.capitalize()
+	result_label.text = _result_summary_text()
+	result_new_hand_button.visible = not score_state.match_complete
+	result_new_match_button.visible = score_state.match_complete
 	help_label.text = game.rules_help_text()
 	help_blocker.visible = help_visible
 	help_panel.visible = help_visible
@@ -483,6 +532,31 @@ func _refresh_settings_ui() -> void:
 	sfx_toggle_button.text = "SFX: %s" % ("On" if audio_controller.sfx_enabled else "Off")
 	music_toggle_button.text = "Music: %s" % ("On" if audio_controller.music_enabled else "Off")
 	volume_button.text = "Volume: %s" % audio_controller.volume_preset.capitalize()
+
+
+func _apply_result_score_once() -> Dictionary:
+	if game.phase != "result":
+		return score_state.debug_state()
+	var summary := game.result_summary()
+	return score_state.apply_hand_result(
+		String(summary.winner_side),
+		int(summary.landlord_seat),
+		String(summary.result_key)
+	)
+
+
+func _result_summary_text() -> String:
+	if game.phase != "result":
+		return ""
+	var result := game.result_summary()
+	var lines := [
+		"%s win" % String(result.winner_side).capitalize(),
+		"Winner: %s | Landlord: %s" % [String(result.winner_name), String(result.landlord_name)],
+		score_state.delta_line(),
+		score_state.score_line(),
+		score_state.match_line(),
+	]
+	return "\n".join(lines)
 
 
 func _play_result_audio_if_needed() -> void:
@@ -693,12 +767,24 @@ func _on_quit_pressed() -> void:
 	_refresh()
 
 
-func _on_new_round_pressed() -> void:
+func _on_new_hand_pressed() -> void:
 	help_visible = false
 	settings_visible = false
 	quit_requested = false
 	audio_controller.play_event("play")
 	_start_new_round()
+
+
+func _on_new_match_pressed() -> void:
+	help_visible = false
+	settings_visible = false
+	quit_requested = false
+	audio_controller.play_event("play")
+	_start_new_match()
+
+
+func _on_new_round_pressed() -> void:
+	_on_new_hand_pressed()
 
 
 func debug_finish_human_win() -> void:
@@ -749,6 +835,32 @@ func debug_audio_state() -> Dictionary:
 	return audio_controller.debug_state()
 
 
+func debug_score_state() -> Dictionary:
+	return score_state.debug_state()
+
+
+func debug_scoreboard_text() -> String:
+	return scoreboard_label.text
+
+
+func debug_result_text() -> String:
+	return result_label.text
+
+
+func simulate_apply_result_score() -> Dictionary:
+	var result := _apply_result_score_once()
+	_refresh()
+	return result
+
+
+func simulate_new_hand() -> void:
+	_on_new_hand_pressed()
+
+
+func simulate_new_match() -> void:
+	_on_new_match_pressed()
+
+
 func debug_settings_visible() -> bool:
 	return settings_panel.visible
 
@@ -765,6 +877,7 @@ func debug_layout_snapshot() -> Dictionary:
 		"action_rect": Rect2(action_bar.global_position, action_bar.size),
 		"status_rect": Rect2(status_label.global_position, status_label.size),
 		"summary_rect": Rect2(hand_summary_label.global_position, hand_summary_label.size),
+		"scoreboard_rect": Rect2(scoreboard_panel.global_position, scoreboard_panel.size),
 		"trick_rect": Rect2(trick_panel.global_position, trick_panel.size),
 		"ai_left_rect": Rect2(ai_left_panel.global_position, ai_left_panel.size),
 		"ai_right_rect": Rect2(ai_right_panel.global_position, ai_right_panel.size),

@@ -80,7 +80,7 @@ func test_rules_help_describes_supported_flow() -> void:
 	var help := game.rules_help_text()
 	assert_that(help.contains("Supported: single")).is_equal(true)
 	assert_that(help.contains("Hint selects")).is_equal(true)
-	assert_that(help.contains("New Round")).is_equal(true)
+	assert_that(help.contains("New Hand")).is_equal(true)
 
 
 func test_result_and_replay_state() -> void:
@@ -93,3 +93,4 @@ func test_result_and_replay_state() -> void:
 	game.new_round(43)
 	assert_that(game.phase).is_equal("landlord")
 	assert_that(game.winner_side).is_equal("")
+

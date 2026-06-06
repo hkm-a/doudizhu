@@ -8,6 +8,7 @@
 
 ## Decisions
 
+- v0.6.0 scoring is owned by `ScoreState`; apply result scoring through stable `DoudizhuGame.result_key` values so UI refreshes cannot double-count a hand. New Hand clears only last delta/card state, while New Match clears cumulative totals and applied-result guards.
 - v0.1.0 uses procedural UI for cards, table, panels, buttons, and labels.
 - No bitmap image, animation, or audio assets are required for v0.1.0.
 - The first playable unit supports singles, pairs, triples, bombs, and joker bombs; v0.2.0 expands this with three attachments, chains, and airplane without wings.
@@ -31,3 +32,4 @@
 ## Reviewer Triage Log
 
 No reviewer findings were rejected or skipped for v0.1.0, v0.2.0, or v0.3.0.
+
