@@ -97,9 +97,9 @@
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| P01 | Audio controller/test hooks | pending | Build phase owns implementation. |
-| P02 | Action SFX integration | pending | Build phase owns implementation. |
-| P03 | Quiet music layer | pending | Build phase owns implementation. |
-| P04 | Audio/settings UI | pending | Build phase owns implementation. |
-| P05 | Restart/quit final flow | pending | Build phase owns implementation. |
-| P06 | Final regression coverage | pending | Build/evaluate phases own implementation and coverage. |
+| P01 | Audio controller/test hooks | verified | `AudioController` added with procedural SFX/music streams, mute/music/volume state, and debug event history; gdUnit passes. |
+| P02 | Action SFX integration | verified | Main card/action/landlord/result/restart paths emit semantic audio events; headless and E2E regression pass. |
+| P03 | Quiet music layer | verified | Music toggle starts/stops a quiet procedural loop and is independently testable from SFX; gdUnit passes. |
+| P04 | Audio/settings UI | verified | Compact Audio settings panel exposes SFX, Music, and Volume controls; existing E2E layout regression passes. |
+| P05 | Restart/quit final flow | verified | Result banner includes Quit, restart clears modal state while preserving audio controller behavior, and debug quit state is exposed. |
+| P06 | Final regression coverage | verified | `tools/run_verify.py` passes with 23/23 gdUnit; existing e2e suite passes 19/19. Evaluator owns new v0.5 E2E additions. |

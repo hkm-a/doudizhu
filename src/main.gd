@@ -9,8 +9,10 @@ const ACTIVE_PANEL_COLOR := Color(0.18, 0.24, 0.13, 0.95)
 const ACTIVE_BORDER_COLOR := Color(0.95, 0.72, 0.25)
 const RESULT_PANEL_COLOR := Color(0.08, 0.11, 0.1, 0.96)
 const SELECTED_CARD_COLOR := Color(1.0, 0.94, 0.55)
+const AudioControllerScript := preload("res://src/audio_controller.gd")
 
 var game := DoudizhuGame.new()
+var audio_controller := AudioControllerScript.new()
 var round_counter := 0
 var layout_scale := 1.0
 
@@ -31,17 +33,29 @@ var play_button: Button
 var pass_button: Button
 var hint_button: Button
 var help_button: Button
+var settings_button: Button
 var new_round_button: Button
+var quit_button: Button
+var sfx_toggle_button: Button
+var music_toggle_button: Button
+var volume_button: Button
 var result_panel: PanelContainer
 var result_label: Label
 var help_blocker: ColorRect
 var help_panel: PanelContainer
 var help_label: Label
+var settings_blocker: ColorRect
+var settings_panel: PanelContainer
+var settings_label: Label
 var help_visible := false
+var settings_visible := false
+var quit_requested := false
 
 
 func _ready() -> void:
 	name = "Main"
+	audio_controller.name = "AudioController"
+	add_child(audio_controller)
 	_build_ui()
 	_layout_ui()
 	_start_new_round()
@@ -125,6 +139,7 @@ func _build_ui() -> void:
 	pass_button = _action_button("PassButton", "Pass", _on_pass_pressed)
 	hint_button = _action_button("HintButton", "Hint", _on_hint_pressed)
 	help_button = _action_button("HelpButton", "Help", _on_help_pressed)
+	settings_button = _action_button("SettingsButton", "Audio", _on_settings_pressed)
 	new_round_button = _action_button("NewRoundButton", "New Round", _on_new_round_pressed)
 
 	hand_area = Control.new()
@@ -157,6 +172,16 @@ func _build_ui() -> void:
 	result_new_round.add_theme_stylebox_override("pressed", _button_style(true))
 	result_new_round.pressed.connect(_on_new_round_pressed)
 	result_vbox.add_child(result_new_round)
+	quit_button = Button.new()
+	quit_button.name = "QuitButton"
+	quit_button.text = "Quit"
+	quit_button.focus_mode = Control.FOCUS_NONE
+	quit_button.custom_minimum_size = Vector2(128, 42)
+	quit_button.add_theme_stylebox_override("normal", _button_style(false))
+	quit_button.add_theme_stylebox_override("hover", _button_style(true))
+	quit_button.add_theme_stylebox_override("pressed", _button_style(true))
+	quit_button.pressed.connect(_on_quit_pressed)
+	result_vbox.add_child(quit_button)
 
 	help_blocker = ColorRect.new()
 	help_blocker.name = "HelpModalBlocker"
@@ -189,6 +214,47 @@ func _build_ui() -> void:
 	close_button.pressed.connect(_on_help_close_pressed)
 	help_vbox.add_child(close_button)
 
+	settings_blocker = ColorRect.new()
+	settings_blocker.name = "SettingsModalBlocker"
+	settings_blocker.color = Color(0.0, 0.0, 0.0, 0.28)
+	settings_blocker.visible = false
+	settings_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+	settings_blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(settings_blocker)
+
+	settings_panel = PanelContainer.new()
+	settings_panel.name = "SettingsPanel"
+	_pin_top_left(settings_panel)
+	settings_panel.visible = false
+	settings_panel.add_theme_stylebox_override("panel", _box_style(RESULT_PANEL_COLOR, ACTIVE_BORDER_COLOR, 2))
+	add_child(settings_panel)
+	var settings_vbox := VBoxContainer.new()
+	settings_vbox.name = "SettingsLayout"
+	settings_vbox.add_theme_constant_override("separation", 8)
+	settings_panel.add_child(settings_vbox)
+	settings_label = Label.new()
+	settings_label.name = "SettingsText"
+	settings_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	settings_label.add_theme_color_override("font_color", Color.WHITE)
+	settings_vbox.add_child(settings_label)
+	sfx_toggle_button = Button.new()
+	sfx_toggle_button.name = "SfxToggleButton"
+	sfx_toggle_button.pressed.connect(_on_sfx_toggle_pressed)
+	settings_vbox.add_child(sfx_toggle_button)
+	music_toggle_button = Button.new()
+	music_toggle_button.name = "MusicToggleButton"
+	music_toggle_button.pressed.connect(_on_music_toggle_pressed)
+	settings_vbox.add_child(music_toggle_button)
+	volume_button = Button.new()
+	volume_button.name = "VolumePresetButton"
+	volume_button.pressed.connect(_on_volume_pressed)
+	settings_vbox.add_child(volume_button)
+	var settings_close := Button.new()
+	settings_close.name = "SettingsCloseButton"
+	settings_close.text = "Close"
+	settings_close.pressed.connect(_on_settings_close_pressed)
+	settings_vbox.add_child(settings_close)
+
 
 func _layout_ui() -> void:
 	for control in [
@@ -203,9 +269,12 @@ func _layout_ui() -> void:
 		result_panel,
 		help_blocker,
 		help_panel,
+		settings_blocker,
+		settings_panel,
 	]:
 		_pin_top_left(control)
 	help_blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
+	settings_blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var viewport_size := get_viewport_rect().size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = BASE_VIEWPORT
@@ -259,7 +328,7 @@ func _layout_ui() -> void:
 	action_bar.custom_minimum_size = action_size
 	action_bar.size = action_size
 	action_bar.add_theme_constant_override("separation", int(8.0 * layout_scale))
-	for button in [call_button, decline_button, play_button, pass_button, hint_button, help_button, new_round_button]:
+	for button in [call_button, decline_button, play_button, pass_button, hint_button, help_button, settings_button, new_round_button]:
 		button.custom_minimum_size = Vector2(88.0 * layout_scale, 42.0 * layout_scale)
 
 	var result_size := Vector2(440.0 * layout_scale, 142.0 * layout_scale)
@@ -274,6 +343,13 @@ func _layout_ui() -> void:
 	help_panel.size = help_size
 	help_label.custom_minimum_size = Vector2(help_size.x - 32.0 * layout_scale, 160.0 * layout_scale)
 	help_label.add_theme_font_size_override("font_size", int(14.0 * layout_scale))
+
+	var settings_size := Vector2(360.0 * layout_scale, 240.0 * layout_scale)
+	settings_panel.position = Vector2(viewport_size.x - margin - settings_size.x, action_bar.position.y - settings_size.y - 10.0 * layout_scale)
+	settings_panel.custom_minimum_size = settings_size
+	settings_panel.size = settings_size
+	settings_label.custom_minimum_size = Vector2(settings_size.x - 32.0 * layout_scale, 54.0 * layout_scale)
+	settings_label.add_theme_font_size_override("font_size", int(14.0 * layout_scale))
 
 
 func _seat_panel(node_name: String) -> Panel:
@@ -330,6 +406,7 @@ func _refresh() -> void:
 	help_label.text = game.rules_help_text()
 	help_blocker.visible = help_visible
 	help_panel.visible = help_visible
+	_refresh_settings_ui()
 
 
 func _refresh_seat(panel: Panel, seat: int) -> void:
@@ -393,9 +470,30 @@ func _refresh_actions() -> void:
 	pass_button.visible = player_turn
 	hint_button.visible = player_turn
 	help_button.visible = game.phase != "result"
+	settings_button.visible = true
 	new_round_button.visible = false
-	for button in [call_button, decline_button, play_button, pass_button, hint_button, help_button, new_round_button]:
+	for button in [call_button, decline_button, play_button, pass_button, hint_button, help_button, settings_button, new_round_button]:
 		button.focus_mode = Control.FOCUS_NONE if not button.visible else Control.FOCUS_ALL
+
+
+func _refresh_settings_ui() -> void:
+	settings_blocker.visible = settings_visible
+	settings_panel.visible = settings_visible
+	settings_label.text = "Audio settings apply immediately during this hand."
+	sfx_toggle_button.text = "SFX: %s" % ("On" if audio_controller.sfx_enabled else "Off")
+	music_toggle_button.text = "Music: %s" % ("On" if audio_controller.music_enabled else "Off")
+	volume_button.text = "Volume: %s" % audio_controller.volume_preset.capitalize()
+
+
+func _play_result_audio_if_needed() -> void:
+	if game.phase != "result":
+		return
+	if game.winner_side == "landlord" and game.landlord_seat == DoudizhuGame.HUMAN:
+		audio_controller.play_event("result_win")
+	elif game.winner_side == "farmers" and game.landlord_seat != DoudizhuGame.HUMAN:
+		audio_controller.play_event("result_win")
+	else:
+		audio_controller.play_event("result_loss")
 
 
 func _card_button(card: Dictionary, interactive: bool, selected: bool) -> Button:
@@ -422,6 +520,7 @@ func _card_button(card: Dictionary, interactive: bool, selected: bool) -> Button
 		if interactive:
 			button.pressed.connect(func() -> void:
 				game.toggle_selection(int(card.id))
+				audio_controller.play_event("select")
 				_refresh()
 			)
 	return button
@@ -510,21 +609,35 @@ func _clear_children(node: Node) -> void:
 
 func _on_call_pressed() -> void:
 	game.resolve_landlord(true)
+	audio_controller.play_event("landlord")
+	_play_result_audio_if_needed()
 	_refresh()
 
 
 func _on_decline_pressed() -> void:
 	game.resolve_landlord(false)
+	audio_controller.play_event("landlord")
+	_play_result_audio_if_needed()
 	_refresh()
 
 
 func _on_play_pressed() -> void:
-	game.play_selected()
+	var played := game.play_selected()
+	if played:
+		audio_controller.play_event("play")
+		_play_result_audio_if_needed()
+	else:
+		audio_controller.play_event("invalid")
 	_refresh()
 
 
 func _on_pass_pressed() -> void:
-	game.pass_turn()
+	var passed := game.pass_turn()
+	if passed:
+		audio_controller.play_event("pass")
+		_play_result_audio_if_needed()
+	else:
+		audio_controller.play_event("invalid")
 	_refresh()
 
 
@@ -543,13 +656,54 @@ func _on_help_close_pressed() -> void:
 	_refresh()
 
 
+func _on_settings_pressed() -> void:
+	settings_visible = true
+	_refresh()
+
+
+func _on_settings_close_pressed() -> void:
+	settings_visible = false
+	_refresh()
+
+
+func _on_sfx_toggle_pressed() -> void:
+	audio_controller.toggle_sfx()
+	_refresh()
+
+
+func _on_music_toggle_pressed() -> void:
+	audio_controller.toggle_music()
+	_refresh()
+
+
+func _on_volume_pressed() -> void:
+	var next_preset := "normal"
+	if audio_controller.volume_preset == "normal":
+		next_preset = "quiet"
+	elif audio_controller.volume_preset == "quiet":
+		next_preset = "loud"
+	audio_controller.set_volume_preset(next_preset)
+	_refresh()
+
+
+func _on_quit_pressed() -> void:
+	quit_requested = true
+	game.message = "Quit requested. Close the window when ready."
+	audio_controller.play_event("pass")
+	_refresh()
+
+
 func _on_new_round_pressed() -> void:
 	help_visible = false
+	settings_visible = false
+	quit_requested = false
+	audio_controller.play_event("play")
 	_start_new_round()
 
 
 func debug_finish_human_win() -> void:
 	game.force_finish_for_human_win()
+	_play_result_audio_if_needed()
 	_refresh()
 
 
@@ -589,6 +743,18 @@ func debug_ai_reason(seat: int) -> String:
 
 func debug_help_visible() -> bool:
 	return help_panel.visible
+
+
+func debug_audio_state() -> Dictionary:
+	return audio_controller.debug_state()
+
+
+func debug_settings_visible() -> bool:
+	return settings_panel.visible
+
+
+func debug_quit_requested() -> bool:
+	return quit_requested
 
 
 func debug_layout_snapshot() -> Dictionary:

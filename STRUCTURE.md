@@ -46,6 +46,30 @@ v0.5.0 adds audio feedback, optional quiet music, compact audio/settings control
 - Music/ambience should be optional, low-volume, and non-essential; if procedural looping is too risky, implement a muted-by-default placeholder with a clear testable toggle rather than blocking the tag on composition.
 - All audio must route through a controllable bus or player set so mute/toggle tests can assert state deterministically.
 
+
+## Component Registry
+
+No new ECS components are required for v0.5.0. Existing component classes remain inherited from previous tags:
+
+| Component | File | Current Tag Status |
+|-----------|------|--------------------|
+| C_Hand | `src/components/c_hand.gd` | inherited |
+| C_Message | `src/components/c_message.gd` | inherited |
+| C_PlayerSeat | `src/components/c_player_seat.gd` | inherited |
+| C_Role | `src/components/c_role.gd` | inherited |
+| C_RoundState | `src/components/c_round_state.gd` | inherited |
+| C_Selection | `src/components/c_selection.gd` | inherited |
+| C_TrickState | `src/components/c_trick_state.gd` | inherited |
+| C_TurnState | `src/components/c_turn_state.gd` | inherited |
+
+## System Schedule
+
+| System / Helper | Tick / Trigger | Order | Notes |
+|-----------------|----------------|-------|-------|
+| RoundFlowSystem | existing test shell | inherited | Existing round-flow shell remains loadable. |
+| AudioController | UI/game event triggered | after gameplay state mutation | Plays or records semantic audio feedback without mutating card rules. |
+| MainAudioProjection | UI callback triggered | after button/card action | Requests audio events and refreshes settings controls. |
+
 ## Tests Required
 
 | Test Area | Expected Coverage |
