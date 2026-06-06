@@ -19,6 +19,8 @@
 - v0.4.0 should improve choice policy and usability without expanding the supported card-rule set.
 - Hint and AI policy changes must keep `CardRules.classify` and `CardRules.can_beat` as the legality gate.
 
+- When image assets are needed, use the user's locally deployed ComfyUI to generate them, do not embed generated images into chat context, and skip image-review/VQA steps unless the user explicitly asks; use generated assets directly and let the user judge acceptance.
+
 ## Known Limitations
 
 - Special combinations beyond the roadmap scope, such as airplane with wings and four-with-two, remain deferred.
