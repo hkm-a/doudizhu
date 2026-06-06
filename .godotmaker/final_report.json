@@ -1,38 +1,35 @@
 {
   "status": "tag_sealed",
-  "tag": "v0.5.0",
-  "completed_at": "2026-06-06T09:30:50Z",
-  "archive_path": "docs/tags/v0.5.0/",
+  "tag": "v0.6.0",
+  "completed_at": "2026-06-06T12:30:15Z",
+  "archive_path": "docs/tags/v0.6.0/",
   "git_tagged": true,
   "summary": {
     "tag_mechanics": [
-      "v0.5.0-M1",
-      "v0.5.0-M2",
-      "v0.5.0-M3",
-      "v0.5.0-M4"
+      "v0.6.0-M1",
+      "v0.6.0-M2",
+      "v0.6.0-M3",
+      "v0.6.0-M4"
     ],
     "systems_added": [
-      "AudioController",
-      "Main audio/settings projection",
-      "Restart/quit result affordance"
+      "match score tracking",
+      "score summary/result UI",
+      "new hand/new match reset flow"
     ],
     "components_added": [],
     "test_count": {
-      "unit": 23,
+      "unit": 5,
       "e2e_tag": 4,
-      "e2e_regression": 19
+      "e2e_regression": 21
     }
   },
   "evidence": {
-    "archive_path": "docs/tags/v0.5.0/evidence/",
-    "e2e_files": 49,
-    "screenshots": 7
+    "archive_path": "docs/tags/v0.6.0/evidence/",
+    "e2e_files": 57,
+    "screenshots": 14
   },
-  "doc_updates": [],
-  "known_limitations": [
-    "v0.5.0 uses procedural/testable audio tones rather than authored audio assets; this keeps the prototype self-contained but is not final production sound design.",
-    "Quit is represented as a safe in-scene quit-request state for testability rather than terminating the E2E process.",
-    "Procedural/testable audio is prototype polish, not final production sound design.",
-    "External release packaging/export is outside the finalized roadmap scope."
-  ]
+  "doc_updates": [
+    "docs/tags/v0.6.0/CHANGELOG.md"
+  ],
+  "known_limitations": []
 }
