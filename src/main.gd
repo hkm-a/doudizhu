@@ -17,6 +17,7 @@ var score_state := ScoreStateScript.new()
 var audio_controller := AudioControllerScript.new()
 var round_counter := 0
 var layout_scale := 1.0
+var debug_viewport_override := Vector2.ZERO
 
 var background: ColorRect
 var ai_left_panel: Panel
@@ -45,6 +46,7 @@ var music_toggle_button: Button
 var volume_button: Button
 var result_panel: PanelContainer
 var result_label: Label
+var result_actions_bar: HBoxContainer
 var result_new_hand_button: Button
 var result_new_match_button: Button
 var help_blocker: ColorRect
@@ -186,6 +188,11 @@ func _build_ui() -> void:
 	result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result_label.add_theme_font_size_override("font_size", 24)
 	result_vbox.add_child(result_label)
+	result_actions_bar = HBoxContainer.new()
+	result_actions_bar.name = "ResultActions"
+	result_actions_bar.alignment = BoxContainer.ALIGNMENT_CENTER
+	result_actions_bar.add_theme_constant_override("separation", 10)
+	result_vbox.add_child(result_actions_bar)
 	result_new_hand_button = Button.new()
 	result_new_hand_button.name = "ResultNewHandButton"
 	result_new_hand_button.text = "New Hand"
@@ -195,7 +202,7 @@ func _build_ui() -> void:
 	result_new_hand_button.add_theme_stylebox_override("hover", _button_style(true))
 	result_new_hand_button.add_theme_stylebox_override("pressed", _button_style(true))
 	result_new_hand_button.pressed.connect(_on_new_hand_pressed)
-	result_vbox.add_child(result_new_hand_button)
+	result_actions_bar.add_child(result_new_hand_button)
 	result_new_match_button = Button.new()
 	result_new_match_button.name = "ResultNewMatchButton"
 	result_new_match_button.text = "New Match"
@@ -205,7 +212,7 @@ func _build_ui() -> void:
 	result_new_match_button.add_theme_stylebox_override("hover", _button_style(true))
 	result_new_match_button.add_theme_stylebox_override("pressed", _button_style(true))
 	result_new_match_button.pressed.connect(_on_new_match_pressed)
-	result_vbox.add_child(result_new_match_button)
+	result_actions_bar.add_child(result_new_match_button)
 	quit_button = Button.new()
 	quit_button.name = "QuitButton"
 	quit_button.text = "Quit"
@@ -215,7 +222,7 @@ func _build_ui() -> void:
 	quit_button.add_theme_stylebox_override("hover", _button_style(true))
 	quit_button.add_theme_stylebox_override("pressed", _button_style(true))
 	quit_button.pressed.connect(_on_quit_pressed)
-	result_vbox.add_child(quit_button)
+	result_actions_bar.add_child(quit_button)
 
 	help_blocker = ColorRect.new()
 	help_blocker.name = "HelpModalBlocker"
@@ -310,8 +317,10 @@ func _layout_ui() -> void:
 		_pin_top_left(control)
 	help_blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
 	settings_blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var viewport_size := BASE_VIEWPORT
-	if is_inside_tree():
+	var viewport_size := debug_viewport_override
+	if viewport_size == Vector2.ZERO:
+		viewport_size = BASE_VIEWPORT
+	if debug_viewport_override == Vector2.ZERO and is_inside_tree():
 		viewport_size = get_viewport_rect().size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = BASE_VIEWPORT
@@ -376,11 +385,18 @@ func _layout_ui() -> void:
 	for button in [call_button, decline_button, play_button, pass_button, hint_button, help_button, settings_button, new_round_button]:
 		button.custom_minimum_size = Vector2(88.0 * layout_scale, 42.0 * layout_scale)
 
-	var result_size := Vector2(500.0 * layout_scale, 210.0 * layout_scale)
-	result_panel.position = Vector2((viewport_size.x - result_size.x) * 0.5, (viewport_size.y - result_size.y) * 0.43)
+	var result_size := Vector2(clampf(viewport_size.x * 0.48, 560.0 * layout_scale, 700.0 * layout_scale), 270.0 * layout_scale)
+	result_panel.position = Vector2((viewport_size.x - result_size.x) * 0.5, (viewport_size.y - result_size.y) * 0.40)
 	result_panel.custom_minimum_size = result_size
 	result_panel.size = result_size
-	result_label.add_theme_font_size_override("font_size", int(26.0 * layout_scale))
+	result_label.custom_minimum_size = Vector2(result_size.x - 36.0 * layout_scale, 164.0 * layout_scale)
+	result_label.size = result_label.custom_minimum_size
+	result_label.add_theme_font_size_override("font_size", int(20.0 * layout_scale))
+	result_actions_bar.custom_minimum_size = Vector2(result_size.x - 36.0 * layout_scale, 42.0 * layout_scale)
+	result_actions_bar.size = result_actions_bar.custom_minimum_size
+	result_actions_bar.add_theme_constant_override("separation", int(10.0 * layout_scale))
+	for button in [result_new_hand_button, result_new_match_button, quit_button]:
+		button.custom_minimum_size = Vector2(132.0 * layout_scale, 38.0 * layout_scale)
 
 	var help_size := Vector2(clampf(viewport_size.x * 0.54, 520.0 * layout_scale, 680.0 * layout_scale), 230.0 * layout_scale)
 	help_panel.position = Vector2((viewport_size.x - help_size.x) * 0.5, (viewport_size.y - help_size.y) * 0.38)
@@ -871,7 +887,7 @@ func debug_quit_requested() -> bool:
 
 func debug_layout_snapshot() -> Dictionary:
 	return {
-		"viewport": get_viewport_rect().size,
+		"viewport": debug_viewport_override if debug_viewport_override != Vector2.ZERO else get_viewport_rect().size,
 		"scale": layout_scale,
 		"hand_rect": Rect2(hand_area.global_position, hand_area.size),
 		"action_rect": Rect2(action_bar.global_position, action_bar.size),
@@ -882,8 +898,22 @@ func debug_layout_snapshot() -> Dictionary:
 		"ai_left_rect": Rect2(ai_left_panel.global_position, ai_left_panel.size),
 		"ai_right_rect": Rect2(ai_right_panel.global_position, ai_right_panel.size),
 		"result_rect": Rect2(result_panel.global_position, result_panel.size),
+		"result_text_rect": Rect2(result_label.global_position, result_label.size),
+		"result_actions_rect": Rect2(result_actions_bar.global_position, result_actions_bar.size),
+		"result_new_hand_rect": Rect2(result_new_hand_button.global_position, result_new_hand_button.size),
+		"result_new_match_rect": Rect2(result_new_match_button.global_position, result_new_match_button.size),
+		"result_quit_rect": Rect2(quit_button.global_position, quit_button.size),
 		"help_rect": Rect2(help_panel.global_position, help_panel.size),
 	}
+
+
+func debug_layout_snapshot_for_viewport(viewport_size: Vector2) -> Dictionary:
+	debug_viewport_override = viewport_size
+	_layout_ui()
+	_refresh()
+	var snapshot := debug_layout_snapshot()
+	debug_viewport_override = Vector2.ZERO
+	return snapshot
 
 
 func debug_visible_hand_card_rects() -> Array:

@@ -2,7 +2,7 @@
 
 **Tag:** v0.6.0
 **Theme:** Scoring And Match Progression
-**Status:** GDD/planning complete; ready for asset/build pipeline.
+**Status:** Build in progress; worker implementing scoring and match progression.
 
 ## Tag Mechanics
 
@@ -73,3 +73,9 @@ The player launches Main, completes one or more hands, sees score deltas applied
 - No bitmap image assets are required for v0.6.0.
 - Scoreboard and result summary use existing procedural UI panels/buttons/text.
 - If icons or decorative badges become necessary, report them as missing first; do not invent file paths.
+## Build Fix Tasks
+
+| Task | Source | Status | Fix Scope | Verify |
+|------|--------|--------|-----------|--------|
+| P07 | Reviewer major UI finding | pending | Increase or compact `src/main.gd` result banner layout so five-line score summary plus New Hand/New Match/Quit controls fit without overflow at supported desktop sizes | gdUnit + ui-review |
+

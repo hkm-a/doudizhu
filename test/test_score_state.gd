@@ -101,3 +101,25 @@ func test_main_simulate_result_score_and_reset_boundaries() -> void:
 	assert_that(main.debug_score_state().totals).is_equal([0, 0, 0])
 	assert_that(main.debug_scoreboard_text().contains("Hand 0/3")).is_equal(true)
 
+
+func test_result_banner_compact_score_layout_fits_supported_desktop_sizes() -> void:
+	var main = auto_free(MainScript.new())
+	main._ready()
+	main.score_state.configure(2, 5)
+	main.game.resolve_landlord(true)
+	main.game.force_finish_for_human_win()
+	main.simulate_apply_result_score()
+	assert_that(main.debug_result_text().split("\n").size()).is_equal(5)
+
+	for viewport_size in [Vector2(1280, 720), Vector2(1366, 768), Vector2(1600, 900)]:
+		var snapshot: Dictionary = main.debug_layout_snapshot_for_viewport(viewport_size)
+		var result_rect: Rect2 = snapshot.result_rect
+		var hand_rect: Rect2 = snapshot.hand_rect
+		var scale: float = snapshot.scale
+		var required_height := (164.0 + 42.0 + 10.0 + 36.0) * scale
+		var three_button_width := ((132.0 * 3.0) + (10.0 * 2.0)) * scale
+		var readable_width := result_rect.size.x - (36.0 * scale)
+		assert_that(result_rect.size.y + 0.01 >= required_height).is_equal(true)
+		assert_that(readable_width + 0.01 >= three_button_width).is_equal(true)
+		assert_that(result_rect.position.y + result_rect.size.y <= hand_rect.position.y).is_equal(true)
+
