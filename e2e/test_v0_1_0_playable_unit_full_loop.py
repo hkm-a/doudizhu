@@ -22,8 +22,9 @@ def test_v0_1_0_playable_unit_full_loop(game):
     )
     root(game).call("debug_finish_human_win")
     expect(game.locator(name="ResultBanner")).to_be_visible()
-    game.locator(name="ResultNewRoundButton").click()
+    game.locator(name="ResultNewHandButton").click()
     expect(game.locator(name="StatusMessage")).to_satisfy(
         lambda node: "Call landlord" in text(node),
         description="replay starts another hand",
     )
+

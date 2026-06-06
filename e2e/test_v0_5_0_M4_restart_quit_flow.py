@@ -19,7 +19,7 @@ def test_v0_5_0_m4_result_restart_and_quit_affordances(game):
         description="quit request is visible to the player",
     )
 
-    game.locator(name="ResultNewRoundButton").click()
+    game.locator(name="ResultNewHandButton").click()
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_quit_requested") is False,
         description="new round clears quit request state",
