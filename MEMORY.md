@@ -2,8 +2,8 @@
 
 ## Current Tag
 
-- Tag: v0.4.0
-- Theme: AI And Usability
+- Tag: v0.5.0
+- Theme: Audio And Finish
 - Status: GDD/planning in progress.
 
 ## Decisions
@@ -20,6 +20,7 @@
 - Hint and AI policy changes must keep `CardRules.classify` and `CardRules.can_beat` as the legality gate.
 
 - When image assets are needed, use the user's locally deployed ComfyUI to generate them, do not embed generated images into chat context, and skip image-review/VQA steps unless the user explicitly asks; use generated assets directly and let the user judge acceptance.
+- v0.5.0 should finish with procedural/testable audio by default; avoid adding external audio files unless implementation proves they are necessary.
 
 ## Known Limitations
 

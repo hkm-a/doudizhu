@@ -1,107 +1,63 @@
-# Doudizhu
+# Structure: Doudizhu
 
-**Tag:** v0.4.0
+**Tag:** v0.5.0
+**Theme:** Audio And Finish
 
-## Dimension: 2D
+## Scope
 
-## Input Actions
+v0.5.0 adds audio feedback, optional quiet music, compact audio/settings controls, and final restart/quit consistency. It must not expand Doudizhu rule recognition or rewrite shipped card-flow behavior.
 
-v0.4.0 remains mouse-driven through UI buttons and card controls. No custom `project.godot` input actions are required.
+## Architecture Decisions
 
-| Action | Keys |
-|--------|------|
-| ui_accept | Enter / Space (Godot default, optional button activation) |
-| mouse_select | Mouse Left (handled by Control input) |
+- Centralize all sound playback behind an `AudioController`-style node/helper so headless tests can inspect requested events without relying on real speakers.
+- Keep SFX event names semantic (`select`, `play`, `pass`, `invalid`, `landlord`, `result_win`, `result_loss`) rather than tied to specific generated waveforms.
+- Prefer procedural/generated-in-engine tones over external audio files to keep the finish tag self-contained.
+- Keep settings UI compact and reuse the existing Main scene procedural Control style.
+- Preserve ECS/gameplay separation: scene tree remains UI/menus/audio; gameplay state stays in existing model/rules classes.
 
-## Architecture Delta
+## Current Tag Systems
 
-v0.4.0 keeps the existing single-scene Doudizhu model and procedural UI. The main architecture change is policy and usability data flowing through the existing model:
+| System / Helper | File | Reads | Writes / Emits | Purpose | Tasks |
+|-----------------|------|-------|----------------|---------|-------|
+| AudioController | `src/audio_controller.gd` or equivalent Main child/helper | semantic audio event names, mute/music settings | `AudioStreamPlayer` state, debug event history, bus/volume state | Centralize SFX/music playback and test hooks | P01, P02, P03 |
+| MainAudioProjection | `src/main.gd` | UI/game events, settings control state | calls AudioController, updates settings controls | Connect card/action/result/settings UI to audio feedback | P02, P03, P04 |
+| RestartQuitProjection | `src/main.gd` | result state, round state | restart/new-round/quit affordance state | Make final restart/quit flow clear and regression-testable | P05 |
 
-- `CardRules` gains legal candidate scoring helpers.
-- `DoudizhuGame` uses scored candidates for Hint and AI, stores concise AI reason text, and exposes hand-summary/help content.
-- `Main` renders the new summary/help/reason text through Control nodes without introducing new scenes.
+## Existing Systems Touched
 
-No new ECS component files are required unless build work chooses to materialize the new text fields as components. Existing component and system files remain valid.
+| Existing System | File | Allowed Change | Guardrail |
+|-----------------|------|----------------|-----------|
+| CardRules | `src/card_rules.gd` | No planned functional change; tests may assert regression stability | Do not add new combination types in v0.5.0 |
+| DoudizhuGame | `src/doudizhu_game.gd` | Expose event moments or state needed for audio/restart tests if Main cannot infer them cleanly | Keep `classify`/`can_beat` legality gate unchanged |
+| Main UI | `src/main.gd` | Add settings/audio/restart/quit controls and audio event calls | No overlap with summary/help/action/status/hand areas |
 
-## Component Registry
+## Data / State
 
-### Existing Components
+| State | Owner | Lifetime | Test Visibility |
+|-------|-------|----------|-----------------|
+| SFX enabled | AudioController/Main settings | scene/session | debug getter or public method for e2e/gdUnit |
+| Music enabled | AudioController/Main settings | scene/session | debug getter or public method for e2e/gdUnit |
+| Last audio events | AudioController | bounded in-memory history | gdUnit/e2e assertions |
+| Restart/quit affordance state | Main UI | current scene | e2e locator/button state |
 
-| Component | Field | Type | Default | v0.4.0 Use |
-|-----------|-------|------|---------|------------|
-| C_Hand | cards | Array[int] | [] | Source for candidate scoring and hand summary |
-| C_Message | text | String | "" | Source for Hint explanation and validation messages |
-| C_PlayerSeat | seat_index/display_name/is_human | mixed | existing defaults | Seat identity for AI reason display |
-| C_Role | role | String | "undecided" | Help/result context and side labels |
-| C_RoundState | phase/winner_side | mixed | existing defaults | Help/result visibility and replay flow |
-| C_Selection | selected_cards | Array[int] | [] | Hint-selected card ids |
-| C_TrickState | cards/play_type/primary_rank/owner_seat | mixed | existing defaults | Active trick for scoring legal responses |
-| C_TurnState | current_seat/initiative_seat/consecutive_passes | mixed | existing defaults | Determines lead/follow scoring and pass availability |
+## Procedural Audio Plan
 
-### Data Added In Model Layer
+- SFX should be short, distinct, and quiet by default: select tick, legal play chime, pass soft tap, invalid low buzz, landlord/result accent.
+- Music/ambience should be optional, low-volume, and non-essential; if procedural looping is too risky, implement a muted-by-default placeholder with a clear testable toggle rather than blocking the tag on composition.
+- All audio must route through a controllable bus or player set so mute/toggle tests can assert state deterministically.
 
-| Data | Owner | Type | Purpose |
-|------|-------|------|---------|
-| hint_reason | DoudizhuGame | String | Human-readable explanation for selected Hint cards |
-| ai_reasons | DoudizhuGame | Array[String] | Short reason for each AI play/pass visible in seat panel |
-| hand_summary | DoudizhuGame helper output | Dictionary/String | Counts singles, pairs, triples, bombs, and chains |
-| help_visible | Main UI | bool | Whether the rules/help panel is open |
+## Tests Required
 
-## System Schedule
+| Test Area | Expected Coverage |
+|-----------|-------------------|
+| Unit | Audio event dispatch, mute/music setting application, no rule regression in card legality tests |
+| E2E | Selecting/playing/passing/invalid action triggers observable audio event state; settings toggles update state; restart/replay remains clean |
+| Layout | Settings/restart/quit controls do not overlap existing Main scene layout at supported desktop sizes |
 
-### Phase: Logic
+## Out of Scope
 
-| Order | System | Reads | Writes | Purpose |
-|-------|--------|--------|--------|---------|
-| 30 | CardRules candidate scoring | Hand cards, active trick, initiative | Scored legal candidates | Rank legal plays by low cost, chain quality, and bomb conservation |
-| 40 | HintSystem | Scored candidates, turn state | C_Selection, C_Message, hint_reason | Select best player response and explain it |
-| 70 | AISystem | Scored candidates, turn state | Hands, trick, turn state, ai_reasons, message | Choose less wasteful AI plays and explain them |
-| 90 | TableProjectionSystem | Game state, summary/help/reason text | Control nodes | Render summary, help, AI recent reason, and existing table UI |
-
-## Scene Markers
-
-| Marker Type | Components | Notes |
-|-------------|------------|-------|
-| TableUIRootMarker | T_TableUI, C_NodeRef | Main scene UI root for projection |
-
-## Entity Archetypes
-
-### Human Seat
-- C_PlayerSeat, C_Hand, C_Role, T_HumanSeat
-
-### AI Seat
-- C_PlayerSeat, C_Hand, C_Role, C_AIProfile, T_AISeat
-
-### Round Controller
-- C_RoundState, C_TurnState, C_TrickState, C_BottomCards, C_Message
-
-### Card
-- C_Card
-
-### Table UI
-- T_TableUI, C_NodeRef
-
-## Node Projection
-
-| UI Area | Node Created/Updated | Parent | v0.4.0 Contract |
-|---------|----------------------|--------|-----------------|
-| AI panels | Recent/reason labels | AILeftPanel/AIRightPanel | Show latest play/pass plus concise reason without overflow |
-| Status band | StatusMessage | Main root | Show Hint explanation and validation messages |
-| Summary area | HandSummary label/panel | Main root near status/action bands | Stay compact and readable at 1280x720 |
-| Help affordance | HelpButton + HelpPanel | Action bar/Main overlay | Open/close supported rules and flow text without scene transition |
-| Player hand | Card buttons | PlayerHand | Existing selected-card feedback remains unchanged |
-
-## Build Order
-
-1. Add pure candidate scoring helpers to `CardRules`.
-2. Add gdUnit scoring tests for low-cost response, bomb conservation, and lead/follow behavior.
-3. Update `DoudizhuGame.hint()` and `_ai_step()` to use scored candidates and store reason text.
-4. Add hand summary helpers and unit coverage.
-5. Add summary/help/reason UI nodes in `src/main.gd`.
-6. Add v0.4.0 e2e coverage for Hint, AI reason, summary, and help overlay.
-7. Run full headless, gdUnit, lint, and e2e verification.
-
-## Asset Hints
-
-- Use existing procedural panels/buttons and text labels.
-- Keep help text compact; if the content grows, use a constrained `PanelContainer` with wrapped labels rather than adding a new scene.
+- Expert Doudizhu AI.
+- New card combination types.
+- Network multiplayer.
+- Release packaging/export installers.
+- Required external audio library licensing work.

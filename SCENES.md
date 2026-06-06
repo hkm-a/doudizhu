@@ -1,60 +1,72 @@
-# Scene Descriptions: Doudizhu
+# Scenes: Doudizhu
 
-**Tag:** v0.4.0
+**Tag:** v0.5.0
+**Theme:** Audio And Finish
 
-## Scene: Main
+## Scene List
 
-- **Type:** gameplay
-- **Resolution reference:** 1280x720
-- **Layout:** responsive desktop table UI from v0.3.0, plus compact hand summary and in-scene help affordance
-- **Background:** Procedural green table surface with restrained contrast; no bitmap background required
-- **Mood:** Clear, calm, readable desktop card table with better player guidance
+| Scene | Path | Purpose | Current Tag Changes |
+|-------|------|---------|---------------------|
+| Main | `scenes/main.tscn` / procedural Main UI | Complete Doudizhu table, help, summary, result, replay | Add compact audio/settings controls, optional settings overlay, restart/quit affordance, and audio debug hooks |
 
-### Elements
+## Main Scene Layout
 
-| Element | Position | Size | Description |
-|---------|----------|------|-------------|
-| Table background | full viewport | 100%w x 100%h | Green table surface behind all UI |
-| AI Left panel | top-left | up to 28%w x 132 scaled px | Seat name, role, card count, active marker, recent play, concise AI reason |
-| AI Right panel | top-right | up to 28%w x 132 scaled px | Seat name, role, card count, active marker, recent play, concise AI reason |
-| Bottom cards area | top-center | 3 scaled card widths | Three bottom cards, hidden before landlord and visible after assignment |
-| Current trick area | center | 46%w, clamped | Most recent valid play as procedural card faces plus owner label |
-| Status message | center-below trick | 62%w, clamped | Current phase, validation errors, Hint explanation, and AI/pass messages |
-| Hand summary | above or beside action/status band | compact, clamped | Counts and opportunity summary for player hand |
-| Player hand | bottom-center | viewport width minus margins | Human cards sorted horizontally; selected cards lift/highlight |
-| Action bar | bottom-right above hand | clamped to viewport margins | Context buttons for Call Landlord, Do Not Call, Play, Pass, Hint, Help |
-| Help panel | centered overlay or anchored modal | clamped within viewport | Supported combinations, initiative/pass rules, Hint behavior, result conditions, close action |
-| Result banner | center overlay | scaled 440x142 px | Win/loss result and New Round action during result phase |
+v0.5.0 keeps the v0.4.0 table composition and adds only compact finish controls.
 
-### Asset bindings
+| Region | Anchor / Placement | Current Contents | v0.5.0 Additions | Constraint |
+|--------|--------------------|------------------|------------------|------------|
+| Top/side panels | existing AI panel bands | AI roles, counts, recent play/reason | no required change | Must stay readable at 1280x720 |
+| Center table | existing trick/status area | current trick, bottom cards, status | sound-triggered status may remain text-only | Do not cover trick cards |
+| Summary/status band | above action/hand area | hand summary, status | no required change | Summary remains compact |
+| Action bar | bottom-right above hand | Call/Decline/Play/Pass/Hint/Help | Settings/Audio button if it fits | Buttons remain reachable and non-overlapping |
+| Settings overlay/panel | small modal or anchored panel | not present before v0.5.0 | SFX toggle, Music toggle, optional volume preset, Close | Must clamp inside viewport and preserve round state |
+| Result banner | center overlay | win/loss, New Round | restart/quit affordance if not already covered | Result/replay remains prominent |
+| Player hand | bottom-center | sorted cards, selection lift/highlight | select SFX only; no layout change | All cards remain visible/fanned |
 
-| Element | Asset Row / Path | Runtime Size | Visual Contract |
-|---------|------------------|--------------|-----------------|
-| Table background | procedural | 1280x720 | Must not reduce card/text contrast |
-| AI panels | procedural/UI text | 24%w x 18%h | Counts, role labels, recent play, and reason text readable |
-| Bottom cards | procedural card UI | 3 cards, about 56x78 px each | Cards visibly hidden/revealed by phase |
-| Current trick cards | procedural card UI | about 56x78 px each | Rank/suit readable at center table scale |
-| Status message | UI text | 60%w x 6%h | Error/status/Hint explanation text fits without overlap |
-| Hand summary | procedural/UI text | compact band/panel | Counts and opportunities readable without covering hand/actions |
-| Player hand cards | procedural card UI | about 56x78 px each, compressed if needed | All hand cards visible or consistently fanned; selected state obvious |
-| Action buttons | UI text/procedural | 42%w x 8%h | Buttons fit labels and enable/disable by phase, including Help |
-| Help panel | procedural/UI text | clamped overlay | Supported rules readable; close action visible; table resumes unchanged |
-| Result banner | UI text/procedural panel | 46%w x 18%h | Winner side and replay action prominent |
+## Interaction Flows
 
-### Acceptance criteria
+### [v0.5.0-M1] Action SFX
 
-- Main scene shows AI Left and AI Right panels, center trick/status area, bottom player hand area, action bar, hand summary, and Help affordance.
-- [v0.4.0-M1] is visible when Hint selects a low-cost legal play and status text explains the selected play type/rationale.
-- [v0.4.0-M2] is visible through AI recent play/reason text and card count/trick changes after AI turns.
-- [v0.4.0-M3] is visible through a hand summary that updates after deal, play, and new round.
-- [v0.4.0-M4] is visible through an openable/closable Help panel explaining supported combinations, initiative/pass rules, Hint behavior, and result conditions.
-- Inherited v0.1.0/v0.2.0/v0.3.0 mechanics remain visible through dealt cards, landlord roles, selected-card feedback, trick/status updates, pass/hint/AI flow, result banner, replay, and non-overlapping desktop layout.
-- No text overlaps action buttons, cards, hand summary, help panel, status, or seat panels at 1280x720.
-- AI reason and help text must wrap or clamp inside their containers.
+1. Player clicks a card.
+2. Main toggles card selection and requests `select` SFX.
+3. Player clicks Play/Pass or attempts invalid play.
+4. Main/game state changes as before and requests `play`, `pass`, or `invalid` SFX.
+5. On landlord assignment and result, Main requests the matching semantic SFX.
 
-### Transitions
+### [v0.5.0-M2] Optional Music
 
-- Launch -> Main: new hand starts automatically.
-- Help button -> Help panel: opens help overlay/panel without changing round state.
-- Help close -> Main: closes help overlay/panel and resumes the same round state.
-- Result banner New Round -> Main: reset same scene into a fresh hand.
+1. Player opens Settings/Audio.
+2. Player toggles Music.
+3. Quiet loop starts/stops or mutes/unmutes immediately.
+4. Closing settings returns to the same round state.
+
+### [v0.5.0-M3] Audio Settings
+
+1. Player opens Settings/Audio.
+2. Player toggles SFX/Music or chooses volume preset if implemented.
+3. UI reflects state immediately.
+4. Subsequent actions respect the setting.
+
+### [v0.5.0-M4] Restart/Quit Flow
+
+1. Player reaches result or opens settings/help action area.
+2. New Round/Restart resets the round without stale selected cards, trick state, or audio setting loss.
+3. Quit is visible as a clear exit affordance if implemented; in headless/e2e it may expose a safe `request_quit` state instead of terminating the test process.
+
+## Asset Bindings
+
+| Element | Asset Row / Path | Runtime Size | Contract |
+|---------|------------------|--------------|----------|
+| SFX feedback | procedural_audio_sfx / procedural | short event streams | Distinct event feedback, testable without speakers |
+| Quiet music | procedural_audio_music / procedural | low-volume loop | Optional and lower priority than SFX |
+| Settings controls | procedural_panels_buttons / procedural | compact panel/button set | Readable labels, immediate toggle feedback |
+| Restart/quit controls | procedural_panels_buttons / procedural | existing result/action scale | Clear and non-overlapping |
+
+## Acceptance Criteria
+
+- Main launches into a playable hand with all inherited UI visible.
+- Settings/Audio can be opened and closed without changing round state.
+- SFX and music toggles visibly update and affect subsequent audio event state.
+- Select/play/pass/invalid/result actions remain fast and trigger observable audio events.
+- Restart/New Round clears gameplay state while preserving audio setting state for the scene/session.
+- No v0.5.0 control overlaps cards, summary, status, help, AI panels, or result banner at supported desktop sizes.

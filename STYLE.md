@@ -29,3 +29,11 @@ Use crisp card-game UI composition, high-contrast card faces, restrained green t
 - v0.1.0 uses procedural UI instead of required bitmap card art.
 - Future asset generation should match the procedural readability established in v0.1.0.
 - v0.4.0 keeps the procedural style and adds guidance text; no bitmap assets are required.
+
+
+## Audio Style
+
+- Keep SFX short, readable, and non-startling: crisp tick for selection, soft chime for legal play, tap for pass, low buzz for invalid, and brief accent for result.
+- Optional music should be quiet table ambience, lower priority than SFX, and safe to mute independently.
+- Audio settings UI should match the existing compact procedural Control style rather than introducing decorative panels.
+- Do not require external audio files unless the build phase explicitly reports a missing asset need first.

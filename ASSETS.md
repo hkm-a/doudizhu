@@ -14,6 +14,9 @@ Visual prompt language lives in `STYLE.md`.
 | 4 | v0.3.0 | main_initial_reference | screenshot | 1280x720 | godot-e2e viewport capture after launch | `e2e/screenshots/scene_main/v0_3_0_01_initial.png` | READY |
 | 5 | v0.3.0 | main_selected_reference | screenshot | 1280x720 | godot-e2e viewport capture after landlord call and card selection | `e2e/screenshots/scene_main/v0_3_0_02_selected.png` | READY |
 | 6 | v0.3.0 | main_result_reference | screenshot | 1280x720 | godot-e2e viewport capture after forced result | `e2e/screenshots/scene_main/v0_3_0_03_result.png` | READY |
+| 7 | v0.5.0 | procedural_audio_sfx | procedural_audio | short one-shot events | Godot-generated tones/streams for select, play, pass, invalid, landlord, and result events | procedural | READY |
+| 8 | v0.5.0 | procedural_audio_music | procedural_audio | quiet loop | Godot-generated low-volume optional ambience/music loop, toggleable separately from SFX | procedural | READY |
+| 9 | v0.5.0 | procedural_audio_settings_ui | procedural_ui | compact viewport-relative | Existing Control style for SFX/Music toggles and optional volume preset | procedural | READY |
 
 ## Visual Asset Contract
 
@@ -34,6 +37,10 @@ Visual prompt language lives in `STYLE.md`.
 | v0.4.0 | Main / [v0.4.0-M2] | AI recent play reason | procedural_panels_buttons / procedural | AI panel recent row | Make AI choice readable | Reason text is concise and readable inside seat panels | procedural/UI |
 | v0.4.0 | Main / [v0.4.0-M3] | Hand summary | procedural_panels_buttons / procedural | Compact summary band/panel | Show hand composition and opportunities | Counts and chain opportunities readable at 1280x720 | procedural/UI |
 | v0.4.0 | Main / [v0.4.0-M4] | Rules/help panel | procedural_panels_buttons / procedural | Clamped overlay/panel | Explain supported combinations and flow | Help text wraps, close action is visible, table remains non-overlapping | procedural/UI |
+| v0.5.0 | Main / [v0.5.0-M1] | Action sound feedback | procedural_audio_sfx / procedural | short one-shot events | Confirm select/play/pass/invalid/result actions | Audio event state testable without speakers; no gameplay delay | procedural/audio |
+| v0.5.0 | Main / [v0.5.0-M2] | Quiet music layer | procedural_audio_music / procedural | low-volume loop | Add optional polish without masking SFX | Toggleable and low priority | procedural/audio |
+| v0.5.0 | Main / [v0.5.0-M3] | Audio settings controls | procedural_audio_settings_ui / procedural | compact panel/button set | Let player mute/toggle audio | Labels readable and controls do not overlap existing action/help UI | procedural/UI |
+| v0.5.0 | Main / [v0.5.0-M4] | Restart/quit finish controls | procedural_panels_buttons / procedural | result/action scale | Make final flow explicit | Controls readable and do not obscure result or hand | procedural/UI |
 
 ## Animated Sprites
 
@@ -52,6 +59,7 @@ No audio assets are required for v0.1.0. Audio is deferred to a later tag.
 | procedural_panels_buttons | v0.1.0 | Godot UI | $0.00 | No image generation |
 | v0.3.0 reference screenshots | v0.3.0 | godot-e2e | $0.00 | Runtime captures only |
 | v0.4.0 help and summary UI | v0.4.0 | Godot UI | $0.00 | No image generation |
+| v0.5.0 procedural audio/settings | v0.5.0 | Godot procedural audio/UI | $0.00 | No external audio or image generation planned |
 | **Total** | — | | **$0.00** | |
 
 ## Post-Processing Notes
@@ -59,3 +67,4 @@ No audio assets are required for v0.1.0. Audio is deferred to a later tag.
 - No post-processing required for v0.1.0.
 - No post-processing required for v0.3.0 screenshots.
 - No post-processing required for v0.4.0 procedural UI text.
+- No post-processing required for v0.5.0 procedural audio/settings assets.
