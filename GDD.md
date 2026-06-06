@@ -15,7 +15,7 @@
 
 - **Moment-to-moment:** The player inspects their hand, selects cards, and chooses Play, Pass, Hint, Call Landlord, Do Not Call, or New Round depending on the current phase.
 - **Session loop:** Start a new hand -> shuffle and deal -> determine landlord -> landlord receives bottom cards -> players take turns playing legal combinations or passing -> first side to empty a hand wins -> show result -> allow replay.
-- **Progression loop:** No persistent progression in the first version. Later tags improve rules coverage, AI quality, presentation, animation, and audio.
+- **Progression loop:** No persistent progression in the first version. Later tags improve rules coverage, AI quality, presentation, animation, audio, and eventually multi-hand scoring/match flow.
 
 ## 3. Mechanics
 
@@ -69,6 +69,7 @@ The first tag prioritizes full state flow, legal comparison, turns, AI, and win/
 - Expanded combinations: Three with attachments, straights, consecutive pairs, and airplane are deferred after the core loop.
 - Better AI: Later tags may search combinations more intelligently and avoid wasting strong cards.
 - Animation/audio polish: Deferred until the game is playable and testable.
+- Scoring and match progression: Later tags track hand results, cumulative score, and short match completion without changing shipped card legality.
 
 ## 4. Game World & Setting
 
@@ -182,6 +183,7 @@ For `v0.1.0`, cards may be rendered procedurally with Godot UI text, suit symbol
 | v0.3.0 Presentation pass | Play with clearer card/table presentation | Card art refinement, animation, turn feedback, result polish | Same hand loop with improved visibility |
 | v0.4.0 AI and usability | Play against less naive AI and better support tools | Improved hint, better AI choice, basic difficulty tuning | Complete hand with more credible opponents |
 | v0.5.0 Audio and finish | Play a more finished desktop prototype | SFX, optional music, final UI consistency, settings | Complete hand with audiovisual polish |
+| v0.6.0 Scoring and match progression | Play several hands as a short match | Per-hand score delta, cumulative scores, match result, new hand/new match flow | Target score or hand-count match winner appears |
 
 ### Deferred
 
@@ -198,3 +200,5 @@ For `v0.1.0`, cards may be rendered procedurally with Godot UI text, suit symbol
 - **Players:** One human, two AI.
 - **Cards:** 54-card deck.
 - **Rules:** Simplified core subset in `v0.1.0`, full planned set in later tags.
+
+

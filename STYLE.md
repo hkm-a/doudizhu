@@ -37,3 +37,9 @@ Use crisp card-game UI composition, high-contrast card faces, restrained green t
 - Optional music should be quiet table ambience, lower priority than SFX, and safe to mute independently.
 - Audio settings UI should match the existing compact procedural Control style rather than introducing decorative panels.
 - Do not require external audio files unless the build phase explicitly reports a missing asset need first.
+
+## v0.6.0 Score UI Notes
+
+- Scoreboard elements should use the existing restrained panel style: compact labels, high-contrast numerals, and no decorative icons unless a future asset pass explicitly adds them.
+- Score delta text should prioritize signs and seat names over color alone so it remains accessible.
+

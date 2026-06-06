@@ -1,55 +1,59 @@
 # Structure: Doudizhu
 
-**Tag:** v0.5.0
-**Theme:** Audio And Finish
+**Tag:** v0.6.0
+**Theme:** Scoring And Match Progression
 
 ## Scope
 
-v0.5.0 adds audio feedback, optional quiet music, compact audio/settings controls, and final restart/quit consistency. It must not expand Doudizhu rule recognition or rewrite shipped card-flow behavior.
+v0.6.0 adds simple scorekeeping, cumulative match progression, score summary UI, and distinct New Hand/New Match reset boundaries. It must not change shipped card legality, combination recognition, or AI policy except where tests need to observe completed hand results.
 
 ## Architecture Decisions
 
-- Centralize all sound playback behind an `AudioController`-style node/helper so headless tests can inspect requested events without relying on real speakers.
-- Keep SFX event names semantic (`select`, `play`, `pass`, `invalid`, `landlord`, `result_win`, `result_loss`) rather than tied to specific generated waveforms.
-- Prefer procedural/generated-in-engine tones over external audio files to keep the finish tag self-contained.
-- Keep settings UI compact and reuse the existing Main scene procedural Control style.
-- Preserve ECS/gameplay separation: scene tree remains UI/menus/audio; gameplay state stays in existing model/rules classes.
+- Keep score logic separate from card-rule logic so `CardRules.classify` and `CardRules.can_beat` remain untouched.
+- Use deterministic simple scoring before any advanced Doudizhu multiplier system.
+- Treat a hand reset and a match reset as different operations: New Hand clears cards/trick/selection while preserving match score; New Match clears both match score and current hand.
+- Keep score UI textual/procedural and compact, reusing existing panel/button style.
+- Add test hooks or getters for score state so headless tests do not depend on visual parsing alone.
 
 ## Current Tag Systems
 
 | System / Helper | File | Reads | Writes / Emits | Purpose | Tasks |
 |-----------------|------|-------|----------------|---------|-------|
-| AudioController | `src/audio_controller.gd` or equivalent Main child/helper | semantic audio event names, mute/music settings | `AudioStreamPlayer` state, debug event history, bus/volume state | Centralize SFX/music playback and test hooks | P01, P02, P03 |
-| MainAudioProjection | `src/main.gd` | UI/game events, settings control state | calls AudioController, updates settings controls | Connect card/action/result/settings UI to audio feedback | P02, P03, P04 |
-| RestartQuitProjection | `src/main.gd` | result state, round state | restart/new-round/quit affordance state | Make final restart/quit flow clear and regression-testable | P05 |
+| ScoreState / ScoreController | `src/score_state.gd` or equivalent | winner side, landlord seat, seat ids, target settings | cumulative scores, last hand delta, hands played, match winner | Centralize hand scoring and match progression | P01, P02, P05 |
+| MainScoreProjection | `src/main.gd` | score state, result state, current phase | scoreboard labels, result score text, New Hand/New Match state | Render progression and connect reset affordances | P03, P04 |
+| RoundToScoreBridge | `src/doudizhu_game.gd` or Main result handler | completed hand result, roles | score application request | Apply score exactly once per completed hand | P01, P02 |
 
 ## Existing Systems Touched
 
 | Existing System | File | Allowed Change | Guardrail |
 |-----------------|------|----------------|-----------|
-| CardRules | `src/card_rules.gd` | No planned functional change; tests may assert regression stability | Do not add new combination types in v0.5.0 |
-| DoudizhuGame | `src/doudizhu_game.gd` | Expose event moments or state needed for audio/restart tests if Main cannot infer them cleanly | Keep `classify`/`can_beat` legality gate unchanged |
-| Main UI | `src/main.gd` | Add settings/audio/restart/quit controls and audio event calls | No overlap with summary/help/action/status/hand areas |
+| CardRules | `src/card_rules.gd` | No planned functional change | Do not add or alter combination rules in v0.6.0 |
+| DoudizhuGame | `src/doudizhu_game.gd` | Expose result winner/roles cleanly if not already available; prevent duplicate score application | Keep turn/rule behavior stable |
+| Main UI | `src/main.gd` | Add scoreboard, score summary, New Hand/New Match controls | No overlap with hand, trick, help, summary, audio/settings, or result controls |
+| AudioController | `src/audio_controller.gd` | Optional result/match sound reuse only | Do not require new external audio assets |
 
 ## Data / State
 
 | State | Owner | Lifetime | Test Visibility |
 |-------|-------|----------|-----------------|
-| SFX enabled | AudioController/Main settings | scene/session | debug getter or public method for e2e/gdUnit |
-| Music enabled | AudioController/Main settings | scene/session | debug getter or public method for e2e/gdUnit |
-| Last audio events | AudioController | bounded in-memory history | gdUnit/e2e assertions |
-| Restart/quit affordance state | Main UI | current scene | e2e locator/button state |
+| Seat score totals | ScoreState | current match | public getter/debug label |
+| Last hand delta | ScoreState | until next scored hand/new match | unit/e2e assertion |
+| Hands played | ScoreState | current match | public getter/scoreboard |
+| Match target | ScoreState/Main config | scene/session | unit test constant/config getter |
+| Match winner | ScoreState | when target reached | result banner/e2e locator |
+| Score applied flag | RoundToScoreBridge | current hand | unit test to prevent duplicate score |
 
-## Procedural Audio Plan
+## Scoring Model
 
-- SFX should be short, distinct, and quiet by default: select tick, legal play chime, pass soft tap, invalid low buzz, landlord/result accent.
-- Music/ambience should be optional, low-volume, and non-essential; if procedural looping is too risky, implement a muted-by-default placeholder with a clear testable toggle rather than blocking the tag on composition.
-- All audio must route through a controllable bus or player set so mute/toggle tests can assert state deterministically.
-
+- Base score defaults to 1 point per farmer seat.
+- If landlord wins: landlord gains +2, each farmer loses -1.
+- If farmers win: each farmer gains +1, landlord loses -2.
+- A match ends when a configurable target score is reached or a compact hand-count cap is reached, whichever implementation proves clearer and more testable.
+- Advanced multipliers, bidding stakes, spring, and bomb multipliers are deferred beyond v0.6.0.
 
 ## Component Registry
 
-No new ECS components are required for v0.5.0. Existing component classes remain inherited from previous tags:
+No new ECS components are required for v0.6.0 unless the build phase chooses to model score state as ECS data. Existing component classes remain inherited from previous tags.
 
 | Component | File | Current Tag Status |
 |-----------|------|--------------------|
@@ -66,22 +70,15 @@ No new ECS components are required for v0.5.0. Existing component classes remain
 
 | System / Helper | Tick / Trigger | Order | Notes |
 |-----------------|----------------|-------|-------|
-| RoundFlowSystem | existing test shell | inherited | Existing round-flow shell remains loadable. |
-| AudioController | UI/game event triggered | after gameplay state mutation | Plays or records semantic audio feedback without mutating card rules. |
-| MainAudioProjection | UI callback triggered | after button/card action | Requests audio events and refreshes settings controls. |
+| DoudizhuGame | existing turn/result flow | before scoring | Produces completed hand winner/roles. |
+| RoundToScoreBridge | result transition | once per hand result | Applies score and marks hand scored. |
+| ScoreState | event triggered | after result known | Updates totals and match winner. |
+| MainScoreProjection | UI refresh | after scoring and on hand/match reset | Refreshes scoreboard and result summary. |
 
 ## Tests Required
 
 | Test Area | Expected Coverage |
 |-----------|-------------------|
-| Unit | Audio event dispatch, mute/music setting application, no rule regression in card legality tests |
-| E2E | Selecting/playing/passing/invalid action triggers observable audio event state; settings toggles update state; restart/replay remains clean |
-| Layout | Settings/restart/quit controls do not overlap existing Main scene layout at supported desktop sizes |
-
-## Out of Scope
-
-- Expert Doudizhu AI.
-- New card combination types.
-- Network multiplayer.
-- Release packaging/export installers.
-- Required external audio library licensing work.
+| Unit | Score deltas for landlord/farmer wins, cumulative totals, match target, New Hand/New Match reset boundaries, duplicate application guard |
+| E2E | Complete or force hand result, read score summary, start New Hand with score persistence, start New Match with cleared score |
+| Regression | Existing rule, AI, hint, help, audio/settings, and responsive layout tests remain green |

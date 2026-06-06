@@ -1,72 +1,72 @@
 # Scenes: Doudizhu
 
-**Tag:** v0.5.0
-**Theme:** Audio And Finish
+**Tag:** v0.6.0
+**Theme:** Scoring And Match Progression
 
 ## Scene List
 
 | Scene | Path | Purpose | Current Tag Changes |
 |-------|------|---------|---------------------|
-| Main | `scenes/main.tscn` / procedural Main UI | Complete Doudizhu table, help, summary, result, replay | Add compact audio/settings controls, optional settings overlay, restart/quit affordance, and audio debug hooks |
+| Main | `scenes/main.tscn` / procedural Main UI | Complete Doudizhu table, help, summary, audio/settings, result, replay | Add compact scoreboard, score delta result summary, New Hand, and New Match progression controls |
 
 ## Main Scene Layout
 
-v0.5.0 keeps the v0.4.0 table composition and adds only compact finish controls.
+v0.6.0 keeps the inherited table and adds a compact score layer.
 
-| Region | Anchor / Placement | Current Contents | v0.5.0 Additions | Constraint |
+| Region | Anchor / Placement | Current Contents | v0.6.0 Additions | Constraint |
 |--------|--------------------|------------------|------------------|------------|
-| Top/side panels | existing AI panel bands | AI roles, counts, recent play/reason | no required change | Must stay readable at 1280x720 |
-| Center table | existing trick/status area | current trick, bottom cards, status | sound-triggered status may remain text-only | Do not cover trick cards |
-| Summary/status band | above action/hand area | hand summary, status | no required change | Summary remains compact |
-| Action bar | bottom-right above hand | Call/Decline/Play/Pass/Hint/Help | Settings/Audio button if it fits | Buttons remain reachable and non-overlapping |
-| Settings overlay/panel | small modal or anchored panel | not present before v0.5.0 | SFX toggle, Music toggle, optional volume preset, Close | Must clamp inside viewport and preserve round state |
-| Result banner | center overlay | win/loss, New Round | restart/quit affordance if not already covered | Result/replay remains prominent |
-| Player hand | bottom-center | sorted cards, selection lift/highlight | select SFX only; no layout change | All cards remain visible/fanned |
+| Top/side panels | existing AI panel bands | AI roles, counts, recent play/reason | optional score beside each seat if compact | Must stay readable at 1280x720 |
+| Center table | existing trick/status area | current trick, bottom cards, status | no required score overlay during active play | Do not cover trick cards |
+| Scoreboard band | compact row near summary/status or top center | not present before v0.6.0 | Player/AI-left/AI-right totals, hand count, match target | Must not push hand/action buttons offscreen |
+| Summary/status band | above action/hand area | hand summary, status, hint rationale | short score status only if space allows | Summary remains compact |
+| Action bar | bottom-right above hand | Call/Decline/Play/Pass/Hint/Help/Settings | New Hand appears after result; New Match appears after match end | Buttons remain reachable and non-overlapping |
+| Settings/help overlays | existing clamped overlays | audio/settings/help content | no required change | Scoreboard remains readable or safely covered by modal |
+| Result banner | center overlay | win/loss, New Round/restart | hand score delta, cumulative totals, match winner when reached | Result remains prominent |
+| Player hand | bottom-center | sorted cards, selection lift/highlight | no layout change | All cards remain visible/fanned |
 
 ## Interaction Flows
 
-### [v0.5.0-M1] Action SFX
+### [v0.6.0-M1] Hand Scoring
 
-1. Player clicks a card.
-2. Main toggles card selection and requests `select` SFX.
-3. Player clicks Play/Pass or attempts invalid play.
-4. Main/game state changes as before and requests `play`, `pass`, or `invalid` SFX.
-5. On landlord assignment and result, Main requests the matching semantic SFX.
+1. A hand reaches result through normal play or test helper.
+2. The result owner/side and landlord seat are sent to score logic once.
+3. Score logic computes a simple delta.
+4. Result banner shows winner side and score changes.
 
-### [v0.5.0-M2] Optional Music
+### [v0.6.0-M2] Cumulative Match Score
 
-1. Player opens Settings/Audio.
-2. Player toggles Music.
-3. Quiet loop starts/stops or mutes/unmutes immediately.
-4. Closing settings returns to the same round state.
+1. Player clicks New Hand after a hand result.
+2. Card, trick, selection, and turn state reset for the new hand.
+3. Score totals and hands played remain visible.
+4. The next hand adds another score delta after completion.
 
-### [v0.5.0-M3] Audio Settings
+### [v0.6.0-M3] Match Completion
 
-1. Player opens Settings/Audio.
-2. Player toggles SFX/Music or chooses volume preset if implemented.
-3. UI reflects state immediately.
-4. Subsequent actions respect the setting.
+1. Score totals reach target score or hand-count cap.
+2. Result banner changes from hand result to match result.
+3. New Match is clearly available.
+4. New Match clears cumulative scores and starts a fresh match/hand.
 
-### [v0.5.0-M4] Restart/Quit Flow
+### [v0.6.0-M4] Score Summary UI
 
-1. Player reaches result or opens settings/help action area.
-2. New Round/Restart resets the round without stale selected cards, trick state, or audio setting loss.
-3. Quit is visible as a clear exit affordance if implemented; in headless/e2e it may expose a safe `request_quit` state instead of terminating the test process.
+1. During play, scoreboard shows compact totals.
+2. At result, score summary expands enough to show delta and totals.
+3. Help/settings can still open and close without losing match state.
+4. Audio/settings controls remain reachable.
 
 ## Asset Bindings
 
 | Element | Asset Row / Path | Runtime Size | Contract |
 |---------|------------------|--------------|----------|
-| SFX feedback | procedural_audio_sfx / procedural | short event streams | Distinct event feedback, testable without speakers |
-| Quiet music | procedural_audio_music / procedural | low-volume loop | Optional and lower priority than SFX |
-| Settings controls | procedural_panels_buttons / procedural | compact panel/button set | Readable labels, immediate toggle feedback |
-| Restart/quit controls | procedural_panels_buttons / procedural | existing result/action scale | Clear and non-overlapping |
+| Scoreboard band | procedural_scoreboard_ui / procedural | compact viewport-relative row | Totals readable, no overlap with cards/actions |
+| Result score summary | procedural_panels_buttons / procedural | existing result overlay scale | Delta and totals clear without hiding winner text |
+| New Hand/New Match controls | procedural_panels_buttons / procedural | existing button scale | Reset boundary is clear and reachable |
 
 ## Acceptance Criteria
 
-- Main launches into a playable hand with all inherited UI visible.
-- Settings/Audio can be opened and closed without changing round state.
-- SFX and music toggles visibly update and affect subsequent audio event state.
-- Select/play/pass/invalid/result actions remain fast and trigger observable audio events.
-- Restart/New Round clears gameplay state while preserving audio setting state for the scene/session.
-- No v0.5.0 control overlaps cards, summary, status, help, AI panels, or result banner at supported desktop sizes.
+- Main launches into a playable hand with inherited UI and audio/settings intact.
+- Scoreboard shows all three seat totals and hands played in a compact readable form.
+- Completing a hand applies one score delta and displays it in the result summary.
+- New Hand resets card play state but preserves cumulative match score.
+- New Match clears cumulative score and starts a fresh progression session.
+- Score UI does not overlap cards, summary, status, help, settings, AI panels, audio controls, or result banner at supported desktop sizes.

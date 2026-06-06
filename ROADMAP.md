@@ -71,3 +71,17 @@ The first tag is always `v0.1.0`. Each tag must ship a player-experienced playab
 - Add optional quiet gameplay music.
 - Add settings for audio volume and restart/quit flow if needed.
 - Final pass on visual consistency, accessibility, and test coverage.
+## v0.6.0 — Scoring And Match Progression
+
+**Expected player experience**
+- Play multiple hands in one session with visible cumulative score.
+- Understand who won each hand, how the landlord/farmer side affected scoring, and when a short match ends.
+- Start a fresh match after the match result without losing existing hand-loop polish.
+
+**Features / mechanics**
+- Add per-hand scoring for landlord-vs-farmers outcome using a simple base score.
+- Track cumulative player, AI-left, and AI-right scores across a short best-of/target-score match.
+- Add match summary UI showing hand winner, score delta, cumulative scores, hands played, and match winner.
+- Add New Hand and New Match affordances with clear state reset boundaries.
+- Preserve all shipped rules, AI, presentation, help, summary, and audio behavior while extending post-hand progression.
+

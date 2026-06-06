@@ -17,6 +17,7 @@ Visual prompt language lives in `STYLE.md`.
 | 7 | v0.5.0 | procedural_audio_sfx | procedural_audio | short one-shot events | Godot-generated tones/streams for select, play, pass, invalid, landlord, and result events | procedural | READY |
 | 8 | v0.5.0 | procedural_audio_music | procedural_audio | quiet loop | Godot-generated low-volume optional ambience/music loop, toggleable separately from SFX | procedural | READY |
 | 9 | v0.5.0 | procedural_audio_settings_ui | procedural_ui | compact viewport-relative | Existing Control style for SFX/Music toggles and optional volume preset | procedural | READY |
+| 10 | v0.6.0 | procedural_scoreboard_ui | procedural_ui | compact viewport-relative | Existing Control style for score totals, hand count, score delta, New Hand, and New Match controls | procedural | READY |
 
 ## Visual Asset Contract
 
@@ -41,6 +42,10 @@ Visual prompt language lives in `STYLE.md`.
 | v0.5.0 | Main / [v0.5.0-M2] | Quiet music layer | procedural_audio_music / procedural | low-volume loop | Add optional polish without masking SFX | Toggleable and low priority | procedural/audio |
 | v0.5.0 | Main / [v0.5.0-M3] | Audio settings controls | procedural_audio_settings_ui / procedural | compact panel/button set | Let player mute/toggle audio | Labels readable and controls do not overlap existing action/help UI | procedural/UI |
 | v0.5.0 | Main / [v0.5.0-M4] | Restart/quit finish controls | procedural_panels_buttons / procedural | result/action scale | Make final flow explicit | Controls readable and do not obscure result or hand | procedural/UI |
+| v0.6.0 | Main / [v0.6.0-M1] | Hand score delta summary | procedural_scoreboard_ui / procedural | result overlay row | Explain score gained/lost after a hand | Delta and winner side readable without hiding result controls | procedural/UI |
+| v0.6.0 | Main / [v0.6.0-M2] | Cumulative scoreboard | procedural_scoreboard_ui / procedural | compact band | Show player and AI totals across hands | Totals readable at 1280x720 and do not overlap hand/action bands | procedural/UI |
+| v0.6.0 | Main / [v0.6.0-M3] | Match result and New Match control | procedural_scoreboard_ui / procedural; procedural_panels_buttons / procedural | result overlay/action scale | Show match completion and reset affordance | Match winner and New Match action prominent | procedural/UI |
+| v0.6.0 | Main / [v0.6.0-M4] | Score summary during normal play | procedural_scoreboard_ui / procedural | compact viewport-relative | Keep progression visible without crowding inherited UI | Score band, help/settings, audio controls, and cards do not overlap | procedural/UI |
 
 ## Animated Sprites
 
@@ -60,6 +65,7 @@ No audio assets are required for v0.1.0. Audio is deferred to a later tag.
 | v0.3.0 reference screenshots | v0.3.0 | godot-e2e | $0.00 | Runtime captures only |
 | v0.4.0 help and summary UI | v0.4.0 | Godot UI | $0.00 | No image generation |
 | v0.5.0 procedural audio/settings | v0.5.0 | Godot procedural audio/UI | $0.00 | No external audio or image generation planned |
+| v0.6.0 procedural scoreboard UI | v0.6.0 | Godot procedural UI | $0.00 | No image generation planned |
 | **Total** | — | | **$0.00** | |
 
 ## Post-Processing Notes
@@ -68,3 +74,5 @@ No audio assets are required for v0.1.0. Audio is deferred to a later tag.
 - No post-processing required for v0.3.0 screenshots.
 - No post-processing required for v0.4.0 procedural UI text.
 - No post-processing required for v0.5.0 procedural audio/settings assets.
+- No post-processing required for v0.6.0 procedural scoreboard UI.
+
