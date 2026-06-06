@@ -1,0 +1,122 @@
+{
+  "tag": "v0.5.0",
+  "result": "approve",
+  "playable_closed_loop": {
+    "builds_clean": true,
+    "boots_main_scene": true,
+    "playable_unit_coverage": true,
+    "completion_fail_or_exit_reached": true
+  },
+  "playable_unit": {
+    "result": "pass",
+    "rows": {
+      "v0.5.0-M1": {
+        "result": "pass",
+        "test": "e2e/test_v0_5_0_M1_audio_feedback.py",
+        "evidence": [
+          "pytest passed: card selection records select SFX event through debug_audio_state.",
+          "pytest passed: play attempt records a semantic audio event while visible state transitions remain valid.",
+          "gdUnit passed: AudioController records SFX events and bounded debug history."
+        ]
+      },
+      "v0.5.0-M2": {
+        "result": "pass",
+        "test": "e2e/test_v0_5_0_M2_quiet_music.py",
+        "evidence": [
+          "pytest passed: MusicToggleButton enables and disables music state immediately.",
+          "gdUnit passed: music toggle and volume state are reflected in debug_state."
+        ]
+      },
+      "v0.5.0-M3": {
+        "result": "pass",
+        "test": "e2e/test_v0_5_0_M3_audio_settings.py",
+        "evidence": [
+          "pytest passed: SettingsButton opens/closes the Audio settings panel.",
+          "pytest passed: SFX toggle and Volume preset apply immediately in debug_audio_state."
+        ]
+      },
+      "v0.5.0-M4": {
+        "result": "pass",
+        "test": "e2e/test_v0_5_0_M4_restart_quit_flow.py",
+        "evidence": [
+          "pytest passed: Result banner exposes QuitButton and records a safe quit request state.",
+          "pytest passed: ResultNewRoundButton clears quit request and returns to landlord phase."
+        ]
+      }
+    }
+  },
+  "tag_mechanics": {
+    "v0.5.0-M1": "pass",
+    "v0.5.0-M2": "pass",
+    "v0.5.0-M3": "pass",
+    "v0.5.0-M4": "pass"
+  },
+  "inherited_mechanics": {
+    "v0.4.0-M1": "pass",
+    "v0.4.0-M2": "pass",
+    "v0.4.0-M3": "pass",
+    "v0.4.0-M4": "pass",
+    "v0.3.0-M1": "pass",
+    "v0.3.0-M2": "pass",
+    "v0.3.0-M3": "pass",
+    "v0.2.0-M1": "pass",
+    "v0.1.0-M1": "pass",
+    "v0.1.0-M2": "pass",
+    "v0.1.0-M3": "pass",
+    "v0.1.0-M4": "pass",
+    "v0.1.0-M5": "pass",
+    "v0.1.0-M6": "pass",
+    "v0.1.0-M7": "pass",
+    "v0.1.0-M8": "pass"
+  },
+  "visual_checks": {
+    "main": {
+      "screenshot": "e2e/screenshots/scene_main.png",
+      "captures": [
+        "e2e/screenshots/scene_main.png",
+        "e2e/screenshots/scene_main/v0_4_0_01_initial.png",
+        "e2e/screenshots/scene_main/v0_4_0_02_help.png"
+      ],
+      "reference": "references/scene_main.png",
+      "vqa_log": "",
+      "result": "pass",
+      "notes": "Per user instruction, image/VQA review was not run or embedded in chat. Existing visual/layout E2E checks passed, and v0.5.0 settings controls are covered by semantic E2E state assertions.",
+      "vqa_calls": []
+    }
+  },
+  "phase4_review": [
+    {
+      "category": "audio_feedback",
+      "verdict": "ok"
+    },
+    {
+      "category": "settings_usability",
+      "verdict": "ok"
+    },
+    {
+      "category": "restart_quit_flow",
+      "verdict": "ok"
+    },
+    {
+      "category": "inherited_loop_stability",
+      "verdict": "ok"
+    },
+    {
+      "category": "final_polish_scope",
+      "verdict": "ok"
+    }
+  ],
+  "e2e_tests": {
+    "total": 23,
+    "passed": 23,
+    "failed": 0
+  },
+  "orphan_tests": [],
+  "gameplay_issues": [],
+  "critical_issues": [],
+  "major_issues": [],
+  "minor_issues": [
+    "v0.5.0 uses procedural/testable audio tones rather than authored audio assets; this keeps the prototype self-contained but is not final production sound design.",
+    "Quit is represented as a safe in-scene quit-request state for testability rather than terminating the E2E process."
+  ]
+}

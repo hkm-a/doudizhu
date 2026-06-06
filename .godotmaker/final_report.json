@@ -1,37 +1,38 @@
 {
   "status": "tag_sealed",
-  "tag": "v0.4.0",
-  "completed_at": "2026-06-06T09:04:21Z",
-  "archive_path": "docs/tags/v0.4.0/",
+  "tag": "v0.5.0",
+  "completed_at": "2026-06-06T09:30:50Z",
+  "archive_path": "docs/tags/v0.5.0/",
   "git_tagged": true,
   "summary": {
     "tag_mechanics": [
-      "v0.4.0-M1",
-      "v0.4.0-M2",
-      "v0.4.0-M3",
-      "v0.4.0-M4"
+      "v0.5.0-M1",
+      "v0.5.0-M2",
+      "v0.5.0-M3",
+      "v0.5.0-M4"
     ],
     "systems_added": [
-      "CardRules candidate scoring helpers",
-      "DoudizhuGame hint/AI policy text projection",
-      "Main UI hand summary and help affordance"
+      "AudioController",
+      "Main audio/settings projection",
+      "Restart/quit result affordance"
     ],
     "components_added": [],
     "test_count": {
-      "unit": 19,
+      "unit": 23,
       "e2e_tag": 4,
-      "e2e_regression": 15
+      "e2e_regression": 19
     }
   },
   "evidence": {
-    "archive_path": "docs/tags/v0.4.0/evidence/",
-    "e2e_files": 41,
+    "archive_path": "docs/tags/v0.5.0/evidence/",
+    "e2e_files": 49,
     "screenshots": 7
   },
   "doc_updates": [],
   "known_limitations": [
-    "v0.4.0 improves policy explanation and usability, while full expert Doudizhu AI, animation, and audio remain deferred by roadmap scope.",
-    "Special combinations beyond the roadmap scope, such as airplane with wings and four-with-two, remain deferred.",
-    "Animation, audio, and full expert Doudizhu AI remain deferred to later roadmap tags."
+    "v0.5.0 uses procedural/testable audio tones rather than authored audio assets; this keeps the prototype self-contained but is not final production sound design.",
+    "Quit is represented as a safe in-scene quit-request state for testability rather than terminating the E2E process.",
+    "Procedural/testable audio is prototype polish, not final production sound design.",
+    "External release packaging/export is outside the finalized roadmap scope."
   ]
 }
