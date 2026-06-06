@@ -102,6 +102,25 @@ func test_main_simulate_result_score_and_reset_boundaries() -> void:
 	assert_that(main.debug_scoreboard_text().contains("Hand 0/3")).is_equal(true)
 
 
+func test_settings_modal_children_are_focusable_only_when_visible() -> void:
+	var main = auto_free(MainScript.new())
+	main._ready()
+
+	assert_that(main.debug_settings_visible()).is_equal(false)
+	for focus_mode in main.debug_settings_focus_modes().values():
+		assert_that(focus_mode).is_equal(Control.FOCUS_NONE)
+
+	main.simulate_open_settings()
+	assert_that(main.debug_settings_visible()).is_equal(true)
+	for focus_mode in main.debug_settings_focus_modes().values():
+		assert_that(focus_mode).is_equal(Control.FOCUS_ALL)
+
+	main.simulate_close_settings()
+	assert_that(main.debug_settings_visible()).is_equal(false)
+	for focus_mode in main.debug_settings_focus_modes().values():
+		assert_that(focus_mode).is_equal(Control.FOCUS_NONE)
+
+
 func test_result_banner_compact_score_layout_fits_supported_desktop_sizes() -> void:
 	var main = auto_free(MainScript.new())
 	main._ready()

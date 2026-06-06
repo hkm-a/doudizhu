@@ -44,6 +44,7 @@ var quit_button: Button
 var sfx_toggle_button: Button
 var music_toggle_button: Button
 var volume_button: Button
+var settings_close_button: Button
 var result_panel: PanelContainer
 var result_label: Label
 var result_actions_bar: HBoxContainer
@@ -290,11 +291,12 @@ func _build_ui() -> void:
 	volume_button.name = "VolumePresetButton"
 	volume_button.pressed.connect(_on_volume_pressed)
 	settings_vbox.add_child(volume_button)
-	var settings_close := Button.new()
-	settings_close.name = "SettingsCloseButton"
-	settings_close.text = "Close"
-	settings_close.pressed.connect(_on_settings_close_pressed)
-	settings_vbox.add_child(settings_close)
+	settings_close_button = Button.new()
+	settings_close_button.name = "SettingsCloseButton"
+	settings_close_button.text = "Close"
+	settings_close_button.focus_mode = Control.FOCUS_NONE
+	settings_close_button.pressed.connect(_on_settings_close_pressed)
+	settings_vbox.add_child(settings_close_button)
 
 
 func _layout_ui() -> void:
@@ -548,6 +550,9 @@ func _refresh_settings_ui() -> void:
 	sfx_toggle_button.text = "SFX: %s" % ("On" if audio_controller.sfx_enabled else "Off")
 	music_toggle_button.text = "Music: %s" % ("On" if audio_controller.music_enabled else "Off")
 	volume_button.text = "Volume: %s" % audio_controller.volume_preset.capitalize()
+	var focus_mode := Control.FOCUS_ALL if settings_visible else Control.FOCUS_NONE
+	for button in [sfx_toggle_button, music_toggle_button, volume_button, settings_close_button]:
+		button.focus_mode = focus_mode
 
 
 func _apply_result_score_once() -> Dictionary:
@@ -877,8 +882,25 @@ func simulate_new_match() -> void:
 	_on_new_match_pressed()
 
 
+func simulate_open_settings() -> void:
+	_on_settings_pressed()
+
+
+func simulate_close_settings() -> void:
+	_on_settings_close_pressed()
+
+
 func debug_settings_visible() -> bool:
 	return settings_panel.visible
+
+
+func debug_settings_focus_modes() -> Dictionary:
+	return {
+		"sfx": sfx_toggle_button.focus_mode,
+		"music": music_toggle_button.focus_mode,
+		"volume": volume_button.focus_mode,
+		"close": settings_close_button.focus_mode,
+	}
 
 
 func debug_quit_requested() -> bool:

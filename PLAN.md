@@ -78,4 +78,5 @@ The player launches Main, completes one or more hands, sees score deltas applied
 | Task | Source | Status | Fix Scope | Verify |
 |------|--------|--------|-----------|--------|
 | P07 | Reviewer major UI finding | pending | Increase or compact `src/main.gd` result banner layout so five-line score summary plus New Hand/New Match/Quit controls fit without overflow at supported desktop sizes | gdUnit + ui-review |
+| P08 | Reviewer minor UI finding | pending | Disable focus on hidden settings modal controls while closed, restoring only when visible as needed | gdUnit + ui-review |
 

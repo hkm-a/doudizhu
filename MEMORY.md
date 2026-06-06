@@ -11,6 +11,7 @@
 - v0.6.0 scoring is owned by `ScoreState`; apply result scoring through stable `DoudizhuGame.result_key` values so UI refreshes cannot double-count a hand. New Hand clears only last delta/card state, while New Match clears cumulative totals and applied-result guards.
 - v0.6.0 target-score completion is based on positive score reaching the target, not losing seats reaching a negative absolute value.
 - v0.6.0 result banner uses a wider compact panel with one-row result actions; layout tests validate score summary plus three controls at supported desktop sizes.
+- v0.6.0 P08: Settings modal child buttons mirror modal visibility with focus_mode; set SFX/Music/Volume/Close to FOCUS_NONE while hidden and FOCUS_ALL while open to satisfy UI G8.
 - v0.1.0 uses procedural UI for cards, table, panels, buttons, and labels.
 - No bitmap image, animation, or audio assets are required for v0.1.0.
 - The first playable unit supports singles, pairs, triples, bombs, and joker bombs; v0.2.0 expands this with three attachments, chains, and airplane without wings.
