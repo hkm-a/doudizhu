@@ -141,7 +141,7 @@ func _update_match_state() -> void:
 			tied = true
 	var reached_target := false
 	for score in totals:
-		if abs(score) >= target_score:
+		if score >= target_score:
 			reached_target = true
 			break
 	if reached_target or hands_played >= hand_count_cap:
@@ -149,3 +149,4 @@ func _update_match_state() -> void:
 		match_winner_seat = -1 if tied else best_seat
 		match_winner = "Tie" if tied else SEAT_NAMES[best_seat]
 		match_winner_score = best_score
+

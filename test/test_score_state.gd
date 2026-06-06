@@ -40,6 +40,13 @@ func test_match_completion_by_target_score() -> void:
 	assert_that(state.match_complete).is_equal(true)
 	assert_that(state.match_winner).is_equal("AI Right")
 
+func test_negative_score_alone_does_not_end_match_by_target() -> void:
+	var score := ScoreState.new()
+	score.configure(2, 5)
+	score.apply_hand_result("farmers", ScoreState.AI_LEFT, "h1")
+	var state := score.debug_state()
+	assert_that(state.totals).is_equal([1, -2, 1])
+	assert_that(state.match_complete).is_equal(false)
 
 func test_new_hand_preserves_totals_and_new_match_clears_all() -> void:
 	var score := ScoreState.new()
@@ -93,5 +100,4 @@ func test_main_simulate_result_score_and_reset_boundaries() -> void:
 	main.simulate_new_match()
 	assert_that(main.debug_score_state().totals).is_equal([0, 0, 0])
 	assert_that(main.debug_scoreboard_text().contains("Hand 0/3")).is_equal(true)
-
 
