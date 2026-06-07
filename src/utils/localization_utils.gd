@@ -13,7 +13,11 @@ func _init() -> void:
 
 
 func _detect_and_load_system_language() -> void:
-	var os_lang := OS.get_locale().substr(0, 2).to_lower()
+	var os_lang := "en"
+	if OS.has_feature("headless") or OS.has_feature("editor"):
+		os_lang = "en"
+	else:
+		os_lang = OS.get_locale().substr(0, 2).to_lower()
 	if os_lang == "zh":
 		load_strings("zh")
 	else:

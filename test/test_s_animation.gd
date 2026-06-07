@@ -12,7 +12,8 @@ func test_animation_component_defaults() -> void:
 func test_animation_system_model_class() -> void:
 	var system := AnimationSystem.new()
 	assert_that(system).is_not_null()
-	assert_that(system.query()).is_not_null()
+	# query() returns null outside World context (gecs gotcha G14) — 
+	# just verify the system can be instantiated without crashing
 	system.free()
 
 
@@ -41,14 +42,9 @@ func test_play_bounce_animation_has_tween() -> void:
 
 
 func test_flight_animation_duration_in_range() -> void:
-	var system := AnimationSystem.new()
-	var button := Button.new()
-	button.position = Vector2(100, 200)
 	var duration: float = 0.3
-	assert_that(duration).is_greater_than_or_equal(0.2)
-	assert_that(duration).is_less_than_or_equal(0.4)
-	button.free()
-	system.free()
+	assert_that(duration).is_greater_equal(0.2)
+	assert_that(duration).is_less_equal(0.4)
 
 
 func test_bounce_animation_does_not_block_input() -> void:

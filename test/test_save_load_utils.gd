@@ -4,6 +4,7 @@ const SaveLoadUtilsScript := preload("res://src/utils/save_load_utils.gd")
 
 
 func test_save_file_operations_delete_nonexistent() -> void:
+	SaveLoadUtilsScript.delete_save()
 	assert_that(SaveLoadUtilsScript.save_exists()).is_equal(false)
 	var del_ok: bool = SaveLoadUtilsScript.delete_save()
 	assert_that(del_ok).is_equal(true)

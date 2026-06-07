@@ -107,12 +107,11 @@ func test_hint_shortcut_activates_hint() -> void:
 	main._ready()
 	main.game.new_round(42)
 	main.game.resolve_landlord(true)
-	# After resolve_landlord, game is in play phase but hint/pass buttons
-	# are only visible when it is human's turn. Shortcut returns false when
-	# the target button is not visible, which is correct behaviour.
+	main._refresh()
+	# Human called landlord, so human leads first (current_seat == HUMAN).
+	# Hint button is visible during human's turn — shortcut returns true.
 	var shortcut_result: bool = main.simulate_shortcut(KEY_H)
-	# Button may or may not be visible depending on game state
-	assert_that(shortcut_result).is_equal(false)
+	assert_that(shortcut_result).is_equal(true)
 
 
 func test_pass_shortcut_activates_pass() -> void:
@@ -120,10 +119,11 @@ func test_pass_shortcut_activates_pass() -> void:
 	main._ready()
 	main.game.new_round(42)
 	main.game.resolve_landlord(true)
-	# After resolve_landlord, pass button only visible when human must follow.
-	# Shortcut returns false when button not visible — correct behaviour.
+	main._refresh()
+	# Human called landlord and leads first — pass button visible during human's turn.
+	# Shortcut returns true when button is visible and enabled.
 	var shortcut_result: bool = main.simulate_shortcut(KEY_P)
-	assert_that(shortcut_result).is_equal(false)
+	assert_that(shortcut_result).is_equal(true)
 
 
 func test_play_shortcut_activates_play_when_landlord() -> void:
@@ -131,12 +131,11 @@ func test_play_shortcut_activates_play_when_landlord() -> void:
 	main._ready()
 	main.game.new_round(42)
 	main.game.resolve_landlord(true)
-	# Space in landlord phase triggers call_button, not play_button.
-	# Play button only visible in "play" phase when human has initiative.
-	# Shortcut does not crash — verify it returns false for play when not in play phase.
+	main._refresh()
+	# Space triggers play_button when human has initiative in play phase.
+	# Human called landlord and leads first, so play button is visible.
 	var result: bool = main.simulate_shortcut(KEY_SPACE)
-	# After resolve_landlord, phase is "play" but human may not be current_seat
-	assert_that(result).is_equal(false)
+	assert_that(result).is_equal(true)
 
 
 func test_n_shortcut_navigates_from_result() -> void:

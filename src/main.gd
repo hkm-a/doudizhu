@@ -509,22 +509,27 @@ func _build_ui() -> void:
 	settings_vbox.add_child(settings_label)
 	sfx_toggle_button = Button.new()
 	sfx_toggle_button.name = "SfxToggleButton"
+	sfx_toggle_button.focus_mode = Control.FOCUS_NONE
 	sfx_toggle_button.pressed.connect(_on_sfx_toggle_pressed)
 	settings_vbox.add_child(sfx_toggle_button)
 	music_toggle_button = Button.new()
 	music_toggle_button.name = "MusicToggleButton"
+	music_toggle_button.focus_mode = Control.FOCUS_NONE
 	music_toggle_button.pressed.connect(_on_music_toggle_pressed)
 	settings_vbox.add_child(music_toggle_button)
 	volume_button = Button.new()
 	volume_button.name = "VolumePresetButton"
+	volume_button.focus_mode = Control.FOCUS_NONE
 	volume_button.pressed.connect(_on_volume_pressed)
 	settings_vbox.add_child(volume_button)
 	stats_reset_button = Button.new()
 	stats_reset_button.name = "ResetStatsButton"
+	stats_reset_button.focus_mode = Control.FOCUS_NONE
 	stats_reset_button.pressed.connect(_on_reset_stats_pressed)
 	settings_vbox.add_child(stats_reset_button)
 	ai_difficulty_button = Button.new()
 	ai_difficulty_button.name = "AIDifficultyButton"
+	ai_difficulty_button.focus_mode = Control.FOCUS_NONE
 	ai_difficulty_button.pressed.connect(_on_ai_difficulty_pressed)
 	settings_vbox.add_child(ai_difficulty_button)
 	var save_button := Button.new()
