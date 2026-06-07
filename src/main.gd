@@ -11,6 +11,11 @@ const RESULT_PANEL_COLOR := Color(0.08, 0.11, 0.1, 0.96)
 const SELECTED_CARD_COLOR := Color(1.0, 0.94, 0.55)
 const AudioControllerScript := preload("res://src/audio_controller.gd")
 const ScoreStateScript := preload("res://src/score_state.gd")
+const AnimationSystemScript := preload("res://src/systems/s_animation.gd")
+const AIUtilsScript := preload("res://src/utils/ai_utils.gd")
+const SaveLoadUtilsScript := preload("res://src/utils/save_load_utils.gd")
+const LocalizationUtilsScript := preload("res://src/utils/localization_utils.gd")
+const CardAssetsScript := preload("res://src/utils/card_assets.gd")
 const TUTORIAL_STEPS := [
 	{
 		"title": "Table Tour",
@@ -44,7 +49,9 @@ var audio_controller := AudioControllerScript.new()
 var round_counter := 0
 var layout_scale := 1.0
 var debug_viewport_override := Vector2.ZERO
+var loc := LocalizationUtilsScript.new()
 
+var animation_system: AnimationSystemScript
 var background: ColorRect
 var ai_left_panel: Panel
 var ai_right_panel: Panel
@@ -74,6 +81,7 @@ var sfx_toggle_button: Button
 var music_toggle_button: Button
 var volume_button: Button
 var stats_reset_button: Button
+var ai_difficulty_button: Button
 var settings_close_button: Button
 var result_panel: PanelContainer
 var result_label: Label
@@ -100,15 +108,23 @@ var tutorial_visible := false
 var tutorial_index := 0
 var settings_visible := false
 var quit_requested := false
+var has_save := false
+var continue_overlay: ColorRect
 
 
 func _ready() -> void:
 	name = "Main"
 	audio_controller.name = "AudioController"
 	add_child(audio_controller)
+	animation_system = AnimationSystemScript.new()
+	add_child(animation_system)
 	_build_ui()
 	_layout_ui()
-	_start_new_round()
+	has_save = SaveLoadUtilsScript.save_exists()
+	if has_save:
+		_show_continue_dialog()
+	else:
+		_start_new_round()
 
 
 func _notification(what: int) -> void:
@@ -219,12 +235,25 @@ func _start_new_match() -> void:
 
 
 func _build_ui() -> void:
-	background = ColorRect.new()
-	background.name = "TableBackground"
-	background.color = TABLE_COLOR
-	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	background.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(background)
+	CardAssetsScript.initialize()
+	
+	var table_bg_texture := CardAssetsScript.get_table_bg()
+	if table_bg_texture != null:
+		var bg_sprite := TextureRect.new()
+		bg_sprite.name = "TableBackground"
+		bg_sprite.texture = table_bg_texture
+		bg_sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		bg_sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		bg_sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bg_sprite.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(bg_sprite)
+	else:
+		background = ColorRect.new()
+		background.name = "TableBackground"
+		background.color = TABLE_COLOR
+		background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		background.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(background)
 
 	ai_left_panel = _seat_panel("AILeftPanel")
 	ai_right_panel = _seat_panel("AIRightPanel")
@@ -300,15 +329,15 @@ func _build_ui() -> void:
 	_pin_top_left(action_bar)
 	action_bar.add_theme_constant_override("separation", 8)
 	add_child(action_bar)
-	call_button = _action_button("CallLandlordButton", "Call Landlord", _on_call_pressed)
-	decline_button = _action_button("DeclineLandlordButton", "Do Not Call", _on_decline_pressed)
-	play_button = _action_button("PlayButton", "Play", _on_play_pressed)
-	pass_button = _action_button("PassButton", "Pass", _on_pass_pressed)
-	hint_button = _action_button("HintButton", "Hint", _on_hint_pressed)
-	help_button = _action_button("HelpButton", "Help", _on_help_pressed)
+	call_button = _action_button("CallLandlordButton", loc.string("action.call_landlord"), _on_call_pressed)
+	decline_button = _action_button("DeclineLandlordButton", loc.string("action.decline_landlord"), _on_decline_pressed)
+	play_button = _action_button("PlayButton", loc.string("action.play"), _on_play_pressed)
+	pass_button = _action_button("PassButton", loc.string("action.pass"), _on_pass_pressed)
+	hint_button = _action_button("HintButton", loc.string("action.hint"), _on_hint_pressed)
+	help_button = _action_button("HelpButton", loc.string("label.help"), _on_help_pressed)
 	tutorial_button = _action_button("TutorialButton", "Tutorial", _on_tutorial_pressed)
-	settings_button = _action_button("SettingsButton", "Audio", _on_settings_pressed)
-	new_round_button = _action_button("NewHandButton", "New Hand", _on_new_hand_pressed)
+	settings_button = _action_button("SettingsButton", loc.string("label.settings"), _on_settings_pressed)
+	new_round_button = _action_button("NewHandButton", loc.string("result.new_hand"), _on_new_hand_pressed)
 
 	hand_area = Control.new()
 	hand_area.name = "PlayerHand"
@@ -337,7 +366,7 @@ func _build_ui() -> void:
 	result_vbox.add_child(result_actions_bar)
 	result_new_hand_button = Button.new()
 	result_new_hand_button.name = "ResultNewHandButton"
-	result_new_hand_button.text = "New Hand"
+	result_new_hand_button.text = loc.string("result.new_hand")
 	result_new_hand_button.focus_mode = Control.FOCUS_NONE
 	result_new_hand_button.custom_minimum_size = Vector2(128, 42)
 	result_new_hand_button.add_theme_stylebox_override("normal", _button_style(false))
@@ -347,7 +376,7 @@ func _build_ui() -> void:
 	result_actions_bar.add_child(result_new_hand_button)
 	result_new_match_button = Button.new()
 	result_new_match_button.name = "ResultNewMatchButton"
-	result_new_match_button.text = "New Match"
+	result_new_match_button.text = loc.string("result.new_match")
 	result_new_match_button.focus_mode = Control.FOCUS_NONE
 	result_new_match_button.custom_minimum_size = Vector2(128, 42)
 	result_new_match_button.add_theme_stylebox_override("normal", _button_style(false))
@@ -357,7 +386,7 @@ func _build_ui() -> void:
 	result_actions_bar.add_child(result_new_match_button)
 	quit_button = Button.new()
 	quit_button.name = "QuitButton"
-	quit_button.text = "Quit"
+	quit_button.text = loc.string("result.quit")
 	quit_button.focus_mode = Control.FOCUS_NONE
 	quit_button.custom_minimum_size = Vector2(128, 42)
 	quit_button.add_theme_stylebox_override("normal", _button_style(false))
@@ -389,7 +418,7 @@ func _build_ui() -> void:
 	help_vbox.add_child(help_label)
 	help_close_button = Button.new()
 	help_close_button.name = "HelpCloseButton"
-	help_close_button.text = "Close"
+	help_close_button.text = loc.string("label.close")
 	help_close_button.focus_mode = Control.FOCUS_NONE
 	help_close_button.add_theme_stylebox_override("normal", _button_style(false))
 	help_close_button.add_theme_stylebox_override("hover", _button_style(true))
@@ -428,19 +457,19 @@ func _build_ui() -> void:
 	tutorial_vbox.add_child(tutorial_actions)
 	tutorial_back_button = Button.new()
 	tutorial_back_button.name = "TutorialBackButton"
-	tutorial_back_button.text = "Back"
+	tutorial_back_button.text = loc.string("label.back")
 	tutorial_back_button.focus_mode = Control.FOCUS_NONE
 	tutorial_back_button.pressed.connect(_on_tutorial_back_pressed)
 	tutorial_actions.add_child(tutorial_back_button)
 	tutorial_next_button = Button.new()
 	tutorial_next_button.name = "TutorialNextButton"
-	tutorial_next_button.text = "Next"
+	tutorial_next_button.text = loc.string("label.next")
 	tutorial_next_button.focus_mode = Control.FOCUS_NONE
 	tutorial_next_button.pressed.connect(_on_tutorial_next_pressed)
 	tutorial_actions.add_child(tutorial_next_button)
 	tutorial_close_button = Button.new()
 	tutorial_close_button.name = "TutorialCloseButton"
-	tutorial_close_button.text = "Close"
+	tutorial_close_button.text = loc.string("label.close")
 	tutorial_close_button.focus_mode = Control.FOCUS_NONE
 	tutorial_close_button.pressed.connect(_on_tutorial_close_pressed)
 	tutorial_actions.add_child(tutorial_close_button)
@@ -459,6 +488,9 @@ func _build_ui() -> void:
 	settings_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
 	settings_blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(settings_blocker)
+
+	continue_overlay = _create_continue_dialog()
+	add_child(continue_overlay)
 
 	settings_panel = PanelContainer.new()
 	settings_panel.name = "SettingsPanel"
@@ -491,9 +523,25 @@ func _build_ui() -> void:
 	stats_reset_button.name = "ResetStatsButton"
 	stats_reset_button.pressed.connect(_on_reset_stats_pressed)
 	settings_vbox.add_child(stats_reset_button)
+	ai_difficulty_button = Button.new()
+	ai_difficulty_button.name = "AIDifficultyButton"
+	ai_difficulty_button.pressed.connect(_on_ai_difficulty_pressed)
+	settings_vbox.add_child(ai_difficulty_button)
+	var save_button := Button.new()
+	save_button.name = "SaveGameButton"
+	save_button.text = "Save Game"
+	save_button.focus_mode = Control.FOCUS_NONE
+	save_button.pressed.connect(_on_save_game_pressed)
+	settings_vbox.add_child(save_button)
+	var load_button := Button.new()
+	load_button.name = "LoadGameButton"
+	load_button.text = "Load Game"
+	load_button.focus_mode = Control.FOCUS_NONE
+	load_button.pressed.connect(_on_load_game_pressed)
+	settings_vbox.add_child(load_button)
 	settings_close_button = Button.new()
 	settings_close_button.name = "SettingsCloseButton"
-	settings_close_button.text = "Close"
+	settings_close_button.text = loc.string("label.close")
 	settings_close_button.focus_mode = Control.FOCUS_NONE
 	settings_close_button.pressed.connect(_on_settings_close_pressed)
 	settings_vbox.add_child(settings_close_button)
@@ -651,7 +699,8 @@ func _seat_panel(node_name: String) -> Panel:
 	for label_name in ["Name", "Role", "Count", "Turn", "Recent", "Reason"]:
 		var label := Label.new()
 		label.name = label_name
-		label.text = label_name
+		var key: String = "label." + label_name.to_lower()
+		label.text = loc.string(key)
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(label)
 	return panel
@@ -677,6 +726,113 @@ func _action_button(node_name: String, text: String, callback: Callable) -> Butt
 	button.pressed.connect(callback)
 	action_bar.add_child(button)
 	return button
+
+
+func _create_continue_dialog() -> ColorRect:
+	var overlay := ColorRect.new()
+	overlay.name = "ContinueOverlay"
+	overlay.color = Color(0.0, 0.0, 0.0, 0.65)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.visible = false
+
+	var panel := PanelContainer.new()
+	panel.name = "ContinuePanel"
+	var style := _box_style(RESULT_PANEL_COLOR, ACTIVE_BORDER_COLOR, 2)
+	style.content_margin_left = 32.0
+	style.content_margin_top = 24.0
+	style.content_margin_right = 32.0
+	style.content_margin_bottom = 24.0
+	panel.add_theme_stylebox_override("panel", style)
+
+	var vbox := VBoxContainer.new()
+	vbox.name = "ContinueLayout"
+	vbox.add_theme_constant_override("separation", 14)
+
+	var title_label := Label.new()
+	title_label.name = "ContinueTitle"
+	title_label.text = "Save Found"
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_label.add_theme_font_size_override("font_size", int(22.0 * layout_scale))
+	title_label.add_theme_color_override("font_color", ACTIVE_BORDER_COLOR)
+	vbox.add_child(title_label)
+
+	var body_label := Label.new()
+	body_label.name = "ContinueBody"
+	body_label.text = "A previous game was saved. Would you like to continue from where you left off?"
+	body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	body_label.add_theme_color_override("font_color", Color.WHITE)
+	vbox.add_child(body_label)
+
+	var actions := HBoxContainer.new()
+	actions.name = "ContinueActions"
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	actions.add_theme_constant_override("separation", 16)
+
+	var continue_btn := Button.new()
+	continue_btn.name = "ContinueBtn"
+	continue_btn.text = "Continue"
+	continue_btn.custom_minimum_size = Vector2(140, 40)
+	continue_btn.add_theme_stylebox_override("normal", _button_style(false))
+	continue_btn.add_theme_stylebox_override("hover", _button_style(true))
+	continue_btn.add_theme_stylebox_override("pressed", _button_style(true))
+	continue_btn.pressed.connect(func() -> void:
+		_load_saved_game()
+		_hide_continue_dialog()
+	)
+	actions.add_child(continue_btn)
+
+	var new_game_btn := Button.new()
+	new_game_btn.name = "NewGameBtn"
+	new_game_btn.text = "New Game"
+	new_game_btn.custom_minimum_size = Vector2(140, 40)
+	new_game_btn.add_theme_stylebox_override("normal", _button_style(false))
+	new_game_btn.add_theme_stylebox_override("hover", _button_style(true))
+	new_game_btn.add_theme_stylebox_override("pressed", _button_style(true))
+	new_game_btn.pressed.connect(func() -> void:
+		_delete_save_and_start()
+		_hide_continue_dialog()
+	)
+	actions.add_child(new_game_btn)
+
+	vbox.add_child(actions)
+	panel.add_child(vbox)
+	panel.position = Vector2((BASE_VIEWPORT.x - 480.0) * 0.5, (BASE_VIEWPORT.y - 260.0) * 0.5)
+	panel.custom_minimum_size = Vector2(480.0, 260.0)
+	panel.size = Vector2(480.0, 260.0)
+	overlay.add_child(panel)
+
+	return overlay
+
+
+func _show_continue_dialog() -> void:
+	continue_overlay.visible = true
+
+
+func _hide_continue_dialog() -> void:
+	continue_overlay.visible = false
+
+
+func _load_saved_game() -> void:
+	var saved: Dictionary = SaveLoadUtilsScript.load_game()
+	if saved.is_empty():
+		game.message = "Failed to load save."
+		_start_new_round()
+		return
+
+	SaveLoadUtilsScript.load_into_game(game, saved.get("game_state", {}))
+	SaveLoadUtilsScript.load_into_score(score_state, saved.get("score_state", {}))
+	SaveLoadUtilsScript.load_into_audio(audio_controller, saved.get("settings", {}))
+	has_save = false
+	_refresh()
+	game.message = "Game loaded from save."
+
+
+func _delete_save_and_start() -> void:
+	SaveLoadUtilsScript.delete_save()
+	has_save = false
+	_start_new_round()
 
 
 func _refresh() -> void:
@@ -706,12 +862,12 @@ func _refresh() -> void:
 
 func _refresh_seat(panel: Panel, seat: int) -> void:
 	var box := panel.get_node("Content")
-	box.get_node("Name").text = DoudizhuGame.SEAT_NAMES[seat]
-	box.get_node("Role").text = "Role: %s" % game.roles[seat]
-	box.get_node("Count").text = "Cards: %d" % game.hands[seat].size()
-	box.get_node("Turn").text = "TURN" if game.current_seat == seat and game.phase == "play" else ""
-	box.get_node("Recent").text = "Recent: %s" % (game.recent_plays[seat] if game.recent_plays[seat] != "" else "-")
-	box.get_node("Reason").text = "Why: %s" % (game.ai_reasons[seat] if game.ai_reasons[seat] != "" else "-")
+	box.get_node("Name").text = loc.string("seat.player") if seat == DoudizhuGame.HUMAN else DoudizhuGame.SEAT_NAMES[seat]
+	box.get_node("Role").text = "%s: %s" % [loc.string("label.role"), game.roles[seat]]
+	box.get_node("Count").text = "%s: %d" % [loc.string("label.count"), game.hands[seat].size()]
+	box.get_node("Turn").text = loc.string("label.turn") if game.current_seat == seat and game.phase == "play" else ""
+	box.get_node("Recent").text = "%s: %s" % [loc.string("label.recent"), (game.recent_plays[seat] if game.recent_plays[seat] != "" else "-")]
+	box.get_node("Reason").text = "%s: %s" % [loc.string("label.reason"), (game.ai_reasons[seat] if game.ai_reasons[seat] != "" else "-")]
 	var active := game.current_seat == seat and game.phase == "play"
 	panel.add_theme_stylebox_override("panel", _panel_style(active))
 
@@ -728,9 +884,9 @@ func _refresh_bottom_cards() -> void:
 func _refresh_trick() -> void:
 	_clear_children(trick_box)
 	if game.active_trick.is_empty():
-		trick_owner_label.text = "Current trick: none"
+		trick_owner_label.text = loc.string("label.current_trick_none")
 		return
-	trick_owner_label.text = "Current trick: %s" % DoudizhuGame.SEAT_NAMES[int(game.active_trick.owner_seat)]
+	trick_owner_label.text = "%s: %s" % [loc.string("label.recent"), DoudizhuGame.SEAT_NAMES[int(game.active_trick.owner_seat)]]
 	for card in game.active_trick.cards:
 		trick_box.add_child(_card_button(card, false, false))
 
@@ -752,8 +908,10 @@ func _refresh_hand() -> void:
 		hand_area.add_child(button)
 		if selected:
 			button.position = target_position + Vector2(0.0, 10.0 * layout_scale)
-			var tween := create_tween()
-			tween.tween_property(button, "position", target_position, 0.08)
+			var bounce_tween: Tween = animation_system.play_bounce_animation(button, 6.0 * layout_scale, 0.18)
+			bounce_tween.finished.connect(func() -> void:
+				button.position = target_position + Vector2(0.0, 10.0 * layout_scale)
+			)
 
 
 func _refresh_actions() -> void:
@@ -778,8 +936,9 @@ func _refresh_settings_ui() -> void:
 	sfx_toggle_button.text = "SFX: %s" % ("On" if audio_controller.sfx_enabled else "Off")
 	music_toggle_button.text = "Music: %s" % ("On" if audio_controller.music_enabled else "Off")
 	volume_button.text = "Volume: %s" % audio_controller.volume_preset.capitalize()
+	_update_ai_difficulty_button()
 	var focus_mode := Control.FOCUS_ALL if settings_visible else Control.FOCUS_NONE
-	for button in [sfx_toggle_button, music_toggle_button, volume_button, settings_close_button]:
+	for button in [sfx_toggle_button, music_toggle_button, volume_button, ai_difficulty_button, settings_close_button]:
 		button.focus_mode = focus_mode
 
 
@@ -792,11 +951,20 @@ func _apply_result_score_once() -> Dictionary:
 	if game.phase != "result":
 		return score_state.debug_state()
 	var summary := game.result_summary()
-	return score_state.apply_hand_result(
+	var result := score_state.apply_hand_result(
 		String(summary.winner_side),
 		int(summary.landlord_seat),
 		String(summary.result_key)
 	)
+	if result.applied and not score_state.match_complete:
+		_auto_save_after_result()
+	return result
+
+
+func _auto_save_after_result() -> void:
+	var ok := SaveLoadUtilsScript.save_game(game, score_state, audio_controller)
+	if ok:
+		has_save = true
 
 
 func _result_summary_text() -> String:
@@ -832,19 +1000,48 @@ func _card_button(card: Dictionary, interactive: bool, selected: bool) -> Button
 	button.focus_mode = Control.FOCUS_NONE
 	if card.is_empty():
 		button.name = "HiddenCard"
-		button.text = "?"
-		button.disabled = true
+		button.tooltip_text = ""
+		var back_tex := CardAssetsScript.get_card_back()
+		if back_tex != null:
+			button.text = ""
+			var icon := TextureRect.new()
+			icon.name = "CardBackTexture"
+			icon.texture = back_tex
+			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon.size = card_size
+			button.add_child(icon)
+			button.disabled = true
+		else:
+			button.text = "?"
+			button.disabled = true
+			button.modulate = Color(0.5, 0.5, 0.5)
 	else:
 		button.name = "Card_%d" % int(card.id)
-		button.text = String(card.label)
-		button.set_meta("card_id", int(card.id))
+		var card_id := int(card.id)
+		button.set_meta("card_id", card_id)
+		button.tooltip_text = String(card.label)
+		var tex := CardAssetsScript.get_card_image(card_id)
+		if tex != null:
+			button.text = ""
+			var card_icon := TextureRect.new()
+			card_icon.name = "CardTexture"
+			card_icon.texture = tex
+			card_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+			card_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			card_icon.size = card_size
+			button.add_child(card_icon)
+		else:
+			button.text = String(card.label)
+			button.modulate = SELECTED_CARD_COLOR if selected else _card_color(card)
+			button.add_theme_color_override("font_color", _card_text_color(card))
+			button.add_theme_font_size_override("font_size", int(16.0 * layout_scale))
 		button.disabled = not interactive
-		button.modulate = SELECTED_CARD_COLOR if selected else _card_color(card)
+		if button.text == "":
+			button.modulate = SELECTED_CARD_COLOR if selected else Color.WHITE
 		button.add_theme_stylebox_override("normal", _card_style(card, selected))
 		button.add_theme_stylebox_override("hover", _card_style(card, true))
 		button.add_theme_stylebox_override("pressed", _card_style(card, true))
-		button.add_theme_color_override("font_color", _card_text_color(card))
-		button.add_theme_font_size_override("font_size", int(16.0 * layout_scale))
 		if interactive:
 			button.pressed.connect(func() -> void:
 				game.toggle_selection(int(card.id))
@@ -935,6 +1132,28 @@ func _clear_children(node: Node) -> void:
 		child.queue_free()
 
 
+func _on_save_game_pressed() -> void:
+	var ok := SaveLoadUtilsScript.save_game(game, score_state, audio_controller)
+	if ok:
+		game.message = "Game saved successfully."
+		audio_controller.play_event("select")
+	else:
+		game.message = "Failed to save game."
+		audio_controller.play_event("invalid")
+	_refresh()
+
+
+func _on_load_game_pressed() -> void:
+	if not SaveLoadUtilsScript.save_exists():
+		game.message = "No save file found."
+		audio_controller.play_event("invalid")
+		_refresh()
+		return
+	_load_saved_game()
+	_on_settings_close_pressed()
+	_refresh()
+
+
 func _on_call_pressed() -> void:
 	game.resolve_landlord(true)
 	audio_controller.play_event("landlord")
@@ -953,6 +1172,7 @@ func _on_play_pressed() -> void:
 	var played := game.play_selected()
 	if played:
 		audio_controller.play_event("play")
+		_animate_cards_to_table()
 		_play_result_audio_if_needed()
 	else:
 		audio_controller.play_event("invalid")
@@ -1050,6 +1270,18 @@ func _on_volume_pressed() -> void:
 		next_preset = "loud"
 	audio_controller.set_volume_preset(next_preset)
 	_refresh()
+
+
+func _on_ai_difficulty_pressed() -> void:
+	var current := AIUtilsScript.get_difficulty()
+	var next := (current + 1) % 2
+	AIUtilsScript.save_difficulty(next)
+	_update_ai_difficulty_button()
+
+
+func _update_ai_difficulty_button() -> void:
+	var current := AIUtilsScript.get_difficulty()
+	ai_difficulty_button.text = "AI Difficulty: %s" % ("Normal" if current == 0 else "Hard")
 
 
 func _on_reset_stats_pressed() -> void:
@@ -1284,3 +1516,54 @@ func debug_visible_hand_card_rects() -> Array:
 		if child is Control and child.name.begins_with("Card_") and child.is_visible_in_tree():
 			rects.append(child.get_global_rect())
 	return rects
+
+
+func _animate_cards_to_table() -> void:
+	var selected_cards: Array = game.selected_cards.duplicate()
+	if selected_cards.is_empty():
+		return
+	var selected_buttons: Array[Button] = []
+	for child in hand_area.get_children():
+		if child is Button and selected_cards.has(child.get_meta("card_id", -1)):
+			selected_buttons.append(child)
+	var table_area := trick_box
+	var start_positions: Array[Vector2] = []
+	for btn in selected_buttons:
+		start_positions.append(btn.position)
+	var total_width: float = 0.0
+	if selected_buttons.size() > 1:
+		var avg_card_width: float = CARD_SIZE.x * layout_scale
+		var avg_gap: float = 6.0 * layout_scale
+		total_width = selected_buttons.size() * avg_card_width + (selected_buttons.size() - 1.0) * avg_gap
+	var start_x: float = table_area.size.x * 0.5 - total_width * 0.5
+	for i in selected_buttons.size():
+		var btn: Button = selected_buttons[i]
+		var target := Vector2(start_x + i * (CARD_SIZE.x * layout_scale + 6.0 * layout_scale), 0.0)
+		var duration := 0.2 + 0.2 * (i as float) / maxf(selected_buttons.size(), 1)
+		animation_system.play_flight_animation(btn, target, clampf(duration, 0.2, 0.4))
+
+
+func simulate_select_card(card_index: int) -> void:
+	var cards: Array = game.hands[DoudizhuGame.HUMAN]
+	if card_index >= 0 and card_index < cards.size():
+		var card_id := int(cards[card_index].id)
+		game.toggle_selection(card_id)
+		_refresh()
+
+
+func simulate_play_cards(card_indices: Array[int]) -> void:
+	for idx in card_indices:
+		var cards: Array = game.hands[DoudizhuGame.HUMAN]
+		if idx >= 0 and idx < cards.size():
+			var card_id := int(cards[idx].id)
+			if not game.selected_cards.has(card_id):
+				game.toggle_selection(card_id)
+	_refresh()
+	var played := game.play_selected()
+	if played:
+		_animate_cards_to_table()
+		_refresh()
+
+
+func get_animation_progress() -> Dictionary:
+	return animation_system.get_animation_progress()

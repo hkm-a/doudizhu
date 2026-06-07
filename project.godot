@@ -20,7 +20,7 @@ config/features=PackedStringArray("4.6")
 
 [autoload]
 
-AutomationServer="*res://addons/godot_e2e/automation_server.gd"
+AutomationServer="*uid://xefj2bc8qx2x"
 ECS="*uid://dfqwl5njvdnmq"
 
 [display]

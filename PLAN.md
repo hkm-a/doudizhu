@@ -121,11 +121,11 @@ The player launches the game, optionally loads a saved hand, plays through a ful
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| R1 | Card animation system (flight + selection bounce) | pending | |
-| R2 | Bomb/joker bomb particle effects | pending | |
-| M01 | AI difficulty selector in settings | pending | |
-| M02 | Hard AI: card memory, farmer coordination, bomb management | pending | |
-| M03 | Localization: Chinese/English UI strings | pending | |
-| M04 | Save/load: persist hand state, scores, settings | pending | |
-| M05 | AI-generated card assets via ComfyUI | pending | |
-| M06 | Audio rework: retooled SFX | pending | |
+| R1 | Card animation system (flight + selection bounce) | completed | Already implemented in v0.7.0 |
+| R2 | Bomb/joker bomb particle effects | completed | Worker implemented |
+| M01 | AI difficulty selector in settings | completed | Combined with M02 |
+| M02 | Hard AI: card memory, farmer coordination, bomb management | completed | Combined with M01 |
+| M03 | Localization: Chinese/English UI strings | completed | Worker implemented |
+| M04 | Save/load: persist hand state, scores, settings | completed | Worker implemented |
+| M05 | AI-generated card assets via ComfyUI | completed | Worker implemented + fixed import issues |
+| M06 | Audio rework: retooled SFX | skipped | Audio SFX files not available — procedural audio remains |

@@ -10,6 +10,8 @@
 
 - v0.7.0+: ComfyUI backend added to `tools/asset_gen.py`. Use `--model comfyui:default` (or `comfyui:default` in `asset_image_model`) to generate images via local ComfyUI at `127.0.0.1:8188`. Configure via env vars: `COMFYUI_HOST`, `COMFYUI_PORT`, `COMFYUI_WORKFLOW`, `COMFYUI_NEGATIVE_PROMPT`, `COMFYUI_TIMEOUT`. Default workflow is `tools/comfyui/default_txt2img.json`.
 
+- v0.8.0 M5: Card assets use `CardAssets` static utility — preloads all 56 card images + back + table bg into memory at startup. Missing files return null and fall back to procedural rendering (`.label` text, `ColorRect` background). Card ID mapping: `rank_index*4 + suit_index` where ranks=3-15, suits=[S,H,C,D]; id=52=red_joker, id=53=black_joker. Two assets missing: `card_k_clubs.png`, `table_bg.png` — handled gracefully.
+
 - v0.6.0 scoring is owned by `ScoreState`; apply result scoring through stable `DoudizhuGame.result_key` values so UI refreshes cannot double-count a hand. New Hand clears only last delta/card state, while New Match clears cumulative totals and applied-result guards.
 - v0.6.0 target-score completion is based on positive score reaching the target, not losing seats reaching a negative absolute value.
 - v0.6.0 result banner uses a wider compact panel with one-row result actions; layout tests validate score summary plus three controls at supported desktop sizes.
@@ -18,6 +20,13 @@
 - No bitmap image, animation, or audio assets are required for v0.1.0.
 - The first playable unit supports singles, pairs, triples, bombs, and joker bombs; v0.2.0 expands this with three attachments, chains, and airplane without wings.
 - E2E coverage is split by mechanic ID plus one full playable-loop test.
+
+## M04 - Save/Load Game State
+
+- SaveLoadUtils is a static class — `save_game(game, score_state, audio)` takes components directly, not `self`.
+- GDScript typed arrays (`Array[int]`, `Array[String]`) reject plain `Array` assignment; must construct with explicit type annotation like `var arr: Array[int] = [int(a), int(b)]`.
+- `JSON.stringify` in Godot 4 converts integers to floats; comparisons may fail if checking `1` vs `1.0`.
+- `LocalizationUtils` lacks `class_name` — must be preloaded to avoid headless parse errors.
 - v0.2.0 keeps the same procedural UI and expands pure card rules plus Hint/AI candidate search.
 - v0.2.0 adds a deterministic debug fixture for e2e coverage of expanded straight follow/play behavior.
 - v0.3.0 keeps procedural UI assets and improves table spacing, selected-card highlight/lift, active/result clarity, and responsive desktop layout without changing Doudizhu rules.
