@@ -1,35 +1,20 @@
 {
   "status": "tag_sealed",
-  "tag": "v0.6.0",
-  "completed_at": "2026-06-06T12:30:15Z",
-  "archive_path": "docs/tags/v0.6.0/",
+  "tag": "v0.7.0",
+  "completed_at": "2026-06-07T07:00:00Z",
+  "archive_path": "docs/tags/v0.7.0/",
   "git_tagged": true,
   "summary": {
-    "tag_mechanics": [
-      "v0.6.0-M1",
-      "v0.6.0-M2",
-      "v0.6.0-M3",
-      "v0.6.0-M4"
-    ],
-    "systems_added": [
-      "match score tracking",
-      "score summary/result UI",
-      "new hand/new match reset flow"
-    ],
+    "tag_mechanics": ["v0.7.0-M1", "v0.7.0-M2", "v0.7.0-M3", "v0.7.0-M4"],
+    "systems_added": ["tutorial_overlay", "stats_panel", "modal_blocker_tutorial"],
     "components_added": [],
-    "test_count": {
-      "unit": 5,
-      "e2e_tag": 4,
-      "e2e_regression": 21
-    }
+    "test_count": {"unit": 6, "e2e_tag": 14, "e2e_regression": 28}
   },
   "evidence": {
-    "archive_path": "docs/tags/v0.6.0/evidence/",
-    "e2e_files": 57,
+    "archive_path": "docs/tags/v0.7.0/evidence/",
+    "e2e_files": 66,
     "screenshots": 14
   },
-  "doc_updates": [
-    "docs/tags/v0.6.0/CHANGELOG.md"
-  ],
-  "known_limitations": []
+  "doc_updates": ["tools/seal_tag.py — fix encoding for Windows subprocess"],
+  "known_limitations": ["Reference screenshots for scene_main are missing — regenerate via /gm-asset step 3"]
 }

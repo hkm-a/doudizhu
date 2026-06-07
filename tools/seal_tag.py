@@ -206,7 +206,7 @@ def _list_tags(project_path: Path) -> list[str]:
     try:
         result = subprocess.run(
             ["git", "-C", str(project_path), "tag", "--sort=v:refname"],
-            capture_output=True, text=True, check=True,
+            capture_output=True, text=True, check=True, encoding="utf-8",
         )
     except (subprocess.CalledProcessError, FileNotFoundError):
         return []
@@ -236,7 +236,7 @@ def _git_log_since(project_path: Path, previous_tag: str | None, upper: str = "H
     try:
         result = subprocess.run(
             ["git", "-C", str(project_path), "log", "--oneline", "--no-decorate", rev_range],
-            capture_output=True, text=True, check=True,
+            capture_output=True, text=True, check=True, encoding="utf-8",
         )
     except (subprocess.CalledProcessError, FileNotFoundError):
         return ""
