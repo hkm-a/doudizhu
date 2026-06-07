@@ -1,37 +1,39 @@
-# Style: v0.7.0 Guided Onboarding And Accessibility
+# Style: v0.8.0 Animation, AI, Localization & Save
 
 ## Visual Direction
 
-v0.7.0 should feel like a polished teaching layer over the existing table, not a new visual theme. Use the established procedural panels, button styles, colors, and spacing from the shipped prototype.
+v0.8.0 introduces AI-generated card art and smooth card animations over the existing polished procedural UI. The table should feel like a premium desktop card game with visual feedback for every action.
 
-## Tutorial Overlay
+## Card Art Style
 
-- Use a single high-contrast panel with title, step count, concise body text, and Next/Back/Close buttons.
-- Keep each step short: one concept, one player action, one observable table area.
-- Avoid modal dead-ends; Close must always be visible and keyboard reachable.
-- Dim or frame content subtly if feasible, but do not require new bitmap art.
+- **Card faces:** AI-generated via ComfyUI (NetaYume model). Readable suit/rank indicators with decorative but unobtrusive backgrounds. Consistent style across all 54 cards.
+- **Card back:** Matching AI-generated design for AI hidden cards.
+- **Table background:** AI-generated green felt texture, subtle pattern, high contrast with card faces.
+- **Color palette:** Green table surface, light card faces with AI-generated decorative elements, red/black card suits, amber highlights for selected cards.
 
-## Coach Text
+## Card Animation Style
 
-- Write in direct action language: “Select a combination to lead,” “Beat the active pair or Pass,” “Use Hint to find the cheapest legal response.”
-- Keep coach messages to one or two short clauses so the status area remains readable.
-- Prefer accurate minimal guidance over long rules explanations; deeper rules stay in Help/Tutorial.
+- **Flight animation:** 200-400ms smooth linear or ease-out motion from hand to table. Cards maintain rotation and scale during flight.
+- **Selection bounce:** Subtle scale up (1.05x) and vertical offset when selecting cards in hand. Returns to normal on deselect.
+- **Bomb explosion:** Particle burst overlay on trick area. Red color for joker bombs, standard color for regular bombs.
+- **Visual feedback:** Every action (select, play, pass, invalid, result, save/load) has matching SFX and visual cue.
 
-## Keyboard And Accessibility
+## Localization Style
 
-- Include readable shortcut hints where space allows, such as `H` for Hint or `T` for Tutorial.
-- Maintain button focus visibility and avoid placing focus on hidden controls.
-- Preserve color contrast introduced in presentation tags.
-- Do not rely only on color to communicate selected cards, active turn, or disabled actions.
+- **Chinese (Simplified):** All UI strings in Simplified Chinese. Font fallback for Chinese characters.
+- **English:** All UI strings in English. Same layout, text length considerations.
+- **Consistency:** Identical layout across languages. No overflow or overlap due to text length differences.
+- **Settings panel:** Language toggle with clear language names (中文/English).
 
-## Stats Presentation
+## Settings Panel
 
-- Use compact labels: Hands, Matches, Player Wins, Landlord Wins, Farmer Wins, Best Score.
-- Show reset as an explicit action with confirmation text or clear status feedback.
-- Keep stats visually secondary to the active hand and score summary.
+- **AI difficulty selector:** Two options — Normal (basic strategy) and Hard (card memory, farmer coordination).
+- **Language toggle:** Chinese/English selector.
+- **Save/load buttons:** Clear labels, confirmation messages on save/load.
 
 ## Asset Policy
 
-- Use procedural UI only for this tag.
-- Do not introduce decorative icons unless the asset pipeline is explicitly updated.
-- If generated assets are requested later, add them to `ASSETS.md` with tag `v0.7.0` before creation.
+- AI-generated assets replace procedural card rendering.
+- SFX files retooled to match new visual polish.
+- Procedural UI elements (buttons, panels, score summary) remain procedural for sharpness.
+

@@ -1,22 +1,24 @@
-# Plan: v0.7.0 Guided Onboarding And Accessibility
+# Plan: v0.8.0 Animation, AI, Localization & Save
 
-## Tag Goal
+**Tag:** v0.8.0
 
-Make the shipped Doudizhu prototype easier to learn and safer to play by adding an optional guided tutorial overlay, contextual next-action prompts, keyboard-friendly controls, and lightweight persistent match statistics without changing card rules.
+## Game Description
 
-## Player Experience
-
-A new player can open Tutorial from the table, step through landlord selection, card selection, legal play, pass, hint, scoring, and match progression explanations, then continue playing normally. Returning players can dismiss guidance, use keyboard shortcuts for core controls, and see compact lifetime stats for completed hands and matches.
+A polished single-player Doudizhu prototype with smooth card animations, improved AI opponents, multilingual UI, and persistent game state. The player experiences a full hand with visual feedback, smarter AI, and the ability to save and resume.
 
 ## Tag Mechanics
 
-- [v0.7.0-M1] Guided tutorial overlay: a non-blocking, step-based overlay explains the current phase, table areas, supported combinations, scoring, New Hand, and New Match controls with Next/Back/Close actions.
-- [v0.7.0-M2] Contextual action coach: during play, concise status guidance highlights the player's current legal options, including when to call landlord, select cards, beat the active trick, pass, or use Hint.
-- [v0.7.0-M3] Keyboard accessibility: core buttons can be reached and activated by keyboard shortcuts, selected-card actions remain clear, and help/tutorial controls expose readable shortcut labels.
-- [v0.7.0-M4] Persistent session statistics: completed hands and matches update lightweight stats such as hands played, matches completed, player-side wins, landlord wins, farmer wins, and best cumulative score; stats can be viewed and reset from the UI.
+- [v0.8.0-M1] Card animations: 200-400ms flight animation when playing cards, bounce/elevation effect on card selection in player hand.
+- [v0.8.0-M2] Particle effects: bomb explosion particles, red explosion effect for joker bombs on the table.
+- [v0.8.0-M3] Improved AI: two difficulty levels (normal plays basic strategy, hard uses card memory and farmer coordination).
+- [v0.8.0-M4] Localization: full Chinese and English UI support with auto-detect language and manual toggle in settings.
+- [v0.8.0-M5] Save/load: persist current hand state (hands, trick, phase, scores, statistics) to JSON file; restore on reload.
+- [v0.8.0-M6] Asset replacement: AI-generated card faces, card back, and table background images via ComfyUI.
+- [v0.8.0-M7] Audio rework: retooled SFX matching new visual polish (card select, play, pass, invalid, result, bomb, save/load).
 
 ## Inherited Mechanics
 
+- [v0.7.0-M1..M4] Tutorial overlay, contextual coach, keyboard shortcuts, persistent session statistics remain intact.
 - [v0.6.0-M1..M4] Hand scoring, cumulative match score, match completion, and score summary UI remain intact.
 - [v0.5.0-M1..M4] Audio feedback, optional music, settings controls, restart/quit flow, and final consistency remain intact.
 - [v0.4.0-M1..M4] Improved hints, AI reasons, hand summary, and rule/help affordance remain visible and stable.
@@ -26,61 +28,104 @@ A new player can open Tutorial from the table, step through landlord selection, 
 
 ## Playable Unit
 
-The player launches Main, opens Tutorial, follows several guided steps, plays a hand with contextual guidance available, completes scoring/match progression, sees persistent stats update, and can reset stats or start a new match.
+The player launches the game, optionally loads a saved hand, plays through a full hand with smooth card animations and particle effects for bombs, plays against improved AI at chosen difficulty, and sees the result in their preferred language. The player can save progress mid-session and reload later.
 
-## Acceptance Matrix
-
-| Mechanic | Player Scenario | Expected Result | Observable Evidence | Verify |
-|----------|-----------------|-----------------|---------------------|--------|
-| [v0.7.0-M1] | Open Tutorial from the table and step through it | Overlay advances, retreats, closes, and does not corrupt game state | Tutorial title/body/step controls are visible and stable | e2e tutorial navigation + ui-review |
-| [v0.7.0-M2] | Reach landlord, play, follow, and result phases | Guidance text matches the current phase and available player actions | Coach/status text changes with phase and active trick | gdUnit phase-guide tests + e2e smoke |
-| [v0.7.0-M3] | Use keyboard shortcuts for help/tutorial/hint/pass/play where valid | Shortcuts activate the same handlers as buttons and show readable labels | UI labels and action results match button behavior | e2e keyboard interactions + input mapping check |
-| [v0.7.0-M4] | Finish hands/matches, restart, and reset stats | Stats persist across New Hand/New Match in the running app and reset only on Reset Stats | Stats panel values update predictably | gdUnit stats tests + e2e stats flow |
+| Mechanic | Player operation / content | Expected effect | Required visible content | Evidence |
+|----------|----------------------------|-----------------|--------------------------|----------|
+| [v0.8.0-M1] | Click Play button to play cards; click cards to select | Cards fly from hand to table with 200-400ms animation; selected cards bounce/elevate | Animated card flight, selected card elevation | E2E animation timing assertion + screenshot |
+| [v0.8.0-M2] | Play a bomb or joker bomb | Explosion particles appear on table; red explosion for joker bomb | Particle effect overlay on trick area | Screenshot with particles + visual QA |
+| [v0.8.0-M3] | Start a hand; choose normal or hard AI difficulty in settings | AI plays with appropriate strategy level; hard AI coordinates as farmers | Settings panel with difficulty selector; AI plays match difficulty | E2E difficulty toggle + gameplay observation |
+| [v0.8.0-M4] | Change language in settings panel | All UI strings update immediately to selected language | Settings panel shows language options; UI reflects change | E2E language toggle assertion |
+| [v0.8.0-M5] | Save game from settings; reload on next launch | Current hand state saved to JSON; restored on reload | Save confirmation message; continue prompt on launch | E2E save/load flow + file content check |
+| [v0.8.0-M6] | Play with AI-generated card art | Cards display generated images instead of procedural rendering | Card faces, card back, table background show art | Screenshot comparison + visual QA |
+| [v0.8.0-M7] | Play cards, select, pass, see result | SFX plays matching the action (select tick, play whoosh, bomb crack, result sting) | Audio feedback on every action | E2E audio state check + manual verification |
 
 ## Risk Tasks
 
-### 1. Tutorial overlay must not block core controls unexpectedly
-- **Why isolated:** The game already has help/settings/result panels; another overlay can cause focus and z-order regressions.
-- **Approach:** Use a single tutorial panel with explicit Close and predictable keyboard focus; never intercept gameplay unless visible.
-- **Verify:** E2E opens/closes tutorial in landlord, play, and result phases, then continues the game.
+### 1. Card Animation System
+- **Why isolated:** Requires tween/animation timing, transform tracking, and event coordination without blocking the game loop
+- **Approach:** Use AnimationPlayer for flight paths; card selection uses Control tween for bounce effect
+- **Systems:** AnimationSystem (manages card flight tweens, selection bounce)
+- **Components:** CardAnimationState (position, target, progress, selected)
+- **Verify:**
+  - Flight animation completes in 200-400ms range
+  - Card selection bounce is visible but doesn't block input
+  - Animation doesn't interfere with game state transitions
+  - No visual glitches during animation
 
-### 2. Guidance must reflect actual game state
-- **Why isolated:** Incorrect coaching is worse than no coaching and can desync from legal-play rules.
-- **Approach:** Generate coach text from phase, active player, initiative, active trick, selected cards, and score/match state instead of hard-coded scene assumptions.
-- **Verify:** Unit tests cover landlord, player initiative, must-beat, no-selection, legal selection, pass, result, and match-ended guidance.
-
-### 3. Stats must update once per completed hand
-- **Why isolated:** Result UI can refresh many times and New Hand/New Match reset boundaries differ.
-- **Approach:** Record stats only after the existing score-result seam confirms a newly applied hand result; guard with a result key or score hand count, not every UI projection.
-- **Verify:** Tests ensure repeated UI refresh does not double-count, persistence uses isolated test storage, and Reset Stats does not reset match score unless explicitly intended.
+### 2. AI Improvement (Card Memory + Coordination)
+- **Why isolated:** Card memory requires tracking played cards; farmer coordination needs decision logic changes
+- **Approach:** Hard AI maintains a set of seen cards; coordinates with farmer seat when not landlord; saves bombs for critical moments
+- **Systems:** ImprovedAISystem (card memory, farmer coordination, bomb management)
+- **Components:** CardMemory (set of seen cards), AIDifficulty (enum: normal/hard), FarmerCoordinationState
+- **Verify:**
+  - Hard AI avoids wasting bombs unnecessarily
+  - Farmer AI plays higher cards when landlord has initiative
+  - Normal AI still plays basic strategy
+  - Difficulty setting affects AI behavior consistently
 
 ## Main Build
 
-| Task | Status | Game Mechanic Function | Player-Facing Outcome | Affected Systems / Scenes / UI | Integration Point | Verify |
-|------|--------|------------------------|-----------------------|--------------------------------|-------------------|--------|
-| P01 | completed | Tutorial model/controller | Player can step through onboarding | `src/main.gd` (TUTORIAL_STEPS, tutorial_index, tutorial_visible) embedded via `_on_tutorial_*` and shortcut keys | Main table overlay controls | gdUnit + e2e |
-| P02 | completed | Tutorial UI panel | Tutorial is readable and dismissible | `src/main.gd` procedural Controls | Help/settings/table overlay stack | e2e + ui-review |
-| P03 | completed | Contextual coach text | Player receives phase-appropriate next-action guidance | `src/main.gd`, game/score helpers | Existing status/help projection | gdUnit + e2e |
-| P04 | completed | Keyboard shortcuts | Common actions are reachable without mouse | `src/main.gd` `_handle_shortcut` method | Existing button callbacks | input-mapper + e2e |
-| P05 | completed | Persistent stats state | Hands and matches update compact lifetime stats | `src/score_state.gd` (stats_* fields) | Newly applied score result | gdUnit |
-| P06 | completed | Stats UI/reset | Player can view and clear stats | `src/main.gd` procedural Controls (stats_panel, stats_reset_button) | Existing scoreboard/settings/help area | e2e + ui-review |
-| P07 | completed | Regression coverage | Rules, score, audio, layout, and prior tests remain stable | `test/test_main.gd` (19 tests), `test/` | Existing verification suites | gdUnit + e2e |
-| P08 | completed | Tutorial modal blocker | Tutorial overlay blocks interaction with underlying game elements | `src/main.gd` — add `tutorial_blocker` ColorRect | Tutorial panel | e2e + ui-review |
-| P09 | completed | E2E tests for v0.7.0 | Tutorial navigation, keyboard shortcuts, and stats flows tested end-to-end | `e2e/` (3 test files, 14 test functions) | Playable unit path | e2e smoke |
+### Build Tasks
 
-## Systems & Components
+| Task | Game Mechanic Function | Player-Facing Outcome | Affected Systems / Scenes / UI | Integration Point | Verify |
+|------|------------------------|-----------------------|--------------------------------|-------------------|--------|
+| R1 | Card animation system (flight + selection bounce) | Smooth card animations during play | AnimationSystem, CardAnimationState, Main table | Connects to Play button handler and card selection | Animation timing + visual check |
+| R2 | Bomb/joker bomb particle effects | Visual explosion feedback on bombs | ParticleSystem, BombEffectComponent, Trick area | Triggers when bomb play is validated | Screenshot + visual QA |
+| M01 | AI difficulty selector in settings | Player chooses normal or hard AI | Settings panel, ImprovedAISystem, AIDifficulty | Integrated into settings save/load flow | E2E toggle + gameplay observation |
+| M02 | Hard AI: card memory, farmer coordination, bomb management | Smarter AI plays more strategically | ImprovedAISystem, CardMemory, AIDifficulty | Replaces basic AI decision in doudizhu_game.gd | E2E difficulty-specific gameplay |
+| M03 | Localization: Chinese/English UI strings | All UI displays in selected language | i18n system, external string files, settings panel | Loads language file at runtime | E2E language toggle assertion |
+| M04 | Save/load: persist hand state, scores, settings | Player can save and resume game | SaveLoadSystem, JSON serializer, settings panel | Auto-save after result; manual save from settings | E2E save/load flow + file check |
+| M05 | AI-generated card assets via ComfyUI | Cards display generated art | Asset pipeline, card texture replacement | Replaces procedural card rendering | Screenshot + visual QA |
+| M06 | Audio rework: retooled SFX | Sound effects match new visual polish | Audio system, SFX files, volume controls | Connected to all card/actions | Manual verification + E2E audio check |
+
+### Systems & Components
 
 | System | Components (reads) | Components (writes) | Purpose |
 |--------|--------------------|---------------------|---------|
-| TutorialState / TutorialController | current step, game phase, visibility | tutorial index, visible flag | Keep onboarding navigation deterministic and testable |
-| CoachTextBuilder | game phase, selected cards, active trick, score/match state | guide string | Present accurate contextual next-action guidance |
-| StatsState | hand result, match result, player side, scores | lifetime counters, best score | Track lightweight session statistics with reset boundary |
-| Main UI projection | game state, score state, tutorial/stats state | overlay, shortcut labels, stats panel | Present onboarding/accessibility without changing rules |
+| AnimationSystem | CardAnimationState | CardAnimationState | Manage card flight tweens and selection bounce |
+| ParticleSystem | BombEffectComponent | — | Trigger bomb/joker bomb explosion effects |
+| ImprovedAISystem | CardMemory, AIDifficulty, FarmerCoordinationState | AIDifficulty | Enhanced AI decision-making with memory and coordination |
+| SaveLoadSystem | Game state, Settings | Save data (JSON) | Persist and restore hand state, scores, statistics, settings |
+| LocalizationSystem | Current language, String resources | Current language | Externalize UI strings for Chinese/English |
 
-## Assets Needed
+### Assets Needed
 
-- No bitmap image assets are required for v0.7.0.
-- Tutorial, shortcut, and stats affordances use existing procedural UI panels/buttons/text.
-- If iconography becomes necessary, log it as missing in `ASSETS.md`; do not invent asset paths.
+- AI-generated card face set: 54 cards (including jokers), generated via ComfyUI with NetaYume model
+- AI-generated card back: single image for AI hidden cards
+- AI-generated table background: green felt texture
+- SFX files: retooled card select, play, pass, invalid, bomb, joker bomb, result, save/load sounds
 
+### Runtime Asset Assignments
 
+| Task / Mechanic | Visible Content | Asset Row / Path | Runtime Size | Verification |
+|-----------------|-----------------|------------------|--------------|--------------|
+| R1/M01 / [v0.8.0-M1] | Card flight animation, selection bounce | procedural animation (CSS tweens) | 200-400ms animation time | E2E timing assertion |
+| R2 / [v0.8.0-M2] | Bomb explosion, joker bomb red explosion | assets/img/bomb_explosion.png, assets/img/joker_bomb_explosion.png | 128x128 | Screenshot + visual QA |
+| M05 / [v0.8.0-M6] | Card faces, card back, table background | assets/img/card_*.png (54 cards), assets/img/card_back.png, assets/img/table_bg.png | 200x300 per card | Screenshot + visual QA |
+| M06 / [v0.8.0-M7] | SFX files | assets/audio/*.ogg | Variable | Manual verification |
+
+### Verify
+
+- Animation timing 200-400ms for card flight
+- Bomb particle effects visible and non-blocking
+- Hard AI uses card memory and coordinates as farmer
+- Language toggle updates all UI strings immediately
+- Save/load preserves game state accurately
+- AI-generated cards are readable and visually consistent
+- SFX plays correctly on all actions
+- No regressions in existing mechanics
+- E2E tests pass for all new features
+
+## Task Status
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| R1 | Card animation system (flight + selection bounce) | pending | |
+| R2 | Bomb/joker bomb particle effects | pending | |
+| M01 | AI difficulty selector in settings | pending | |
+| M02 | Hard AI: card memory, farmer coordination, bomb management | pending | |
+| M03 | Localization: Chinese/English UI strings | pending | |
+| M04 | Save/load: persist hand state, scores, settings | pending | |
+| M05 | AI-generated card assets via ComfyUI | pending | |
+| M06 | Audio rework: retooled SFX | pending | |

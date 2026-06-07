@@ -1,42 +1,75 @@
-# Structure: v0.7.0 Guided Onboarding And Accessibility
+# Structure: v0.8.0 Animation, AI, Localization & Save
 
-## Target Architecture
+**Tag:** v0.8.0
 
-v0.7.0 should keep the card-rule engine unchanged and layer tutorial, coach, keyboard, and stats behavior around existing game state projection. New state should be small, deterministic, and unit-testable.
+## Component Registry
 
-## Proposed File Responsibilities
+### v0.8.0 Components
 
-| Path | Responsibility | Notes |
-|------|----------------|-------|
-| `src/main.gd` | Wire tutorial/stats UI, input shortcuts, and coach text into the existing procedural table | Keep UI additions compact and avoid changing rule logic here |
-| `src/tutorial_state.gd` | Store tutorial steps, current index, navigation, and visibility | Prefer pure methods so gdUnit can verify step order and bounds |
-| `src/stats_state.gd` | Track lifetime/session stats, match stats, best score, persistence, and reset behavior | Guard against double-counting the same hand result; tests should inject memory/temp storage instead of real `user://` data |
-| `project.godot` | Add or validate input actions for tutorial/help/hint/play/pass/stat reset as needed | Use input-mapper conventions if modifying actions |
-| `test/` | Add focused gdUnit tests for tutorial bounds, coach text, and stats counting | Do not duplicate broad e2e flows in unit tests |
-| `e2e/` | Add tutorial, keyboard, and stats smoke flows | Keep existing full-loop test as the primary regression path |
+| Component | Field | Type | Default | Description |
+|-----------|-------|------|---------|-------------|
+| CardAnimationState | target_position | Vector2 | Vector2.ZERO | Target position for card flight animation |
+| CardAnimationState | progress | float | 0.0 | Animation progress (0.0 to 1.0) |
+| CardAnimationState | animation_type | String | "idle" | Type: "flight" or "bounce" |
+| CardAnimationState | duration | float | 0.3 | Animation duration in seconds |
+| BombEffectState | effect_type | String | "" | "bomb" or "joker_bomb" |
+| BombEffectState | position | Vector2 | Vector2.ZERO | Explosion center position |
+| BombEffectState | active | bool | false | Whether explosion is playing |
+| AIDifficulty | level | int | 1 | 0=normal, 1=hard |
+| AIDifficulty | card_memory_active | bool | false | Whether AI tracks seen cards |
+| CardMemory | seen_cards | Array | [] | List of cards already played |
+| FarmerCoordination | role | int | 0 | 0=landlord, 1=farmer-left, 2=farmer-right |
+| SaveState | hands | Dictionary | {} | Player/AI hand card IDs |
+| SaveState | trick | Array | [] | Current trick cards |
+| SaveState | phase | String | "" | Current game phase |
+| SaveState | scores | Dictionary | {} | Cumulative scores |
+| SaveState | statistics | Dictionary | {} | Session statistics |
+| SaveState | settings | Dictionary | {} | Audio, language settings |
+| Localization | current_language | String | "zh" | Current UI language |
 
-## State Boundaries
+## System Schedule
 
-| State | Preserved Across New Hand | Preserved Across New Match | Reset Control |
-|-------|---------------------------|----------------------------|---------------|
-| Current card hand | No | No | New Hand / New Match |
-| Match score | Yes | No | New Match |
-| Tutorial current step | Yes, unless closed | Yes, unless closed | Close Tutorial |
-| Lifetime stats | Yes | Yes | Reset Stats |
-| Audio/settings preferences | Yes | Yes | Existing settings controls |
+### Phase: Game Logic
 
-## Integration Notes
+| Order | System | Reads | Writes | Purpose |
+|-------|--------|-------|--------|---------|
+| 1 | ImprovedAISystem | CardMemory, AIDifficulty, FarmerCoordinationState | Game phase decisions | Enhanced AI with memory and coordination |
 
-- Tutorial should read from current game phase for captions but should not mutate game state except its own visibility/index.
-- Coach text should be generated from existing phase/action data and remain short enough to fit the current status area.
-- Stats should be updated only when the score-result seam reports a newly applied hand result, not from every UI redraw.
-- Keyboard shortcuts should call the same functions as visible buttons so mouse and keyboard behavior cannot diverge.
-- UI changes should preserve readable desktop layouts at 1280x720, 1366x768, and 1600x900.
+### Phase: Animation
 
-## Verification Focus
+| Order | System | Reads | Writes | Purpose |
+|-------|--------|-------|--------|---------|
+| 10 | AnimationSystem | CardAnimationState | Card positions, scales | Card flight and selection bounce |
+| 11 | ParticleSystem | BombEffectState | Particle effects | Bomb/joker bomb explosions |
 
-- Tutorial open/next/back/close works from landlord, play, result, and match-ended phases.
-- Coach text changes when the player has initiative versus when they must beat an active trick.
-- Stats count each hand once, ignore duplicate result keys, and reset only through Reset Stats.
-- Keyboard shortcuts match button behavior without activating hidden/invalid actions.
+### Phase: Save/Load
 
+| Order | System | Reads | Writes | Purpose |
+|-------|--------|-------|--------|---------|
+| 20 | SaveLoadSystem | SaveState, Game state | JSON file | Persist and restore game state |
+
+## Scene Markers
+
+| Marker Type | Components | Notes |
+|-------------|------------|-------|
+| MainTableMarker | — | Procedural UI, no ECS needed |
+| SettingsPanelMarker | — | Procedural UI for settings |
+
+## Build Order
+
+1. Component definitions (CardAnimationState, BombEffectState, AIDifficulty, CardMemory, SaveState, Localization)
+2. AnimationSystem (card flight + selection bounce)
+3. ParticleSystem (bomb explosions)
+4. ImprovedAISystem (card memory, farmer coordination)
+5. SaveLoadSystem (JSON serialization)
+6. LocalizationSystem (external string files)
+7. ComfyUI asset generation pipeline
+8. Audio rework (SFX files)
+9. Integration wiring + gdUnit tests
+
+## Asset Hints
+
+- AI-generated card faces (54 cards + 2 jokers, 200x300px each)
+- AI-generated card back (200x300px)
+- AI-generated table background (1280x720px)
+- SFX files: card select, play, pass, invalid, bomb, joker bomb, result, save/load
