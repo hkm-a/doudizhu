@@ -66,6 +66,14 @@ The first tag prioritizes full state flow, legal comparison, turns, AI, and win/
 
 ### Additional Mechanics
 
+- Card animations: 200-400ms flight animation on play, bounce/elevation on selection.
+- Particle effects: bomb explosions, red explosion for joker bombs.
+- Audio rework: retooled SFX matching new visual polish.
+- Improved AI: two difficulty levels — normal plays basic strategy, hard uses card memory and farmer coordination.
+- Localization: Chinese and English, auto-detect with manual toggle.
+- Save/load: persist current hand state, scores, statistics, and settings.
+- Progress tracking: streaks, best score, session statistics.
+- Asset replacement: AI-generated card faces, card back, background via ComfyUI.
 - Expanded combinations: Three with attachments, straights, consecutive pairs, and airplane are deferred after the core loop.
 - Better AI: Later tags may search combinations more intelligently and avoid wasting strong cards.
 - Animation/audio polish: Deferred until the game is playable and testable.
@@ -135,20 +143,24 @@ Launch Main -> New hand auto-starts -> Landlord phase -> Play phase -> Result ->
 
 ## 8. Audio Direction
 
-Audio is optional for `v0.1.0`. Later tags may add:
+### SFX Rework (v0.8.0)
 
-| Scene/Context | Mood | Notes |
-|---------------|------|-------|
-| Gameplay table | Calm and light | Low-volume loop, should not distract from card reading |
-| Result | Short confirmation | Win/loss sting |
+Sound effects are retuned to match the new visual polish:
 
-Sound effects deferred after core gameplay:
+| Context | Mood | Notes |
+|---------|------|-------|
+| Card select | Soft tick, satisfying | Clear feedback, not sharp |
+| Play cards | Short card slap with whoosh | Matches animation speed (200-400ms) |
+| Pass | Subtle click | Quiet, unobtrusive |
+| Invalid play | Gentle warning buzz | Clear but not jarring |
+| Bomb | Explosion crack | Short burst |
+| Joker bomb | Red explosion | Louder, with rumble |
+| Round result | Short win/loss cue | Victory sting or defeat thud |
+| Save/load | Soft click | Positive confirmation sound |
 
-- Card select: soft tick
-- Play cards: short card slap
-- Pass: subtle click
-- Invalid play: gentle warning
-- Round result: short win/loss cue
+### Music
+
+Optional calm background music loop (preserved from v0.5.0).
 
 ## 9. Art Asset Requirements
 
@@ -156,14 +168,14 @@ Sound effects deferred after core gameplay:
 
 | Category | Asset | Description | Provided by User? |
 |----------|-------|-------------|-------------------|
-| Card UI | Playing card face set | 54 readable card faces, including jokers | No |
-| Card UI | Card back | Back used for AI hidden cards if needed | No |
-| UI | Buttons and panels | Clean rectangular game controls and table panels | No |
-| Background | Table surface | Simple green felt/table background | No |
+| Card UI | AI-generated card face set | 54 readable card faces via ComfyUI (NetaYume model), including jokers | No |
+| Card UI | AI-generated card back | Back used for AI hidden cards, generated via ComfyUI | No |
+| UI | AI-generated table background | Green felt/table background image, generated via ComfyUI | No |
+| UI | Buttons and panels | Clean rectangular game controls and table panels (procedural) | No |
 
 ### Asset Strategy
 
-For `v0.1.0`, cards may be rendered procedurally with Godot UI text, suit symbols, and simple rectangles. Dedicated bitmap card art is not required unless a later asset pass chooses to replace procedural card faces.
+Cards will be generated using ComfyUI with the NetaYume model. Each card face, card back, and background image will be produced as AI-generated art with emphasis on readability and visual polish. Button panels and table frame elements remain procedural for UI sharpness.
 
 ### Art Style Constraints
 
@@ -171,6 +183,7 @@ For `v0.1.0`, cards may be rendered procedurally with Godot UI text, suit symbol
 - Cards must be legible at desktop 1280x720.
 - UI text must fit Chinese or English labels without overlap.
 - Color cannot rely on one hue family only; red/black suits and amber/blue UI accents should break up the green table.
+- AI-generated assets must maintain consistent style across all 54 card faces.
 
 ## 10. Scope & Playable Units
 
@@ -184,14 +197,11 @@ For `v0.1.0`, cards may be rendered procedurally with Godot UI text, suit symbol
 | v0.4.0 AI and usability | Play against less naive AI and better support tools | Improved hint, better AI choice, basic difficulty tuning | Complete hand with more credible opponents |
 | v0.5.0 Audio and finish | Play a more finished desktop prototype | SFX, optional music, final UI consistency, settings | Complete hand with audiovisual polish |
 | v0.6.0 Scoring and match progression | Play several hands as a short match | Per-hand score delta, cumulative scores, match result, new hand/new match flow | Target score or hand-count match winner appears |
+| v0.8.0 Animation, AI, Localization & Save | Play a polished hand with smooth animations, smarter AI, multilingual UI, and persistent game state | Card animations, particle effects, improved AI, i18n, save/load | Complete hand with animations and saved state |
 
 ### Deferred
 
 - Multiplayer
-- Scorekeeping across multiple hands
-- Difficulty settings
-- Full animation/audio polish
-- Save/load
 - Mobile layout
 
 ### Content Volume
@@ -200,5 +210,46 @@ For `v0.1.0`, cards may be rendered procedurally with Godot UI text, suit symbol
 - **Players:** One human, two AI.
 - **Cards:** 54-card deck.
 - **Rules:** Simplified core subset in `v0.1.0`, full planned set in later tags.
+
+## 11. Localization (v0.8.0)
+
+- **Languages:** Chinese (Simplified), English.
+- **Scope:** All UI strings: button labels, status messages, tutorial text, settings panel, result banner.
+- **Auto-detect:** Use system locale on first launch; manual toggle in settings panel.
+- **Implementation:** External string files (CSV or JSON) per language, loaded at runtime.
+
+## 12. Save/Load (v0.8.0)
+
+### Save Data
+
+| Field | Description |
+|-------|-------------|
+| Current hand state | Player hands, AI hands (hidden), bottom cards reference, current trick, turn phase |
+| Scores | Per-hand scores, cumulative scores, match progress |
+| Statistics | Hands played, wins, landlord/farmer wins, best score |
+| Settings | Audio volume, language preference |
+
+### Save Flow
+
+- **Auto-save:** After each hand result, save current state.
+- **Manual save:** Player can explicitly save from settings menu.
+- **Load:** On game start, check for save file; offer to continue or start new hand.
+- **File format:** JSON for human readability and debuggability.
+
+## 13. Improved AI (v0.8.0)
+
+### Difficulty Levels
+
+| Level | Behavior |
+|-------|----------|
+| Normal | Plays smallest legal response, basic card awareness, no farmer coordination |
+| Hard | Card memory (tracks played cards), defensive play when ahead, farmer coordination when not landlord |
+
+### Hard AI Features
+
+- **Card memory:** Tracks which cards and combinations have been played.
+- **Defensive play:** When an AI seat is close to winning, plays conservatively to finish first.
+- **Farmer coordination:** Non-landlord AI seats coordinate to block the landlord, playing higher cards when landlord has initiative.
+- **Bomb usage:** Saves bombs for critical moments in hard mode, plays them only to win initiative or stop the landlord from finishing.
 
 

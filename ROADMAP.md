@@ -100,3 +100,25 @@ The first tag is always `v0.1.0`. Each tag must ship a player-experienced playab
 - Add or validate keyboard shortcuts for tutorial/help/hint/pass/play and related core controls.
 - Track persistent session statistics for hands, matches, player-side wins, landlord/farmer wins, and best score.
 - Preserve scoring, match progression, audio/settings, help, AI, rules, and layout behavior from prior tags.
+
+## v0.8.0 — Animation, AI, Localization & Save
+
+**Expected player experience**
+- Watch smooth card animations during play: flying cards when played, bounce effects when selected.
+- See particle effects for bombs and joker bombs (red explosion for joker bombs).
+- Play against smarter AI with two difficulty levels: normal AI plays basic strategy, hard AI uses memory and coordinates as farmers.
+- Use the game in Chinese or English with full UI localization.
+- Save and reload the current hand state along with settings, scores, and statistics.
+- Experience retooled sound effects that match the new visual style.
+- Replace procedural card art with AI-generated images through ComfyUI.
+
+**Features / mechanics**
+- Card animations: 200-400ms flight animation when playing cards, bounce/elevation on selection.
+- Particle effects: bomb explosion particles, red explosion for joker bombs.
+- Audio rework: retune SFX to match the new visual polish (card select, play, pass, invalid, result).
+- Improved AI: two difficulty levels (normal, hard) — hard AI uses card memory, defensive play, and farmer coordination.
+- Localization: Chinese and English support, UI string externalization, auto-detect language with manual toggle.
+- Save/load: persist current hand state (hands, trick, phase, scores, statistics) to file; restore on reload.
+- Save settings: persist audio volume, language preference, and other user settings.
+- Progress tracking: record streaks, best score, and session statistics alongside saved state.
+- Asset replacement: generate card face images, card back, and background via ComfyUI (NetaYume model).
