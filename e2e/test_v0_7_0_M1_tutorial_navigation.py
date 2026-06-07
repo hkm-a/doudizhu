@@ -61,7 +61,7 @@ def test_tutorial_navigation_next_and_back(game):
         description="back returns to step 1 of 6",
     )
 
-    for _i in range(4):
+    for _i in range(5):
         game.locator(name="TutorialNextButton").click()
 
     expect(game.locator(name="TutorialStep")).to_satisfy(
@@ -81,14 +81,14 @@ def test_tutorial_shortcut_keys(game):
         description="tutorial opens from button",
     )
 
-    game.call("simulate_shortcut", ["KEY_T"])
+    root(game).call("simulate_shortcut", ["KEY_T"])
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_tutorial_visible") is False,
         description="KEY_T shortcut closes the tutorial",
     )
 
     game.locator(name="TutorialButton").click()
-    game.call("simulate_shortcut", ["KEY_T"])
+    root(game).call("simulate_shortcut", ["KEY_T"])
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_tutorial_visible") is False,
         description="second KEY_T shortcut also closes the tutorial",
@@ -98,31 +98,31 @@ def test_tutorial_shortcut_keys(game):
 def test_tutorial_keyboard_navigation(game):
     game.locator(name="TutorialButton").click()
 
-    game.call("simulate_shortcut", ["KEY_RIGHT"])
+    root(game).call("simulate_shortcut", ["KEY_RIGHT"])
     expect(game.locator(name="TutorialStep")).to_satisfy(
         lambda node: "Step 2 of 6" in text(node),
         description="KEY_RIGHT advances tutorial step",
     )
 
-    game.call("simulate_shortcut", ["KEY_LEFT"])
+    root(game).call("simulate_shortcut", ["KEY_LEFT"])
     expect(game.locator(name="TutorialStep")).to_satisfy(
         lambda node: "Step 1 of 6" in text(node),
         description="KEY_LEFT retreats tutorial step",
     )
 
-    game.call("simulate_shortcut", ["KEY_RIGHT"])
+    root(game).call("simulate_shortcut", ["KEY_RIGHT"])
     expect(game.locator(name="TutorialStep")).to_satisfy(
         lambda node: "Step 2 of 6" in text(node),
         description="KEY_RIGHT advances again after retreat",
     )
 
-    game.call("simulate_shortcut", ["KEY_B"])
+    root(game).call("simulate_shortcut", ["KEY_B"])
     expect(game.locator(name="TutorialStep")).to_satisfy(
         lambda node: "Step 1 of 6" in text(node),
         description="KEY_B shortcut retreats tutorial step",
     )
 
-    game.call("simulate_shortcut", ["KEY_SPACE"])
+    root(game).call("simulate_shortcut", ["KEY_SPACE"])
     expect(game.locator(name="TutorialStep")).to_satisfy(
         lambda node: "Step 2 of 6" in text(node),
         description="KEY_SPACE advances tutorial step",

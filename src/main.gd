@@ -1154,11 +1154,39 @@ func simulate_apply_result_score() -> Dictionary:
 	return result
 
 
-func simulate_shortcut(keycode: int) -> bool:
-	var event := InputEventKey.new()
-	event.keycode = keycode
-	event.pressed = true
-	return _handle_shortcut(event)
+func simulate_shortcut(keycode) -> bool:
+	var keys := []
+	if keycode is Array:
+		keys = keycode
+	else:
+		keys = [keycode]
+	for key in keys:
+		var event := InputEventKey.new()
+		if key is String:
+			if key == "KEY_T":
+				event.keycode = KEY_T
+			elif key == "KEY_F1":
+				event.keycode = KEY_F1
+			elif key == "KEY_H":
+				event.keycode = KEY_H
+			elif key == "KEY_P":
+				event.keycode = KEY_P
+			elif key == "KEY_N":
+				event.keycode = KEY_N
+			elif key == "KEY_SPACE":
+				event.keycode = KEY_SPACE
+			elif key == "KEY_B":
+				event.keycode = KEY_B
+			elif key == "KEY_RIGHT":
+				event.keycode = KEY_RIGHT
+			elif key == "KEY_LEFT":
+				event.keycode = KEY_LEFT
+		elif key is int:
+			event.keycode = key
+		event.pressed = true
+		if not _handle_shortcut(event):
+			return false
+	return true
 
 
 func simulate_new_hand() -> void:
