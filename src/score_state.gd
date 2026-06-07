@@ -12,13 +12,22 @@ var target_score := 6
 var hand_count_cap := 3
 var totals: Array[int] = [0, 0, 0]
 var last_delta: Array[int] = [0, 0, 0]
+var hand_wins: Array[int] = [0, 0, 0]
+var hand_losses: Array[int] = [0, 0, 0]
 var hands_played := 0
 var match_complete := false
 var match_winner := ""
 var match_winner_seat := -1
 var match_winner_score := 0
+var stats_hands_completed := 0
+var stats_matches_completed := 0
+var stats_player_side_wins := 0
+var stats_landlord_side_wins := 0
+var stats_farmer_side_wins := 0
+var stats_best_player_score := 0
 
 var _applied_result_keys := {}
+var _current_match_stats_recorded := false
 
 
 func configure(new_target_score: int = 6, new_hand_count_cap: int = 3) -> void:
@@ -30,12 +39,24 @@ func configure(new_target_score: int = 6, new_hand_count_cap: int = 3) -> void:
 func reset_match() -> void:
 	totals = [0, 0, 0]
 	last_delta = [0, 0, 0]
+	hand_wins = [0, 0, 0]
+	hand_losses = [0, 0, 0]
 	hands_played = 0
 	match_complete = false
 	match_winner = ""
 	match_winner_seat = -1
 	match_winner_score = 0
+	_current_match_stats_recorded = false
 	_applied_result_keys.clear()
+
+
+func reset_stats() -> void:
+	stats_hands_completed = 0
+	stats_matches_completed = 0
+	stats_player_side_wins = 0
+	stats_landlord_side_wins = 0
+	stats_farmer_side_wins = 0
+	stats_best_player_score = 0
 
 
 func start_new_hand() -> void:
@@ -70,9 +91,14 @@ func apply_hand_result(winner_side: String, landlord_seat: int, result_key: Stri
 	last_delta = calculate_delta(winner_side, landlord_seat)
 	for seat in range(3):
 		totals[seat] += last_delta[seat]
+		if last_delta[seat] > 0:
+			hand_wins[seat] += 1
+		elif last_delta[seat] < 0:
+			hand_losses[seat] += 1
 	hands_played += 1
 	_applied_result_keys[key] = true
 	_update_match_state()
+	_record_stats(winner_side, landlord_seat)
 	return _summary(true, key)
 
 
@@ -96,19 +122,65 @@ func match_line() -> String:
 	return "Match target: %+d or %d hands" % [target_score, hand_count_cap]
 
 
+func hand_record_line() -> String:
+	return "Hand W/L  H:%d-%d L:%d-%d R:%d-%d" % [
+		hand_wins[HUMAN],
+		hand_losses[HUMAN],
+		hand_wins[AI_LEFT],
+		hand_losses[AI_LEFT],
+		hand_wins[AI_RIGHT],
+		hand_losses[AI_RIGHT],
+	]
+
+
+func stats_line() -> String:
+	return "Stats Hands:%d Matches:%d PlayerSide:%d Landlord:%d Farmers:%d Best:%+d" % [
+		stats_hands_completed,
+		stats_matches_completed,
+		stats_player_side_wins,
+		stats_landlord_side_wins,
+		stats_farmer_side_wins,
+		stats_best_player_score,
+	]
+
+
 func debug_state() -> Dictionary:
 	return {
 		"target_score": target_score,
 		"hand_count_cap": hand_count_cap,
 		"totals": totals.duplicate(),
 		"last_delta": last_delta.duplicate(),
+		"hand_wins": hand_wins.duplicate(),
+		"hand_losses": hand_losses.duplicate(),
 		"hands_played": hands_played,
 		"match_complete": match_complete,
 		"match_winner": match_winner,
 		"match_winner_seat": match_winner_seat,
 		"match_winner_score": match_winner_score,
+		"stats_hands_completed": stats_hands_completed,
+		"stats_matches_completed": stats_matches_completed,
+		"stats_player_side_wins": stats_player_side_wins,
+		"stats_landlord_side_wins": stats_landlord_side_wins,
+		"stats_farmer_side_wins": stats_farmer_side_wins,
+		"stats_best_player_score": stats_best_player_score,
 		"applied_count": _applied_result_keys.size(),
 	}
+
+
+func _record_stats(winner_side: String, landlord_seat: int) -> void:
+	stats_hands_completed += 1
+	if winner_side == SIDE_LANDLORD:
+		stats_landlord_side_wins += 1
+		if landlord_seat == HUMAN:
+			stats_player_side_wins += 1
+	elif winner_side == SIDE_FARMERS:
+		stats_farmer_side_wins += 1
+		if landlord_seat != HUMAN:
+			stats_player_side_wins += 1
+	stats_best_player_score = max(stats_best_player_score, totals[HUMAN])
+	if match_complete and not _current_match_stats_recorded:
+		stats_matches_completed += 1
+		_current_match_stats_recorded = true
 
 
 func _summary(applied: bool, key: String) -> Dictionary:

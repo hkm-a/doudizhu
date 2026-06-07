@@ -1,45 +1,37 @@
-# Visual Style: Doudizhu
+# Style: v0.7.0 Guided Onboarding And Accessibility
 
-## Style Anchor
+## Visual Direction
 
-Clean modern desktop card-table UI with readable procedural playing cards.
+v0.7.0 should feel like a polished teaching layer over the existing table, not a new visual theme. Use the established procedural panels, button styles, colors, and spacing from the shipped prototype.
 
-## Prompt Suffix
+## Tutorial Overlay
 
-Use crisp card-game UI composition, high-contrast card faces, restrained green table surface, and clear red/black suit readability. Keep decoration minimal and leave generous spacing for labels, buttons, and card ranks.
+- Use a single high-contrast panel with title, step count, concise body text, and Next/Back/Close buttons.
+- Keep each step short: one concept, one player action, one observable table area.
+- Avoid modal dead-ends; Close must always be visible and keyboard reachable.
+- Dim or frame content subtly if feasible, but do not require new bitmap art.
 
-## UI / Asset Rules
+## Coach Text
 
-- Prioritize legibility of card rank, suit, role labels, counts, and action buttons at 1280x720.
-- Use green as table grounding only; break it with white cards, red/black suits, amber active highlights, and neutral panels.
-- Cards should have stable dimensions and selected state should be visible without shifting neighboring layout.
-- Buttons should use simple rectangular Control styling with clear enabled/disabled states.
-- Help, summary, and AI reason text should stay compact and utilitarian; prefer short labels and wrapped panel text over decorative callouts.
-- Avoid large ornamental backgrounds that compete with card faces.
+- Write in direct action language: “Select a combination to lead,” “Beat the active pair or Pass,” “Use Hint to find the cheapest legal response.”
+- Keep coach messages to one or two short clauses so the status area remains readable.
+- Prefer accurate minimal guidance over long rules explanations; deeper rules stay in Help/Tutorial.
 
-## Avoid
+## Keyboard And Accessibility
 
-- Dark, blurred, or atmospheric table images that reduce readability.
-- One-note green-only palette.
-- Oversized decorative hero/landing layout.
-- Tiny card text or cramped hand spacing that cannot be inspected in screenshots.
+- Include readable shortcut hints where space allows, such as `H` for Hint or `T` for Tutorial.
+- Maintain button focus visibility and avoid placing focus on hidden controls.
+- Preserve color contrast introduced in presentation tags.
+- Do not rely only on color to communicate selected cards, active turn, or disabled actions.
 
-## Reference Notes
+## Stats Presentation
 
-- v0.1.0 uses procedural UI instead of required bitmap card art.
-- Future asset generation should match the procedural readability established in v0.1.0.
-- v0.4.0 keeps the procedural style and adds guidance text; no bitmap assets are required.
+- Use compact labels: Hands, Matches, Player Wins, Landlord Wins, Farmer Wins, Best Score.
+- Show reset as an explicit action with confirmation text or clear status feedback.
+- Keep stats visually secondary to the active hand and score summary.
 
+## Asset Policy
 
-## Audio Style
-
-- Keep SFX short, readable, and non-startling: crisp tick for selection, soft chime for legal play, tap for pass, low buzz for invalid, and brief accent for result.
-- Optional music should be quiet table ambience, lower priority than SFX, and safe to mute independently.
-- Audio settings UI should match the existing compact procedural Control style rather than introducing decorative panels.
-- Do not require external audio files unless the build phase explicitly reports a missing asset need first.
-
-## v0.6.0 Score UI Notes
-
-- Scoreboard elements should use the existing restrained panel style: compact labels, high-contrast numerals, and no decorative icons unless a future asset pass explicitly adds them.
-- Score delta text should prioritize signs and seat names over color alone so it remains accessible.
-
+- Use procedural UI only for this tag.
+- Do not introduce decorative icons unless the asset pipeline is explicitly updated.
+- If generated assets are requested later, add them to `ASSETS.md` with tag `v0.7.0` before creation.

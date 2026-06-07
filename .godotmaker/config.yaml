@@ -26,6 +26,7 @@ vqa_fallback_model: native
 # - openai:<model>: tools/asset_gen.py OpenAI Images backend
 # - grok:<model>: tools/asset_gen.py xAI Grok backend
 asset_image_model: native
+# comfyui:default also available (local ComfyUI at 127.0.0.1:8188)
 
 # Asset video generation model.
 # Supported values: none, grok:<model>

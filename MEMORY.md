@@ -8,6 +8,8 @@
 
 ## Decisions
 
+- v0.7.0+: ComfyUI backend added to `tools/asset_gen.py`. Use `--model comfyui:default` (or `comfyui:default` in `asset_image_model`) to generate images via local ComfyUI at `127.0.0.1:8188`. Configure via env vars: `COMFYUI_HOST`, `COMFYUI_PORT`, `COMFYUI_WORKFLOW`, `COMFYUI_NEGATIVE_PROMPT`, `COMFYUI_TIMEOUT`. Default workflow is `tools/comfyui/default_txt2img.json`.
+
 - v0.6.0 scoring is owned by `ScoreState`; apply result scoring through stable `DoudizhuGame.result_key` values so UI refreshes cannot double-count a hand. New Hand clears only last delta/card state, while New Match clears cumulative totals and applied-result guards.
 - v0.6.0 target-score completion is based on positive score reaching the target, not losing seats reaching a negative absolute value.
 - v0.6.0 result banner uses a wider compact panel with one-row result actions; layout tests validate score summary plus three controls at supported desktop sizes.
@@ -35,4 +37,12 @@
 ## Reviewer Triage Log
 
 No reviewer findings were rejected or skipped for v0.1.0, v0.2.0, or v0.3.0.
+
+### v0.7.0 Build Review (ACCEPTED — added P08, P09 tasks)
+- **Minor: Tutorial lacks modal blocker** — Tutorial panel can be opened while game is playable underneath. Add a ColorRect blocker behind tutorial. (ACCEPTED → P08)
+- **Minor: T-key inconsistency** — T opens AND closes tutorial, while Escape closes any panel. Consistent toggle behavior preferred. (ACCEPTED → P08)
+- **Minor: Stats reset boundary implicit** — `reset_match()` doesn't reset `last_delta`; relies on `start_new_hand()` called after it. Acceptable by construction. (SKIP — minor)
+- **Minor: ComfyUI checkpoint cache unconventional** — Uses `_generate_comfyui._checkpoints` module-level attr. Unusual Python idiom but works. (SKIP — minor)
+- **Minor: e2e test gap** — 19 unit tests pass but no e2e tests for tutorial/keyboard/stats flows. (ACCEPTED → P09)
+- **Minor: Shortcut tests assert false** — hint/pass/play shortcut tests confirm shortcuts return false when game state is not in play phase. Valid minimal pass but shortcuts never tested when they should succeed. (SKIP — will be covered by e2e)
 

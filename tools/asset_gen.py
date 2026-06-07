@@ -172,6 +172,11 @@ AGNES_MODEL = "agnes-image-1.2"
 AGNES_BASE_URL = "https://apihub.agnes-ai.com/v1"
 AGNES_COST = 0
 
+COMFYUI_HOST = os.environ.get("COMFYUI_HOST", "127.0.0.1")
+COMFYUI_PORT = int(os.environ.get("COMFYUI_PORT", "8188"))
+COMFYUI_DEFAULT_WORKFLOW = TOOLS_DIR / "comfyui" / "default_txt2img.json"
+COMFYUI_COST = 0
+
 
 def _split_model_selector(selector: str, *, default_provider: str,
                           default_model: str,
@@ -186,12 +191,13 @@ def _split_model_selector(selector: str, *, default_provider: str,
         model = model.strip()
         if provider and model:
             return provider, model
-    if raw in {"gemini", "openai", "grok", "agnes", "native", "codex", "none"}:
+    if raw in {"gemini", "openai", "grok", "agnes", "comfyui", "native", "codex", "none"}:
         defaults = {
             "gemini": GEMINI_MODEL,
             "openai": OPENAI_MODEL,
             "grok": GROK_MODEL,
             "agnes": AGNES_MODEL,
+            "comfyui": "default",
             "native": "native",
             "codex": "codex",
             "none": "none",
@@ -458,6 +464,183 @@ def _generate_agnes(args, output: Path, cost: int, model_name: str):
     finish_image_output(args, output, cost, "agnes")
 
 
+def _comfyui_size(size: str, aspect_ratio: str) -> tuple[int, int]:
+    """Compute pixel dimensions from size name and aspect ratio.
+
+    Returns (width, height) with both values rounded down to multiples of 8
+    (required by ComfyUI latent format).
+    """
+    base_map = {"512": 512, "1K": 1024, "2K": 2048, "4K": 4096}
+    base = base_map.get(size, 1024)
+    try:
+        left, right = aspect_ratio.split(":", 1)
+        ar = float(left) / float(right)
+    except (ValueError, ZeroDivisionError):
+        ar = 1.0
+    if ar >= 1.0:
+        w, h = base, int(base / ar)
+    else:
+        w, h = int(base * ar), base
+    w = max(64, (w // 8) * 8)
+    h = max(64, (h // 8) * 8)
+    return w, h
+
+
+def _generate_comfyui(args, output: Path, cost: int, model_name: str):
+    import requests
+    from PIL import Image
+
+    # Bypass system proxy for local ComfyUI connection
+    session = requests.Session()
+    session.trust_env = False
+
+    base_url = f"http://{COMFYUI_HOST}:{COMFYUI_PORT}"
+
+    workflow_path = Path(
+        os.environ.get("COMFYUI_WORKFLOW", str(COMFYUI_DEFAULT_WORKFLOW))
+    )
+    if not workflow_path.exists():
+        result_json(False, error=f"ComfyUI workflow not found: {workflow_path}")
+        sys.exit(1)
+
+    checkpoints_cache = getattr(_generate_comfyui, "_checkpoints", None)
+    if checkpoints_cache is None:
+        try:
+            obj_r = session.get(
+                f"{base_url}/object_info/CheckpointLoaderSimple", timeout=10
+            )
+            if obj_r.status_code == 200:
+                ckpt_info = obj_r.json()
+                raw = ckpt_info.get("CheckpointLoaderSimple", {}).get(
+                    "input", {}
+                ).get("required", {}).get("ckpt_name", [])
+                if isinstance(raw, list) and raw:
+                    first = raw[0]
+                    pick = first if isinstance(first, str) else None
+                    if pick is None and isinstance(first, list):
+                        pick = first[0]
+                    _generate_comfyui._checkpoints = (pick or "model.safetensors",)
+                else:
+                    _generate_comfyui._checkpoints = ("model.safetensors",)
+            else:
+                _generate_comfyui._checkpoints = ("model.safetensors",)
+        except Exception:
+            _generate_comfyui._checkpoints = ("model.safetensors",)
+    checkpoint = os.environ.get("COMFYUI_CHECKPOINT") or _generate_comfyui._checkpoints[0]
+
+    if args.image:
+        result_json(False, error="ComfyUI backend in this tool only supports text-to-image generation")
+        sys.exit(1)
+
+    # Load base workflow
+    workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
+
+    # Locate node IDs by class_type (supports custom workflows)
+    pos_node = next((nid for nid, n in workflow.items() if n.get("class_type") == "CLIPTextEncode"), None)
+    neg_node = next((nid for nid, n in workflow.items() if n.get("class_type") == "CLIPTextEncode" and nid != pos_node), None)
+    latent_node = next((nid for nid, n in workflow.items() if n.get("class_type") == "EmptyLatentImage"), None)
+    sampler_node = next((nid for nid, n in workflow.items() if n.get("class_type") == "KSampler"), None)
+    save_node = next((nid for nid, n in workflow.items() if n.get("class_type") == "SaveImage"), None)
+    ckpt_node = next((nid for nid, n in workflow.items() if n.get("class_type") == "CheckpointLoaderSimple"), None)
+
+    if not pos_node:
+        result_json(False, error="ComfyUI workflow must have a CLIPTextEncode node for positive prompt")
+        sys.exit(1)
+    if not latent_node:
+        result_json(False, error="ComfyUI workflow must have an EmptyLatentImage node")
+        sys.exit(1)
+    if not save_node:
+        result_json(False, error="ComfyUI workflow must have a SaveImage node")
+        sys.exit(1)
+
+    # Patch checkpoint
+    if ckpt_node:
+        workflow[ckpt_node]["inputs"]["ckpt_name"] = checkpoint
+
+    # Patch prompt
+    workflow[pos_node]["inputs"]["text"] = args.prompt
+    if neg_node and neg_node != pos_node:
+        neg_text = os.environ.get("COMFYUI_NEGATIVE_PROMPT", "")
+        workflow[neg_node]["inputs"]["text"] = neg_text
+
+    # Patch dimensions
+    w, h = _comfyui_size(args.size, args.aspect_ratio)
+    workflow[latent_node]["inputs"]["width"] = w
+    workflow[latent_node]["inputs"]["height"] = h
+
+    # Patch seed if sampler node exists
+    if sampler_node:
+        if args.seed is not None:
+            workflow[sampler_node]["inputs"]["seed"] = args.seed
+        else:
+            workflow[sampler_node]["inputs"]["seed"] = int.from_bytes(
+                os.urandom(8), "big", signed=True
+            )
+
+    # Override SaveImage prefix
+    workflow[save_node]["inputs"]["filename_prefix"] = "asset_gen"
+
+    payload = {"prompt": workflow, "client_id": "asset_gen"}
+    try:
+        resp = session.post(f"{base_url}/prompt", json=payload, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        result_json(False, error=f"ComfyUI prompt submission failed: {e}")
+        sys.exit(1)
+
+    prompt_id = data.get("prompt_id")
+    if not prompt_id:
+        result_json(False, error=f"ComfyUI did not return a prompt_id: {data}")
+        sys.exit(1)
+
+    # Poll history until the prompt is done
+    import time
+
+    max_wait = int(os.environ.get("COMFYUI_TIMEOUT", "300"))
+    deadline = time.monotonic() + max_wait
+    result_data = None
+    while time.monotonic() < deadline:
+        time.sleep(1.0)
+        try:
+            hist_resp = session.get(f"{base_url}/history/{prompt_id}", timeout=10)
+            if hist_resp.status_code == 200:
+                hist = hist_resp.json()
+                if prompt_id in hist:
+                    result_data = hist[prompt_id]
+                    break
+        except requests.RequestException:
+            pass
+
+    if result_data is None:
+        result_json(False, error=f"ComfyUI generation timed out after {max_wait}s")
+        sys.exit(1)
+
+    # Extract output image
+    outputs = result_data.get("outputs", {})
+    images = []
+    for node_id, node_out in outputs.items():
+        for img in node_out.get("images", []):
+            images.append(img)
+    if not images:
+        error_hint = result_data.get("status", {}).get("error_message", "no images in output")
+        result_json(False, error=f"ComfyUI generation produced no images: {error_hint}")
+        sys.exit(1)
+
+    first = images[0]
+    params = {"filename": first["filename"], "subfolder": first.get("subfolder", ""), "type": first.get("type", "output")}
+    try:
+        img_resp = session.get(f"{base_url}/view", params=params, timeout=30)
+        img_resp.raise_for_status()
+        img = Image.open(io.BytesIO(img_resp.content))
+        img.save(output, format="PNG")
+    except Exception as e:
+        result_json(False, error=f"Failed to download ComfyUI output image: {e}")
+        sys.exit(1)
+
+    finish_image_output(args, output, cost, "comfyui")
+
+
 def cmd_image(args):
     config = _load_project_config()
     selector = (
@@ -470,7 +653,8 @@ def cmd_image(args):
             "No API-backed asset image model selected. The project default is "
             "asset_image_model: native, which is handled by /gm-asset through "
             "the active agent runtime. Pass --model gemini:<model>, "
-            "openai:<model>, grok:<model>, or agnes:<model> to use tools/asset_gen.py directly."
+            "openai:<model>, grok:<model>, agnes:<model>, or comfyui[:default] "
+            "to use tools/asset_gen.py directly."
         ))
         sys.exit(1)
     backend, model_name = _split_model_selector(
@@ -483,14 +667,14 @@ def cmd_image(args):
             f"asset_image_model {backend!r} is handled by the agent runtime, "
             "not tools/asset_gen.py. Use /gm-asset with a runtime that supports "
             "the selected provider, or choose gemini:<model>, openai:<model>, "
-            "grok:<model>, or agnes:<model>."
+            "grok:<model>, agnes:<model>, or comfyui[:default]."
         ))
         sys.exit(1)
-    if backend not in {"gemini", "openai", "grok", "agnes"}:
+    if backend not in {"gemini", "openai", "grok", "agnes", "comfyui"}:
         result_json(False, error=(
             "Invalid asset_image_model in .godotmaker/config.yaml: "
             f"{selector!r}. Use 'native', 'codex', 'gemini:<model>', "
-            "'openai:<model>', 'grok:<model>', or 'agnes:<model>'."
+            "'openai:<model>', 'grok:<model>', 'agnes:<model>', or 'comfyui[:default]'."
         ))
         sys.exit(1)
     size = args.size
@@ -510,6 +694,11 @@ def cmd_image(args):
             result_json(False, error="Agnes does not support this tool size. Use: 512, 1K, 2K")
             sys.exit(1)
         cost = AGNES_COST
+    elif backend == "comfyui":
+        if size not in {"512", "1K", "2K", "4K"}:
+            result_json(False, error=f"ComfyUI does not support size {size}. Use: 512, 1K, 2K, 4K")
+            sys.exit(1)
+        cost = COMFYUI_COST
     else:
         _, cost = _openai_size(size, args.aspect_ratio)
 
@@ -528,6 +717,8 @@ def cmd_image(args):
         _generate_grok(args, output, cost, model_name)
     elif backend == "agnes":
         _generate_agnes(args, output, cost, model_name)
+    elif backend == "comfyui":
+        _generate_comfyui(args, output, cost, model_name)
     else:
         _generate_openai(args, output, cost, model_name)
 
@@ -640,18 +831,20 @@ def cmd_set_budget(args):
 def main():
     parser = argparse.ArgumentParser(
         description=(
-            "Asset Generator - images (Gemini / OpenAI / xAI Grok / Agnes) "
+            "Asset Generator - images (Gemini / OpenAI / xAI Grok / Agnes / ComfyUI) "
             "and GLBs (Tripo3D)"
         )
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_img = sub.add_parser("image", help="Generate a PNG image (Gemini / OpenAI / xAI Grok / Agnes)")
+    p_img = sub.add_parser("image", help="Generate a PNG image (Gemini / OpenAI / xAI Grok / Agnes / ComfyUI)")
     p_img.add_argument("--prompt", required=True, help="Full image generation prompt")
     p_img.add_argument("--model", default=None,
-                       help="Model override: gemini[:model], openai[:model], grok[:model], or agnes[:model].")
+                       help="Model override: gemini[:model], openai[:model], grok[:model], agnes[:model], or comfyui[:default].")
     p_img.add_argument("--size", choices=ALL_SIZES, default="1K",
-                       help="Resolution. OpenAI: 1K. Grok: 1K, 2K. Gemini: 512, 1K, 2K, 4K. Default: 1K.")
+                       help="Resolution. OpenAI: 1K. Grok: 1K, 2K. Gemini: 512, 1K, 2K, 4K. ComfyUI: all. Default: 1K.")
+    p_img.add_argument("--seed", type=int, default=None,
+                       help="Random seed (ComfyUI only). Default: random.")
     p_img.add_argument("--aspect-ratio", choices=ALL_ASPECT_RATIOS, default="1:1",
                        help="Aspect ratio. Default: 1:1")
     p_img.add_argument("--image", default=None, help="Reference image for image-to-image edit")

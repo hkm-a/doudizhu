@@ -85,3 +85,18 @@ The first tag is always `v0.1.0`. Each tag must ship a player-experienced playab
 - Add New Hand and New Match affordances with clear state reset boundaries.
 - Preserve all shipped rules, AI, presentation, help, summary, and audio behavior while extending post-hand progression.
 
+
+## v0.7.0 — Guided Onboarding And Accessibility
+
+**Expected player experience**
+- Learn the table, phases, legal-action expectations, scoring, and match flow through an optional guided tutorial.
+- Receive concise contextual guidance while playing without changing the shipped Doudizhu rules.
+- Use keyboard-accessible controls for common actions and understand shortcuts from the UI.
+- View lightweight lifetime/session statistics and reset them intentionally.
+
+**Features / mechanics**
+- Add a step-based tutorial overlay with Next, Back, and Close controls.
+- Add a contextual action coach for landlord selection, player initiative, follow/pass decisions, result, and match-ended states.
+- Add or validate keyboard shortcuts for tutorial/help/hint/pass/play and related core controls.
+- Track persistent session statistics for hands, matches, player-side wins, landlord/farmer wins, and best score.
+- Preserve scoring, match progression, audio/settings, help, AI, rules, and layout behavior from prior tags.
