@@ -11,16 +11,16 @@
 | v0.7.0 | Tutorial panel | Procedural UI | READY | Display guided onboarding steps | Unchanged |
 | v0.7.0 | Stats panel | Procedural UI | READY | Display lifetime/session statistics | Unchanged |
 | v0.7.0 | Shortcut labels | Text | READY | Explain keyboard-accessible actions | Unchanged |
-| v0.8.0 | Card faces (54 cards + 2 jokers) | Image | MISSING | AI-generated card art via ComfyUI | NetaYume model, 200x300px, 56 files |
-| v0.8.0 | Card back | Image | MISSING | AI-generated card back via ComfyUI | 200x300px, 1 file |
-| v0.8.0 | Table background | Image | MISSING | AI-generated green felt texture via ComfyUI | 1280x720px, 1 file |
-| v0.8.0 | Bomb explosion | Image | MISSING | Particle effect sprite for regular bombs | 128x128px, 1 file |
-| v0.8.0 | Joker bomb explosion | Image | MISSING | Red particle effect sprite for joker bombs | 128x128px, 1 file |
+| v0.8.0 | Card faces (54 cards + 2 jokers) | Image | GENERATED | AI-generated card art via Agnes API | 200x300px, 56 files, assets/img/card_*.png |
+| v0.8.0 | Card back | Image | GENERATED | AI-generated card back via Agnes API | 200x300px, 1 file, assets/img/card_back.png |
+| v0.8.0 | Table background | Image | GENERATED | AI-generated green felt texture via Agnes API | 1920x1080px, 1 file, assets/img/table_bg.png |
+| v0.8.0 | Bomb explosion | Image | GENERATED | Particle effect sprite via Agnes API | 256x256px, 1 file, assets/img/bomb_explosion.png |
+| v0.8.0 | Joker bomb explosion | Image | GENERATED | Red particle effect sprite via Agnes API | 256x256px, 1 file, assets/img/joker_bomb_explosion.png |
 | v0.8.0 | SFX rework (select, play, pass, invalid, bomb, joker, result, save) | Audio | DEFERRED | Retooled SFX matching new visual polish | User-provided or AI-generated |
 
 ## Missing Assets
 
-No bitmap, audio, or external art assets are required for v0.7.0.
+v0.8.0 audio SFX: User must provide retooled sound effects (select, play, pass, invalid, bomb, joker bomb, result, save/load).
 
 ## Notes
 

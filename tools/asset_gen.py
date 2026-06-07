@@ -168,7 +168,7 @@ ALL_SIZES = ["512", "1K", "2K", "4K"]
 ALL_ASPECT_RATIOS = sorted(set(GEMINI_ASPECT_RATIOS + GROK_ASPECT_RATIOS))
 OPENAI_MODEL = "gpt-image-2"
 OPENAI_COSTS = {"1:1": 5, "portrait": 7, "landscape": 7}
-AGNES_MODEL = "agnes-image-1.2"
+AGNES_MODEL = "agnes-image-2.1-flash"
 AGNES_BASE_URL = "https://apihub.agnes-ai.com/v1"
 AGNES_COST = 0
 
