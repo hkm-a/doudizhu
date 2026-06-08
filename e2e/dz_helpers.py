@@ -19,10 +19,17 @@ def selected_count(game):
 
 def call_landlord(game):
     game.locator(name="CallLandlordButton").click()
-    expect(game.locator(name="StatusMessage")).to_satisfy(
-        lambda node: "landlord" in text(node).lower(),
-        description="landlord phase resolves",
-    )
+    # Wait until phase changes from "landlord" to "play" (landlord resolved)
+    for _ in range(100):
+        import time
+        time.sleep(0.05)
+        try:
+            phase = root(game).call("debug_phase")
+            if phase is not None and phase != "landlord":
+                return
+        except Exception:
+            pass
+    raise Exception("Call landlord phase not reached")
 
 
 def hint_then_play(game):

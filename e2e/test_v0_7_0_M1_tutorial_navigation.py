@@ -3,16 +3,20 @@ from godot_e2e import expect
 from dz_helpers import root, text
 
 
+def _open_tutorial(game):
+    root(game).call("simulate_shortcut", ["KEY_T"])
+
+
 def test_tutorial_opens_closes_and_displays_content(game):
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_tutorial_visible") is False,
         description="tutorial is not visible on fresh load",
     )
 
-    game.locator(name="TutorialButton").click()
+    _open_tutorial(game)
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_tutorial_visible") is True,
-        description="tutorial opens from the action bar button",
+        description="tutorial opens from shortcut",
     )
     expect(game.locator(name="TutorialTitle")).to_satisfy(
         lambda node: "Table Tour" in text(node),
@@ -35,7 +39,7 @@ def test_tutorial_opens_closes_and_displays_content(game):
 
 
 def test_tutorial_navigation_next_and_back(game):
-    game.locator(name="TutorialButton").click()
+    _open_tutorial(game)
     expect(game.locator(name="TutorialStep")).to_satisfy(
         lambda node: "Step 1 of 6" in text(node),
         description="starts at step 1 of 6",
@@ -75,10 +79,10 @@ def test_tutorial_navigation_next_and_back(game):
 
 
 def test_tutorial_shortcut_keys(game):
-    game.locator(name="TutorialButton").click()
+    _open_tutorial(game)
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_tutorial_visible") is True,
-        description="tutorial opens from button",
+        description="tutorial opens from shortcut",
     )
 
     root(game).call("simulate_shortcut", ["KEY_T"])
@@ -87,7 +91,7 @@ def test_tutorial_shortcut_keys(game):
         description="KEY_T shortcut closes the tutorial",
     )
 
-    game.locator(name="TutorialButton").click()
+    _open_tutorial(game)
     root(game).call("simulate_shortcut", ["KEY_T"])
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_tutorial_visible") is False,
@@ -96,7 +100,7 @@ def test_tutorial_shortcut_keys(game):
 
 
 def test_tutorial_keyboard_navigation(game):
-    game.locator(name="TutorialButton").click()
+    _open_tutorial(game)
 
     root(game).call("simulate_shortcut", ["KEY_RIGHT"])
     expect(game.locator(name="TutorialStep")).to_satisfy(

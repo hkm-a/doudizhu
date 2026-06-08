@@ -110,6 +110,8 @@ var settings_visible := false
 var quit_requested := false
 var has_save := false
 var continue_overlay: ColorRect
+var _bounce_button: Button
+var _bounce_target_pos: Vector2
 
 
 func _ready() -> void:
@@ -782,10 +784,7 @@ func _create_continue_dialog() -> ColorRect:
 	continue_btn.add_theme_stylebox_override("normal", _button_style(false))
 	continue_btn.add_theme_stylebox_override("hover", _button_style(true))
 	continue_btn.add_theme_stylebox_override("pressed", _button_style(true))
-	continue_btn.pressed.connect(func() -> void:
-		_load_saved_game()
-		_hide_continue_dialog()
-	)
+	continue_btn.pressed.connect(_on_continue_pressed)
 	actions.add_child(continue_btn)
 
 	var new_game_btn := Button.new()
@@ -795,10 +794,7 @@ func _create_continue_dialog() -> ColorRect:
 	new_game_btn.add_theme_stylebox_override("normal", _button_style(false))
 	new_game_btn.add_theme_stylebox_override("hover", _button_style(true))
 	new_game_btn.add_theme_stylebox_override("pressed", _button_style(true))
-	new_game_btn.pressed.connect(func() -> void:
-		_delete_save_and_start()
-		_hide_continue_dialog()
-	)
+	new_game_btn.pressed.connect(_on_new_game_pressed)
 	actions.add_child(new_game_btn)
 
 	vbox.add_child(actions)
@@ -837,6 +833,11 @@ func _load_saved_game() -> void:
 func _delete_save_and_start() -> void:
 	SaveLoadUtilsScript.delete_save()
 	has_save = false
+	_start_new_round()
+
+
+func debug_clear_save() -> void:
+	SaveLoadUtilsScript.delete_save()
 	_start_new_round()
 
 
@@ -879,9 +880,13 @@ func _refresh_seat(panel: Panel, seat: int) -> void:
 
 func _refresh_bottom_cards() -> void:
 	_clear_children(bottom_cards_box)
+	var hidden_idx := 0
 	for card in game.bottom_cards:
 		if game.phase == "landlord":
-			bottom_cards_box.add_child(_card_button({}, false, false))
+			var btn := _card_button({}, false, false)
+			btn.name = "HiddenCard_%d" % hidden_idx
+			bottom_cards_box.add_child(btn)
+			hidden_idx += 1
 		else:
 			bottom_cards_box.add_child(_card_button(card, false, false))
 
@@ -912,11 +917,10 @@ func _refresh_hand() -> void:
 		button.position = target_position
 		hand_area.add_child(button)
 		if selected:
-			button.position = target_position + Vector2(0.0, 10.0 * layout_scale)
+			_bounce_button = button
+			_bounce_target_pos = target_position + Vector2(0.0, 10.0 * layout_scale)
 			var bounce_tween: Tween = animation_system.play_bounce_animation(button, 6.0 * layout_scale, 0.18)
-			bounce_tween.finished.connect(func() -> void:
-				button.position = target_position + Vector2(0.0, 10.0 * layout_scale)
-			)
+			bounce_tween.finished.connect(_on_bounce_complete)
 
 
 func _refresh_actions() -> void:
@@ -1004,10 +1008,10 @@ func _card_button(card: Dictionary, interactive: bool, selected: bool) -> Button
 	button.size = card_size
 	button.focus_mode = Control.FOCUS_NONE
 	if card.is_empty():
-		button.name = "HiddenCard"
 		button.tooltip_text = ""
 		var back_tex := CardAssetsScript.get_card_back()
 		if back_tex != null:
+			button.name = "HiddenCard"
 			button.text = ""
 			var icon := TextureRect.new()
 			icon.name = "CardBackTexture"
@@ -1018,6 +1022,7 @@ func _card_button(card: Dictionary, interactive: bool, selected: bool) -> Button
 			button.add_child(icon)
 			button.disabled = true
 		else:
+			button.name = "HiddenCard"
 			button.text = "?"
 			button.disabled = true
 			button.modulate = Color(0.5, 0.5, 0.5)
@@ -1048,11 +1053,9 @@ func _card_button(card: Dictionary, interactive: bool, selected: bool) -> Button
 		button.add_theme_stylebox_override("hover", _card_style(card, true))
 		button.add_theme_stylebox_override("pressed", _card_style(card, true))
 		if interactive:
-			button.pressed.connect(func() -> void:
-				game.toggle_selection(int(card.id))
-				audio_controller.play_event("select")
-				_refresh()
-			)
+			var selected_card_id: int = int(card.id)
+			button.set_meta("selected_card_id", selected_card_id)
+			button.pressed.connect(_on_card_selected.bind(button))
 	return button
 
 
@@ -1197,6 +1200,29 @@ func _on_pass_pressed() -> void:
 func _on_hint_pressed() -> void:
 	game.hint()
 	_refresh()
+
+
+func _on_card_selected(button: Button) -> void:
+	var card_id: int = int(button.get_meta("selected_card_id", -1))
+	if card_id >= 0:
+		game.toggle_selection(card_id)
+		audio_controller.play_event("select")
+		_refresh()
+
+
+func _on_continue_pressed() -> void:
+	_load_saved_game()
+	_hide_continue_dialog()
+
+
+func _on_new_game_pressed() -> void:
+	_delete_save_and_start()
+	_hide_continue_dialog()
+
+
+func _on_bounce_complete() -> void:
+	if is_instance_valid(_bounce_button):
+		_bounce_button.position = _bounce_target_pos
 
 
 func _on_help_pressed() -> void:
@@ -1377,12 +1403,70 @@ func debug_scoreboard_text() -> String:
 	return scoreboard_label.text
 
 
+func debug_phase() -> String:
+	return game.phase
+
+
+func debug_bottom_cards_count() -> int:
+	return game.bottom_cards.size()
+
+
+func debug_bottom_ui_children() -> int:
+	var box := get_node_or_null("BottomCards")
+	if box:
+		return box.get_child_count()
+	return -1
+
+
+func debug_bottom_card_names() -> Array:
+	var box := get_node_or_null("BottomCards")
+	if box:
+		var names: Array = []
+		for i in box.get_child_count():
+			names.append(box.get_child(i).name)
+		return names
+	return ["no box"]
+
+
+func debug_all_button_names() -> Array:
+	var names: Array = []
+	for child in get_children():
+		_collect_button_names(child, names, 0)
+	return names
+
+
+func _collect_button_names(node: Node, names: Array, depth: int) -> void:
+	var indent := ""
+	for d in depth:
+		indent += "  "
+	if node is Button:
+		names.append("%s%s (%s)" % [indent, node.name, node.text])
+	for child in node.get_children():
+		_collect_button_names(child, names, depth + 1)
+
+
 func debug_stats_text() -> String:
 	return stats_label.text
 
 
 func debug_result_text() -> String:
 	return result_label.text
+
+
+func debug_count_text(seat: int) -> String:
+	var panel_name := "AILeftPanel" if seat == DoudizhuGame.AI_LEFT else "AIRightPanel"
+	var panel := get_node_or_null(panel_name)
+	if panel:
+		return panel.get_node("Content").get_node("Count").text
+	return ""
+
+
+func debug_localization_output() -> Dictionary:
+	return {
+		"label.count": loc.string("label.count"),
+		"label.role": loc.string("label.role"),
+		"locale": loc.current_locale(),
+	}
 
 
 func simulate_apply_result_score() -> Dictionary:
@@ -1440,6 +1524,18 @@ func simulate_open_settings() -> void:
 
 func simulate_close_settings() -> void:
 	_on_settings_close_pressed()
+
+
+func simulate_music_toggle() -> void:
+	_on_music_toggle_pressed()
+
+
+func simulate_sfx_toggle() -> void:
+	_on_sfx_toggle_pressed()
+
+
+func simulate_volume_toggle() -> void:
+	_on_volume_pressed()
 
 
 func debug_settings_visible() -> bool:

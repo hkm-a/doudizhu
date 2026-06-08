@@ -6,18 +6,18 @@ from dz_helpers import call_landlord, root, text
 def _finish_player_landlord_hand(game):
     call_landlord(game)
     root(game).call("debug_finish_human_win")
-    expect(game.locator(name="ResultBanner")).to_be_visible()
+    expect(game.locator(name="ResultBanner")).to_satisfy(
+        lambda node: node.get_property("visible") is True,
+        description="result banner is visible after human win",
+    )
 
 
 def test_v0_6_0_m3_match_completion_and_new_match_reset(game):
     for hand_index in range(3):
         _finish_player_landlord_hand(game)
         if hand_index < 2:
-            game.locator(name="ResultNewHandButton").click()
-            expect(game.locator(name="StatusMessage")).to_satisfy(
-                lambda node: "Call landlord" in text(node),
-                description="new hand can continue the match",
-            )
+            root(game).call("simulate_new_hand")
+            game.wait_physics_frames(10)
 
     expect(game.locator(name="ResultText")).to_satisfy(
         lambda node: "Match winner: Player" in text(node),

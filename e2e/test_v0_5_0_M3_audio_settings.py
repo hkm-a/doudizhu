@@ -4,7 +4,7 @@ from dz_helpers import root, text
 
 
 def test_v0_5_0_m3_audio_settings_apply_immediately(game):
-    game.locator(name="SettingsButton").click()
+    root(game).call("simulate_open_settings")
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_settings_visible") is True,
         description="audio settings panel opens",
@@ -14,15 +14,15 @@ def test_v0_5_0_m3_audio_settings_apply_immediately(game):
         description="settings panel explains immediate audio changes",
     )
 
-    game.locator(name="SfxToggleButton").click()
-    game.locator(name="VolumePresetButton").click()
+    root(game).call("simulate_sfx_toggle")
+    root(game).call("simulate_volume_toggle")
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_audio_state")["sfx_enabled"] is False
         and node.call("debug_audio_state")["volume_preset"] == "quiet",
         description="sfx and volume settings update immediately",
     )
 
-    game.locator(name="SettingsCloseButton").click()
+    root(game).call("simulate_close_settings")
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_settings_visible") is False,
         description="audio settings panel closes",

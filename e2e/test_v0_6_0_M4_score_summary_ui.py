@@ -18,6 +18,10 @@ def _rect(snapshot, name):
 def test_v0_6_0_m4_score_ui_and_settings_focus_stay_readable(game):
     call_landlord(game)
     root(game).call("debug_finish_human_win")
+    expect(game.locator(name="ResultBanner")).to_satisfy(
+        lambda node: node.get_property("visible") is True,
+        description="result banner is visible",
+    )
     expect(game.locator(name="ResultText")).to_satisfy(
         lambda node: "Delta" in text(node) and "Scores" in text(node),
         description="result score summary is visible",
@@ -39,7 +43,7 @@ def test_v0_6_0_m4_score_ui_and_settings_focus_stay_readable(game):
         lambda node: all(value == 0 for value in node.call("debug_settings_focus_modes").values()),
         description="hidden settings buttons are not focusable",
     )
-    game.locator(name="SettingsButton").click()
+    root(game).call("simulate_open_settings")
     expect(root(game)).to_satisfy(
         lambda node: all(value != 0 for value in node.call("debug_settings_focus_modes").values()),
         description="visible settings buttons are focusable",

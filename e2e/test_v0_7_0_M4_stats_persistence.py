@@ -74,8 +74,8 @@ def test_stats_scoreboard_updates_after_play_and_result(game):
 
 
 def test_stats_persist_across_new_hand(game):
-    game.locator(name="CallLandlordButton").click()
-    game.wait_physics_frames(10)
+    from dz_helpers import call_landlord
+    call_landlord(game)
     root(game).call("debug_finish_human_win")
     game.wait_physics_frames(10)
 

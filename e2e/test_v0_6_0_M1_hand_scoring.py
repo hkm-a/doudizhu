@@ -7,7 +7,10 @@ def test_v0_6_0_m1_hand_scoring_delta_is_visible(game):
     call_landlord(game)
     root(game).call("debug_finish_human_win")
 
-    expect(game.locator(name="ResultBanner")).to_be_visible()
+    expect(game.locator(name="ResultBanner")).to_satisfy(
+        lambda node: node.get_property("visible") is True,
+        description="result banner is visible after human win",
+    )
     expect(game.locator(name="ResultText")).to_satisfy(
         lambda node: "Delta H:+2 L:-1 R:-1" in text(node)
         and "Scores H:+2 L:-1 R:-1" in text(node),

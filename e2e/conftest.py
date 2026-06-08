@@ -38,4 +38,8 @@ def _game_process():
 def game(_game_process):
     _game_process.reload_scene()
     _game_process.wait_for_node("/root/Main", timeout=5.0)
+    # Clean save file and ensure game is in fresh state
+    from dz_helpers import root
+    root(_game_process).call("debug_clear_save")
+    _game_process.wait_physics_frames(5)
     yield _game_process

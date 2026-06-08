@@ -133,10 +133,10 @@ func _parse_tres_strings(content: String, target: Dictionary) -> void:
 			# Remove leading quote
 			if val_str.begins_with("\""):
 				val_str = val_str.substr(1)
-			# Remove trailing quote and comma
-			if val_str.ends_with("\""):
-				val_str = val_str.substr(0, val_str.length() - 1)
+			# Remove trailing quote and comma (order matters: comma is outside quotes)
 			if val_str.ends_with(","):
+				val_str = val_str.substr(0, val_str.length() - 1)
+			if val_str.ends_with("\""):
 				val_str = val_str.substr(0, val_str.length() - 1)
 			
 			target[current_key] = val_str
