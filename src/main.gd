@@ -1385,6 +1385,11 @@ func debug_result_text() -> String:
 	return result_label.text
 
 
+func debug_clear_save() -> void:
+	SaveLoadUtilsScript.delete_save()
+	await get_tree().process_frame
+
+
 func simulate_apply_result_score() -> Dictionary:
 	var result := _apply_result_score_once()
 	_refresh()

@@ -1,0 +1,9 @@
+{
+  "role": "evaluate",
+  "tag": "v0.9.1",
+  "stage_event_ts": "2026-06-09T05:39:00Z",
+  "archive_path": ".godotmaker/evaluation-runs/20260609T053900Z_v0.9.1",
+  "screenshots_path": ".godotmaker/evaluation-runs/20260609T053900Z_v0.9.1/screenshots",
+  "screenshot_files": 15,
+  "evaluation_json": null
+}
