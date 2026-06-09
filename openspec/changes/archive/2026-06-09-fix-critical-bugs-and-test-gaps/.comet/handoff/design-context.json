@@ -1,0 +1,13 @@
+{
+  "change": "fix-critical-bugs-and-test-gaps",
+  "phase": "design",
+  "mode": "compact",
+  "canonical_spec": "openspec",
+  "generated_by": "comet-handoff.sh",
+  "context_hash": "e9eda12f032b0f190c7466d77ae665379eb94758d87ed97b5cfca2f7fdbc8d02",
+  "files": [
+    { "path": "openspec/changes/fix-critical-bugs-and-test-gaps/proposal.md", "sha256": "2b2681382a771251af12c52f2425b66400b496aa16b405a490c413a436958c15" },
+    { "path": "openspec/changes/fix-critical-bugs-and-test-gaps/design.md", "sha256": "013555d6142af552d3d5b19a21bd0242c0e4a8c23b5dfcd0ee90143b0c026e11" },
+    { "path": "openspec/changes/fix-critical-bugs-and-test-gaps/tasks.md", "sha256": "161a4ba565f720d55498a2f7d81976ce9acc49cd3d1e993553b809c31e0c7403" }
+  ]
+}

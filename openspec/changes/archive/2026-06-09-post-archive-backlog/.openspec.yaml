@@ -1,0 +1,26 @@
+{
+  "title": "Post-Archive Backlog Fixes (v0.10.0)",
+  "description": "Implement procedural SFX fallback, fill e2e test coverage gaps, and refactor main.gd to reduce from 1746 lines.",
+  "motivation": "After archiving v0.8.0 and v0.9.1, three backlog items remain. SFX are DEFERRED in ASSETS.md, e2e coverage is incomplete for v0.7.0-M2 and v0.8.0 combined flows, and main.gd is 1746 lines violating single responsibility.",
+  "changes": [
+    "src/audio_fallback.gd - New procedural SFX system using oscillator-based audio",
+    "src/main.gd - Refactored to use audio_fallback.gd",
+    "e2e/test_v0_7_0_M2_contextual_coach.py - New e2e test for contextual coach",
+    "e2e/test_v0_8_0_M7_audio_sfx.py - Enhanced with procedural SFX validation",
+    "src/main_ui_builder.gd - Split from main.gd _build_ui",
+    "src/main_ui_layout.gd - Split from main.gd _layout_ui",
+    "src/main_ui_refresh.gd - Split from main.gd _refresh methods",
+    "src/main_ui_callbacks.gd - Split from main.gd button handlers",
+    "src/main_debug.gd - Split from main.gd debug methods"
+  ],
+  "risks": [
+    {
+      "risk": "main.gd refactor introduces behavioral changes",
+      "mitigation": "Keep public API surface stable. Run all tests before and after refactor."
+    },
+    {
+      "risk": "Procedural SFX sounds different from user expectations",
+      "mitigation": "Provide volume/volume_preset control. Can be replaced later with real audio files."
+    }
+  ]
+}

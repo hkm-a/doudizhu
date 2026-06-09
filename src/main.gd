@@ -1345,6 +1345,10 @@ func debug_human_card_count() -> int:
 	return game.hands[DoudizhuGame.HUMAN].size()
 
 
+func debug_phase() -> String:
+	return game.phase
+
+
 func debug_status_text() -> String:
 	return game.message
 
@@ -1709,6 +1713,31 @@ func debug_bottom_cards_count() -> int:
 
 func simulate_call_landlord() -> void:
 	game.resolve_landlord(true)
+
+
+func simulate_tutorial_next() -> void:
+	_on_tutorial_next_pressed()
+
+
+func simulate_tutorial_back() -> void:
+	_on_tutorial_back_pressed()
+
+
+func simulate_tutorial_close() -> void:
+	_on_tutorial_close_pressed()
+
+
+func simulate_hint() -> void:
+	game.hint()
+	_refresh()
+
+
+func simulate_play() -> void:
+	var played := game.play_selected()
+	if played:
+		_animate_cards_to_table()
+	_play_result_audio_if_needed()
+	_refresh()
 
 func _on_hand_area_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:

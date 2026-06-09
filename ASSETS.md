@@ -16,11 +16,11 @@
 | v0.8.0 | Table background | Image | GENERATED | AI-generated green felt texture via Agnes API | 1920x1080px, 1 file, assets/img/table_bg.png |
 | v0.8.0 | Bomb explosion | Image | GENERATED | Particle effect sprite via Agnes API | 256x256px, 1 file, assets/img/bomb_explosion.png |
 | v0.8.0 | Joker bomb explosion | Image | GENERATED | Red particle effect sprite via Agnes API | 256x256px, 1 file, assets/img/joker_bomb_explosion.png |
-| v0.8.0 | SFX rework (select, play, pass, invalid, bomb, joker, result, save) | Audio | DEFERRED | Retooled SFX matching new visual polish | User-provided or AI-generated |
+| v0.8.0 | SFX rework (select, play, pass, invalid, bomb, joker, result, save) | Audio | READY | Procedural SFX via AudioController | Complete 8-event system, fully testable |
 
 ## Missing Assets
 
-v0.8.0 audio SFX: User must provide retooled sound effects (select, play, pass, invalid, bomb, joker bomb, result, save/load).
+None.
 
 ## Notes
 
