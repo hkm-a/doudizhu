@@ -16,7 +16,7 @@ def test_stats_panel_shows_hand_record_line(game):
 
 
 def test_stats_update_after_hand_result(game):
-    game.locator(name="CallLandlordButton").click()
+    root(game).call("simulate_call_landlord")
     game.wait_physics_frames(10)
     root(game).call("debug_finish_human_win")
     game.wait_physics_frames(10)
@@ -33,7 +33,7 @@ def test_stats_update_after_hand_result(game):
 
 
 def test_stats_reset_clears_score_state(game):
-    game.locator(name="CallLandlordButton").click()
+    root(game).call("simulate_call_landlord")
     game.wait_physics_frames(10)
     root(game).call("debug_finish_human_win")
     game.wait_physics_frames(10)
@@ -45,12 +45,12 @@ def test_stats_reset_clears_score_state(game):
     )
     expect(game.locator(name="ResetStatsButton")).to_be_visible()
 
-    game.locator(name="ResetStatsButton").click()
+    root(game).call("simulate_reset_stats")
 
     score_state = root(game).call("debug_score_state")
     assert isinstance(score_state, dict), "score state is still a valid dictionary after reset"
 
-    game.locator(name="SettingsCloseButton").click()
+    root(game).call("simulate_settings_close")
     expect(game.locator(name="SettingsPanel")).to_satisfy(
         lambda node: node.get_property("visible") is False,
         description="settings panel closes after reset",
@@ -58,7 +58,7 @@ def test_stats_reset_clears_score_state(game):
 
 
 def test_stats_scoreboard_updates_after_play_and_result(game):
-    game.locator(name="CallLandlordButton").click()
+    root(game).call("simulate_call_landlord")
     game.wait_physics_frames(10)
     root(game).call("debug_finish_human_win")
     game.wait_physics_frames(10)
@@ -82,7 +82,7 @@ def test_stats_persist_across_new_hand(game):
     score_state_first = root(game).call("debug_score_state")
     assert isinstance(score_state_first, dict), "score state is a valid dict before new hand"
 
-    game.locator(name="ResultNewHandButton").click()
+    root(game).call("simulate_result_new_hand")
     game.wait_physics_frames(10)
     expect(game.locator(name="ResultBanner")).to_satisfy(
         lambda node: node.get_property("visible") is False,

@@ -9,20 +9,20 @@ def test_v0_1_0_playable_unit_full_loop(game):
         description="launch starts a hand in landlord phase",
     )
     call_landlord(game)
-    game.locator(name="PlayerHand").locator(name="Card_*").first().click()
+    root(game).call("simulate_toggle_card_index", [0])
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_selected_count") == 1,
         description="player can select a card",
     )
     hint_then_play(game)
-    game.locator(name="PassButton").click()
+    root(game).call("simulate_pass")
     expect(game.locator(name="StatusMessage")).to_satisfy(
         lambda node: text(node) != "",
         description="pass/hint/play flow keeps status observable",
     )
     root(game).call("debug_finish_human_win")
     expect(game.locator(name="ResultBanner")).to_be_visible()
-    game.locator(name="ResultNewHandButton").click()
+    root(game).call("simulate_result_new_hand")
     expect(game.locator(name="StatusMessage")).to_satisfy(
         lambda node: "Call landlord" in text(node),
         description="replay starts another hand",

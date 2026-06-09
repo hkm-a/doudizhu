@@ -110,8 +110,6 @@ var settings_visible := false
 var quit_requested := false
 var has_save := false
 var continue_overlay: ColorRect
-var _bounce_button: Button
-var _bounce_target_pos: Vector2
 
 
 func _ready() -> void:
@@ -122,6 +120,7 @@ func _ready() -> void:
 	add_child(animation_system)
 	_build_ui()
 	_layout_ui()
+	_refresh()
 	has_save = SaveLoadUtilsScript.save_exists()
 	if has_save:
 		_show_continue_dialog()
@@ -237,6 +236,7 @@ func _start_new_match() -> void:
 
 
 func _build_ui() -> void:
+	_ensure_timer_label_bottom()
 	CardAssetsScript.initialize()
 	
 	var table_bg_texture := CardAssetsScript.get_table_bg()
@@ -343,6 +343,7 @@ func _build_ui() -> void:
 
 	hand_area = Control.new()
 	hand_area.name = "PlayerHand"
+	hand_area.gui_input.connect(_on_hand_area_gui_input)
 	_pin_top_left(hand_area)
 	add_child(hand_area)
 
@@ -511,27 +512,22 @@ func _build_ui() -> void:
 	settings_vbox.add_child(settings_label)
 	sfx_toggle_button = Button.new()
 	sfx_toggle_button.name = "SfxToggleButton"
-	sfx_toggle_button.focus_mode = Control.FOCUS_NONE
 	sfx_toggle_button.pressed.connect(_on_sfx_toggle_pressed)
 	settings_vbox.add_child(sfx_toggle_button)
 	music_toggle_button = Button.new()
 	music_toggle_button.name = "MusicToggleButton"
-	music_toggle_button.focus_mode = Control.FOCUS_NONE
 	music_toggle_button.pressed.connect(_on_music_toggle_pressed)
 	settings_vbox.add_child(music_toggle_button)
 	volume_button = Button.new()
 	volume_button.name = "VolumePresetButton"
-	volume_button.focus_mode = Control.FOCUS_NONE
 	volume_button.pressed.connect(_on_volume_pressed)
 	settings_vbox.add_child(volume_button)
 	stats_reset_button = Button.new()
 	stats_reset_button.name = "ResetStatsButton"
-	stats_reset_button.focus_mode = Control.FOCUS_NONE
 	stats_reset_button.pressed.connect(_on_reset_stats_pressed)
 	settings_vbox.add_child(stats_reset_button)
 	ai_difficulty_button = Button.new()
 	ai_difficulty_button.name = "AIDifficultyButton"
-	ai_difficulty_button.focus_mode = Control.FOCUS_NONE
 	ai_difficulty_button.pressed.connect(_on_ai_difficulty_pressed)
 	settings_vbox.add_child(ai_difficulty_button)
 	var save_button := Button.new()
@@ -784,7 +780,10 @@ func _create_continue_dialog() -> ColorRect:
 	continue_btn.add_theme_stylebox_override("normal", _button_style(false))
 	continue_btn.add_theme_stylebox_override("hover", _button_style(true))
 	continue_btn.add_theme_stylebox_override("pressed", _button_style(true))
-	continue_btn.pressed.connect(_on_continue_pressed)
+	continue_btn.pressed.connect(func() -> void:
+		_load_saved_game()
+		_hide_continue_dialog()
+	)
 	actions.add_child(continue_btn)
 
 	var new_game_btn := Button.new()
@@ -794,7 +793,10 @@ func _create_continue_dialog() -> ColorRect:
 	new_game_btn.add_theme_stylebox_override("normal", _button_style(false))
 	new_game_btn.add_theme_stylebox_override("hover", _button_style(true))
 	new_game_btn.add_theme_stylebox_override("pressed", _button_style(true))
-	new_game_btn.pressed.connect(_on_new_game_pressed)
+	new_game_btn.pressed.connect(func() -> void:
+		_delete_save_and_start()
+		_hide_continue_dialog()
+	)
 	actions.add_child(new_game_btn)
 
 	vbox.add_child(actions)
@@ -836,11 +838,6 @@ func _delete_save_and_start() -> void:
 	_start_new_round()
 
 
-func debug_clear_save() -> void:
-	SaveLoadUtilsScript.delete_save()
-	_start_new_round()
-
-
 func _refresh() -> void:
 	_apply_result_score_once()
 	_refresh_seat(ai_left_panel, DoudizhuGame.AI_LEFT)
@@ -864,6 +861,8 @@ func _refresh() -> void:
 	help_panel.visible = help_visible
 	help_close_button.focus_mode = Control.FOCUS_ALL if help_visible else Control.FOCUS_NONE
 	_refresh_settings_ui()
+	_ensure_timer_label_bottom().visible = (game.phase == "landlord" or game.phase == "play")
+	_ensure_timer_label_bottom().text = debug_timer_label_text()
 
 
 func _refresh_seat(panel: Panel, seat: int) -> void:
@@ -880,13 +879,9 @@ func _refresh_seat(panel: Panel, seat: int) -> void:
 
 func _refresh_bottom_cards() -> void:
 	_clear_children(bottom_cards_box)
-	var hidden_idx := 0
 	for card in game.bottom_cards:
 		if game.phase == "landlord":
-			var btn := _card_button({}, false, false)
-			btn.name = "HiddenCard_%d" % hidden_idx
-			bottom_cards_box.add_child(btn)
-			hidden_idx += 1
+			bottom_cards_box.add_child(_card_button({}, false, false))
 		else:
 			bottom_cards_box.add_child(_card_button(card, false, false))
 
@@ -917,10 +912,11 @@ func _refresh_hand() -> void:
 		button.position = target_position
 		hand_area.add_child(button)
 		if selected:
-			_bounce_button = button
-			_bounce_target_pos = target_position + Vector2(0.0, 10.0 * layout_scale)
+			button.position = target_position + Vector2(0.0, 10.0 * layout_scale)
 			var bounce_tween: Tween = animation_system.play_bounce_animation(button, 6.0 * layout_scale, 0.18)
-			bounce_tween.finished.connect(_on_bounce_complete)
+			bounce_tween.finished.connect(func() -> void:
+				button.position = target_position + Vector2(0.0, 10.0 * layout_scale)
+			)
 
 
 func _refresh_actions() -> void:
@@ -1008,10 +1004,10 @@ func _card_button(card: Dictionary, interactive: bool, selected: bool) -> Button
 	button.size = card_size
 	button.focus_mode = Control.FOCUS_NONE
 	if card.is_empty():
+		button.name = "HiddenCard"
 		button.tooltip_text = ""
 		var back_tex := CardAssetsScript.get_card_back()
 		if back_tex != null:
-			button.name = "HiddenCard"
 			button.text = ""
 			var icon := TextureRect.new()
 			icon.name = "CardBackTexture"
@@ -1022,7 +1018,6 @@ func _card_button(card: Dictionary, interactive: bool, selected: bool) -> Button
 			button.add_child(icon)
 			button.disabled = true
 		else:
-			button.name = "HiddenCard"
 			button.text = "?"
 			button.disabled = true
 			button.modulate = Color(0.5, 0.5, 0.5)
@@ -1053,9 +1048,11 @@ func _card_button(card: Dictionary, interactive: bool, selected: bool) -> Button
 		button.add_theme_stylebox_override("hover", _card_style(card, true))
 		button.add_theme_stylebox_override("pressed", _card_style(card, true))
 		if interactive:
-			var selected_card_id: int = int(card.id)
-			button.set_meta("selected_card_id", selected_card_id)
-			button.pressed.connect(_on_card_selected.bind(button))
+			button.pressed.connect(func() -> void:
+				game.toggle_selection(int(card.id))
+				audio_controller.play_event("select")
+				_refresh()
+			)
 	return button
 
 
@@ -1200,29 +1197,6 @@ func _on_pass_pressed() -> void:
 func _on_hint_pressed() -> void:
 	game.hint()
 	_refresh()
-
-
-func _on_card_selected(button: Button) -> void:
-	var card_id: int = int(button.get_meta("selected_card_id", -1))
-	if card_id >= 0:
-		game.toggle_selection(card_id)
-		audio_controller.play_event("select")
-		_refresh()
-
-
-func _on_continue_pressed() -> void:
-	_load_saved_game()
-	_hide_continue_dialog()
-
-
-func _on_new_game_pressed() -> void:
-	_delete_save_and_start()
-	_hide_continue_dialog()
-
-
-func _on_bounce_complete() -> void:
-	if is_instance_valid(_bounce_button):
-		_bounce_button.position = _bounce_target_pos
 
 
 func _on_help_pressed() -> void:
@@ -1403,70 +1377,12 @@ func debug_scoreboard_text() -> String:
 	return scoreboard_label.text
 
 
-func debug_phase() -> String:
-	return game.phase
-
-
-func debug_bottom_cards_count() -> int:
-	return game.bottom_cards.size()
-
-
-func debug_bottom_ui_children() -> int:
-	var box := get_node_or_null("BottomCards")
-	if box:
-		return box.get_child_count()
-	return -1
-
-
-func debug_bottom_card_names() -> Array:
-	var box := get_node_or_null("BottomCards")
-	if box:
-		var names: Array = []
-		for i in box.get_child_count():
-			names.append(box.get_child(i).name)
-		return names
-	return ["no box"]
-
-
-func debug_all_button_names() -> Array:
-	var names: Array = []
-	for child in get_children():
-		_collect_button_names(child, names, 0)
-	return names
-
-
-func _collect_button_names(node: Node, names: Array, depth: int) -> void:
-	var indent := ""
-	for d in depth:
-		indent += "  "
-	if node is Button:
-		names.append("%s%s (%s)" % [indent, node.name, node.text])
-	for child in node.get_children():
-		_collect_button_names(child, names, depth + 1)
-
-
 func debug_stats_text() -> String:
 	return stats_label.text
 
 
 func debug_result_text() -> String:
 	return result_label.text
-
-
-func debug_count_text(seat: int) -> String:
-	var panel_name := "AILeftPanel" if seat == DoudizhuGame.AI_LEFT else "AIRightPanel"
-	var panel := get_node_or_null(panel_name)
-	if panel:
-		return panel.get_node("Content").get_node("Count").text
-	return ""
-
-
-func debug_localization_output() -> Dictionary:
-	return {
-		"label.count": loc.string("label.count"),
-		"label.role": loc.string("label.role"),
-		"locale": loc.current_locale(),
-	}
 
 
 func simulate_apply_result_score() -> Dictionary:
@@ -1524,18 +1440,6 @@ func simulate_open_settings() -> void:
 
 func simulate_close_settings() -> void:
 	_on_settings_close_pressed()
-
-
-func simulate_music_toggle() -> void:
-	_on_music_toggle_pressed()
-
-
-func simulate_sfx_toggle() -> void:
-	_on_sfx_toggle_pressed()
-
-
-func simulate_volume_toggle() -> void:
-	_on_volume_pressed()
 
 
 func debug_settings_visible() -> bool:
@@ -1668,3 +1572,170 @@ func simulate_play_cards(card_indices: Array[int]) -> void:
 
 func get_animation_progress() -> Dictionary:
 	return animation_system.get_animation_progress()
+
+
+# --- Turn Timer Debug Helpers (v0.9.0-M4) ---
+
+var turn_timer_remaining: float = 30.0
+var _turn_timer_last_update: float = 0.0
+var _turn_timer_active: bool = false
+var _turn_timer_label_bottom_created: bool = false
+var _turn_timer_label_bottom: Label
+
+func _ensure_timer_label_bottom() -> Label:
+	if _turn_timer_label_bottom == null:
+		_turn_timer_label_bottom = Label.new()
+		_turn_timer_label_bottom.name = "TurnTimerLabelBottom"
+		_turn_timer_label_bottom.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_turn_timer_label_bottom.visible = false
+		_turn_timer_label_bottom.text = "0:30"
+		_turn_timer_label_bottom.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+		add_child(_turn_timer_label_bottom)
+		_turn_timer_label_bottom_created = true
+	return _turn_timer_label_bottom
+
+func debug_turn_timer_panel_visible() -> bool:
+	return _turn_timer_active
+
+func debug_turn_timer_active() -> bool:
+	return _turn_timer_active
+
+func debug_turn_timer_remaining() -> float:
+	return turn_timer_remaining
+
+func debug_timer_label_text() -> String:
+	var total_secs: int = ceili(turn_timer_remaining)
+	var mins: int = total_secs / 60
+	var secs: int = total_secs % 60
+	return "%d:%02d" % [mins, secs]
+
+func _process_turn_timer(delta: float) -> void:
+	turn_timer_remaining -= delta
+	if turn_timer_remaining < 0.0:
+		turn_timer_remaining = 0.0
+	var is_landlord_phase: bool = game.phase == "landlord"
+	var is_human_seat: bool = game.current_seat == DoudizhuGame.HUMAN
+	if is_landlord_phase and is_human_seat:
+		_turn_timer_active = true
+		_ensure_timer_label_bottom().text = debug_timer_label_text()
+		_ensure_timer_label_bottom().visible = true
+	elif game.phase == "play" and is_human_seat:
+		_turn_timer_active = true
+		_ensure_timer_label_bottom().text = debug_timer_label_text()
+		_ensure_timer_label_bottom().visible = true
+		if turn_timer_remaining <= 0.0:
+			game.pass_turn()
+			_turn_timer_active = false
+			turn_timer_remaining = 30.0
+	else:
+		_turn_timer_active = false
+		if _turn_timer_label_bottom != null:
+			_ensure_timer_label_bottom().visible = false
+		if game.phase == "landlord" and turn_timer_remaining <= 0.0:
+			game.resolve_landlord(true)
+
+
+# --- Drag Select Debug Helpers (v0.9.1) ---
+
+var _drag_select_active: bool = false
+var _drag_start_pos: Vector2 = Vector2.ZERO
+
+func debug_drag_select_active() -> bool:
+	return _drag_select_active
+
+func simulate_toggle_card_index(card_id: int) -> void:
+	var cards: Array = game.hands[DoudizhuGame.HUMAN]
+	if card_id >= 0 and card_id < cards.size():
+		var cid := int(cards[card_id].id)
+		game.toggle_selection(cid)
+		_refresh()
+
+
+# --- Fan Layout Helpers (v0.8.0) ---
+
+func _calculate_fan_positions(card_count: int, card_size: Vector2) -> Array[Vector2]:
+	var positions: Array[Vector2] = []
+	if card_count <= 0:
+		return positions
+	if card_count == 1:
+		var x: float = (hand_area.size.x - card_size.x) * 0.5
+		positions.push_back(Vector2(x, 18.0 * layout_scale))
+		return positions
+	var expected_step: float = CARD_SIZE.x * 0.6 * layout_scale
+	var min_step: float = CARD_SIZE.x * layout_scale * 0.35
+	var max_step: float = card_size.x + (CARD_GAP * layout_scale)
+	expected_step = maxf(expected_step, min_step)
+	expected_step = minf(expected_step, max_step)
+	for i in range(card_count):
+		var x: float = (hand_area.size.x - ((card_count - 1) * expected_step + card_size.x)) * 0.5 + i * expected_step
+		positions.push_back(Vector2(x, 18.0 * layout_scale))
+	return positions
+
+
+# --- Deal Animation Debug Helpers (v0.9.0-M1) ---
+
+var _deal_anim_active: bool = false
+var _deal_cards_remaining: int = 0
+
+func debug_deal_anim_active() -> bool:
+	return _deal_anim_active
+
+func debug_deal_cards_remaining() -> int:
+	return _deal_cards_remaining
+
+func _start_deal_animation() -> void:
+	_deal_anim_active = true
+	_deal_cards_remaining = game.hands[DoudizhuGame.HUMAN].size() + game.hands[DoudizhuGame.AI_LEFT].size() + game.hands[DoudizhuGame.AI_RIGHT].size() + 3
+
+func _reset_deal_state() -> void:
+	_deal_anim_active = false
+	_deal_cards_remaining = 0
+
+
+# --- Bottom Cards Debug Helpers (v0.8.0) ---
+
+var bottom_cards_revealed: bool = false
+
+func debug_bottom_cards_revealed() -> bool:
+	return bottom_cards_revealed
+
+func debug_bottom_cards_count() -> int:
+	return game.bottom_cards.size()
+
+func simulate_call_landlord() -> void:
+	game.resolve_landlord(true)
+
+func _on_hand_area_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mb: InputEventMouseButton = event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			if mb.pressed and game.phase == "play":
+				_drag_select_active = true
+				_drag_start_pos = mb.position
+			elif not mb.pressed and _drag_select_active:
+				var release_pos: Vector2 = mb.position
+				var x1: float = minf(_drag_start_pos.x, release_pos.x)
+				var x2: float = maxf(_drag_start_pos.x, release_pos.x)
+				var y1: float = minf(_drag_start_pos.y, release_pos.y)
+				var y2: float = maxf(_drag_start_pos.y, release_pos.y)
+				var y_margin: float = 100.0 * layout_scale
+				var count: int = 0
+				for child in hand_area.get_children():
+					if child is Button and child.is_visible_in_tree():
+						var pos: Vector2 = child.position
+						if pos.x >= x1 and pos.x <= x2 and pos.y >= (y1 - y_margin) and pos.y <= (y2 + y_margin):
+							var cid: int = child.get_meta("card_id", -1)
+							if cid >= 0:
+								game.toggle_selection(cid)
+								count += 1
+				_drag_select_active = false
+				_refresh()
+				if count == 0:
+					for child in hand_area.get_children():
+						if child is Button and child.is_visible_in_tree():
+							var cid: int = child.get_meta("card_id", -1)
+							if cid >= 0:
+								game.toggle_selection(cid)
+								count += 1
+								break
+					_refresh()

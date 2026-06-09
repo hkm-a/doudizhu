@@ -27,6 +27,9 @@ var winner_seat := -1
 var hand_number := 0
 var result_key := ""
 var seed := 7
+var ai_delay_active := false
+var ai_delay_seat := -1
+var ai_delay_remaining := 0.0
 
 
 func new_round(round_seed: int = 7) -> void:
@@ -230,6 +233,34 @@ func debug_configure_bomb_conservation_fixture() -> void:
 	message = "Bomb conservation fixture: AI should answer with 4S, not bomb."
 
 
+func debug_configure_joker_fixture() -> void:
+	cards_by_id.clear()
+	for card in CardRules.create_deck():
+		cards_by_id[int(card.id)] = card
+	roles = ["landlord", "farmer", "farmer"]
+	landlord_seat = HUMAN
+	phase = "play"
+	current_seat = HUMAN
+	initiative_seat = AI_LEFT
+	consecutive_passes = 0
+	selected_cards = []
+	winner_side = ""
+	winner_seat = -1
+	result_key = ""
+	hands[HUMAN] = [cards_by_id[53], cards_by_id[4], cards_by_id[8]]
+	hands[AI_LEFT] = [cards_by_id[52], cards_by_id[0]]
+	hands[AI_RIGHT] = [cards_by_id[1], cards_by_id[2]]
+	bottom_cards = [cards_by_id[20], cards_by_id[21], cards_by_id[22]]
+	var active_cards: Array[Dictionary] = [cards_by_id[52]]
+	active_trick = CardRules.classify(active_cards)
+	active_trick["cards"] = active_cards
+	active_trick["owner_seat"] = AI_LEFT
+	recent_plays = ["", "SJ", ""]
+	ai_reasons = ["", "", ""]
+	hint_reason = ""
+	message = "Joker fixture: AI played SJ, human has BJ."
+
+
 func hand_summary_text() -> String:
 	return _hand_summary_for(DoudizhuGame.HUMAN)
 
@@ -252,8 +283,41 @@ func selected_card_dicts() -> Array[Dictionary]:
 func process_ai_until_human(max_steps: int = 12) -> void:
 	var steps := 0
 	while phase == "play" and current_seat != HUMAN and steps < max_steps:
-		_ai_step()
+		_start_ai_delay(current_seat)
 		steps += 1
+
+
+func _start_ai_delay(seat: int) -> void:
+	var difficulty := AIUtilsScript.get_difficulty()
+	var delay := 0.3 if difficulty == 0 else 0.5
+	ai_delay_active = true
+	ai_delay_seat = seat
+	ai_delay_remaining = delay
+
+
+func tick_ai_delay(delta: float) -> bool:
+	if not ai_delay_active:
+		return false
+	ai_delay_remaining -= delta
+	if ai_delay_remaining <= 0.0:
+		ai_delay_active = false
+		ai_delay_seat = -1
+		ai_delay_remaining = 0.0
+		_ai_step()
+		return true
+	return false
+
+
+func get_ai_delay_active() -> bool:
+	return ai_delay_active
+
+
+func get_ai_delay_seat() -> int:
+	return ai_delay_seat
+
+
+func get_ai_delay_remaining() -> float:
+	return maxf(ai_delay_remaining, 0.0)
 
 
 func _ai_step() -> void:

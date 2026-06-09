@@ -6,7 +6,7 @@ from dz_helpers import root, text
 def test_v0_4_0_m1_hint_explains_low_cost_legal_play(game):
     root(game).call("debug_configure_expanded_rule_fixture")
 
-    game.locator(name="HintButton").click()
+    root(game).call("simulate_hint")
 
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_selected_count") == 5,

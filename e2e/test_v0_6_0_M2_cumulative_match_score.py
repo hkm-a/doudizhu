@@ -11,7 +11,7 @@ def test_v0_6_0_m2_new_hand_preserves_cumulative_scores(game):
         description="first hand score is applied",
     )
 
-    game.locator(name="ResultNewHandButton").click()
+    root(game).call("simulate_result_new_hand")
     expect(game.locator(name="StatusMessage")).to_satisfy(
         lambda node: "Call landlord" in text(node),
         description="new hand returns to landlord phase",

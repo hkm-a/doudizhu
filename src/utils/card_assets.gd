@@ -58,16 +58,10 @@ static func _initialize() -> void:
 
 
 static func _load_image_file(path: String) -> Texture2D:
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		return null
-	var data := file.get_buffer(file.get_length())
-	file.close()
-	var img := Image.new()
-	var err := img.load_png_from_buffer(data)
-	if err != OK:
-		return null
-	return ImageTexture.create_from_image(img)
+	var res := ResourceLoader.load(path, "Texture2D", ResourceLoader.CACHE_MODE_REUSE)
+	if res != null:
+		return res as Texture2D
+	return null
 
 
 static func _make_filename(rank: int, suit: String) -> String:

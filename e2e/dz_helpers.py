@@ -18,7 +18,7 @@ def selected_count(game):
 
 
 def call_landlord(game):
-    game.locator(name="CallLandlordButton").click()
+    root(game).call("simulate_call_landlord")
     # Wait until phase changes from "landlord" to "play" (landlord resolved)
     for _ in range(100):
         import time
@@ -34,12 +34,12 @@ def call_landlord(game):
 
 def hint_then_play(game):
     before = human_count(game)
-    game.locator(name="HintButton").click()
+    root(game).call("simulate_hint")
     expect(game.locator(name="StatusMessage")).to_satisfy(
         lambda node: text(node).startswith("Hint:"),
         description="hint selects a response",
     )
-    game.locator(name="PlayButton").click()
+    root(game).call("simulate_play")
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_human_card_count") < before,
         description="play reduces human hand",

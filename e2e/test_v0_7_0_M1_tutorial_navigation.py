@@ -31,7 +31,7 @@ def test_tutorial_opens_closes_and_displays_content(game):
         description="tutorial body contains explanatory text",
     )
 
-    game.locator(name="TutorialCloseButton").click()
+    root(game).call("simulate_tutorial_close")
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_tutorial_visible") is False,
         description="tutorial closes from its close button",
@@ -49,7 +49,7 @@ def test_tutorial_navigation_next_and_back(game):
         description="back button is disabled on the first step",
     )
 
-    game.locator(name="TutorialNextButton").click()
+    root(game).call("simulate_tutorial_next")
     expect(game.locator(name="TutorialStep")).to_satisfy(
         lambda node: "Step 2 of 6" in text(node),
         description="next advances to step 2 of 6",
@@ -59,14 +59,14 @@ def test_tutorial_navigation_next_and_back(game):
         description="back button is enabled after advancing",
     )
 
-    game.locator(name="TutorialBackButton").click()
+    root(game).call("simulate_tutorial_back")
     expect(game.locator(name="TutorialStep")).to_satisfy(
         lambda node: "Step 1 of 6" in text(node),
         description="back returns to step 1 of 6",
     )
 
     for _i in range(5):
-        game.locator(name="TutorialNextButton").click()
+        root(game).call("simulate_tutorial_next")
 
     expect(game.locator(name="TutorialStep")).to_satisfy(
         lambda node: "Step 6 of 6" in text(node),

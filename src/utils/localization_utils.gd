@@ -67,6 +67,13 @@ func is_en() -> bool:
 	return _current_locale == "en"
 
 
+func switch_locale() -> void:
+	if _current_locale == "en":
+		set_locale("zh")
+	else:
+		set_locale("en")
+
+
 func _defaults() -> Dictionary:
 	return {
 		"seat.player": "Player",
@@ -94,7 +101,16 @@ func _defaults() -> Dictionary:
 		"message.no_valid_play": "Hint is available on your turn.",
 		"result.landlord_win": "Landlord Wins",
 		"result.farmers_win": "Farmers Win",
-		"settings.audio": "Audio settings apply immediately during this hand.",
+		"result.new_hand": "New Hand",
+		"result.new_match": "New Match",
+		"result.quit": "Quit",
+		"result.winner": "Winner: %s | Landlord: %s",
+		"label.sfx": "Audio settings apply immediately during this hand.",
+		"label.seat_human": "Player",
+		"label.seat_ai_left": "AI Left",
+		"label.seat_ai_right": "AI Right",
+		"label.thinking": "...",
+		"label.bottom_cards": "底牌",
 	}
 
 

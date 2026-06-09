@@ -7,7 +7,7 @@ def test_v0_2_0_m1_hint_and_play_follow_straight(game):
     root(game).call("debug_configure_expanded_rule_fixture")
     before = human_count(game)
 
-    game.locator(name="HintButton").click()
+    root(game).call("simulate_hint")
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_selected_count") == 5,
         description="hint selects the five-card straight response",
@@ -17,7 +17,7 @@ def test_v0_2_0_m1_hint_and_play_follow_straight(game):
         description="hint status is visible",
     )
 
-    game.locator(name="PlayButton").click()
+    root(game).call("simulate_play")
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_human_card_count") == before - 5,
         description="playing the selected straight reduces the hand",

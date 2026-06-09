@@ -1,0 +1,31 @@
+{
+  "result": "fail",
+  "ts": "2026-06-09T05:09:50Z",
+  "checks": {
+    "build": {
+      "result": "pass",
+      "errors": []
+    },
+    "unit_tests": {
+      "result": "pass",
+      "passed": 131,
+      "failed": 0,
+      "failures": []
+    },
+    "lint": {
+      "result": "pass",
+      "issues": [],
+      "format_drift": null
+    },
+    "static_check": {
+      "result": "fail",
+      "issues": [
+        {
+          "check": "static_check",
+          "detail": "AutomationServer autoload missing in project.godot"
+        }
+      ]
+    }
+  },
+  "tooling_notes": []
+}

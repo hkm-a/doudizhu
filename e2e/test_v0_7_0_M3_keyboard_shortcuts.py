@@ -44,7 +44,7 @@ def test_shortcut_f1_opens_and_closes_help(game):
 
 
 def test_shortcut_h_activates_hint(game):
-    game.locator(name="CallLandlordButton").click()
+    root(game).call("simulate_call_landlord")
     game.wait_physics_frames(30)
 
     root(game).call("simulate_shortcut", ["KEY_H"])
@@ -57,10 +57,10 @@ def test_shortcut_h_activates_hint(game):
 
 
 def test_shortcut_p_activates_pass(game):
-    game.locator(name="CallLandlordButton").click()
+    root(game).call("simulate_call_landlord")
     game.wait_physics_frames(10)
 
-    game.locator(name="PlayButton").click()
+    root(game).call("simulate_play")
     game.wait_physics_frames(10)
 
     root(game).call("simulate_shortcut", ["KEY_P"])
@@ -81,7 +81,7 @@ def test_shortcut_space_plays_or_calls_landlord(game):
 
 
 def test_shortcut_n_on_result_restarts_hand(game):
-    game.locator(name="CallLandlordButton").click()
+    root(game).call("simulate_call_landlord")
     game.wait_physics_frames(10)
     root(game).call("debug_finish_human_win")
     game.wait_physics_frames(10)

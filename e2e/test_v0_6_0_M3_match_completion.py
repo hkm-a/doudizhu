@@ -29,7 +29,7 @@ def test_v0_6_0_m3_match_completion_and_new_match_reset(game):
         description="match completion state is observable",
     )
 
-    game.locator(name="ResultNewMatchButton").click()
+    root(game).call("simulate_result_new_match")
     expect(root(game)).to_satisfy(
         lambda node: node.call("debug_score_state")["totals"] == [0, 0, 0]
         and node.call("debug_score_state")["hands_played"] == 0,

@@ -122,3 +122,13 @@ The first tag is always `v0.1.0`. Each tag must ship a player-experienced playab
 - Save settings: persist audio volume, language preference, and other user settings.
 - Progress tracking: record streaks, best score, and session statistics alongside saved state.
 - Asset replacement: generate card face images, card back, and background via ComfyUI (NetaYume model).
+
+## v0.9.1 — Drag-to-Select
+
+**Expected player experience**
+- Select multiple cards at once by dragging mouse across the fan hand instead of clicking each card individually.
+
+**Features / mechanics**
+- Mouse drag detection on player hand area with visual feedback.
+- Cards intersected by drag rect get selected (or deselected if drag goes backwards).
+- Works alongside existing click-to-toggle selection.

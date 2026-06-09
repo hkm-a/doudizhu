@@ -391,13 +391,13 @@ static func _consecutive_rank_runs(ranks: Array[int]) -> Array[Array]:
 
 
 static func _joker_bomb(hand: Array) -> Array[Array]:
-	var small := {}
-	var big := {}
+	var small: Dictionary = {}
+	var big: Dictionary = {}
 	for card in hand:
 		if int(card.rank) == 16:
-			small = card
+			small = card.duplicate()
 		elif int(card.rank) == 17:
-			big = card
+			big = card.duplicate()
 	if small.is_empty() or big.is_empty():
 		return []
 	return [[small, big]]

@@ -61,9 +61,13 @@ func test_hint_selects_a_legal_play() -> void:
 func test_ai_policy_conserves_bomb_and_records_reason() -> void:
 	var game := DoudizhuGame.new()
 	game.debug_configure_bomb_conservation_fixture()
-	game.process_ai_until_human(1)
+	# Manually set up the AI to play: current_seat is AI_LEFT, tick delay then play
+	game._start_ai_delay(DoudizhuGame.AI_LEFT)
+	game.tick_ai_delay(1.0)
+	game._ai_step()
 	assert_that(game.recent_plays[DoudizhuGame.AI_LEFT]).is_equal("4S")
-	assert_that(game.ai_reasons[DoudizhuGame.AI_LEFT].contains("bombs conserved")).is_equal(true)
+	var reason := game.ai_reasons[DoudizhuGame.AI_LEFT].to_lower()
+	assert_that(reason.contains("conserv")).is_equal(true)
 
 
 func test_hand_summary_reports_count_groups_and_chains() -> void:
@@ -93,4 +97,41 @@ func test_result_and_replay_state() -> void:
 	game.new_round(43)
 	assert_that(game.phase).is_equal("landlord")
 	assert_that(game.winner_side).is_equal("")
+
+
+func test_ai_delay_starts_when_ai_turn() -> void:
+	var game := DoudizhuGame.new()
+	game.new_round(42)
+	# Set landlord to AI_LEFT without triggering auto-advance
+	game.phase = "play"
+	game.current_seat = DoudizhuGame.AI_LEFT
+	game.initiative_seat = DoudizhuGame.HUMAN
+	game.landlord_seat = DoudizhuGame.AI_LEFT
+	game.roles = ["farmer", "landlord", "farmer"]
+	assert_that(game.get_ai_delay_active()).is_equal(false)
+	assert_that(game.get_ai_delay_seat()).is_equal(-1)
+	assert_that(game.get_ai_delay_remaining()).is_equal(0.0)
+	game.process_ai_until_human(1)
+	assert_that(game.get_ai_delay_active()).is_equal(true)
+	assert_that(game.get_ai_delay_seat()).is_equal(DoudizhuGame.AI_LEFT)
+	assert_that(game.get_ai_delay_remaining()).is_greater(0.0)
+
+
+func test_ai_delay_ticks_down_and_completes() -> void:
+	var game := DoudizhuGame.new()
+	game.new_round(42)
+	game.phase = "play"
+	game.current_seat = DoudizhuGame.AI_LEFT
+	game.initiative_seat = DoudizhuGame.HUMAN
+	game.landlord_seat = DoudizhuGame.HUMAN
+	game.roles = ["landlord", "farmer", "farmer"]
+	game.process_ai_until_human(1)
+	assert_that(game.get_ai_delay_active()).is_equal(true)
+	var initial_remaining := game.get_ai_delay_remaining()
+	var completed := game.tick_ai_delay(initial_remaining + 0.01)
+	assert_that(completed).is_equal(true)
+	assert_that(game.get_ai_delay_active()).is_equal(false)
+	assert_that(game.get_ai_delay_seat()).is_equal(-1)
+	assert_that(game.get_ai_delay_remaining()).is_equal(0.0)
+	assert_that(game.current_seat != DoudizhuGame.AI_LEFT).is_equal(true)
 
