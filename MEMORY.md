@@ -2,9 +2,13 @@
 
 ## Current Tag
 
-- Tag: v0.6.0
-- Theme: Scoring And Match Progression
-- Status: Build verification in progress.
+- Tag: v0.9.1 (shipped as git tag v0.9.1)
+- Theme: Drag-to-Select Cards
+- Status: All roadmap tags v0.1.0–v0.9.1 archived and git-tagged. Post-archive backlog completed.
+
+## Decisions
+
+- main.gd (1776 lines) has been flagged for refactoring but deferred due to tight coupling with game state, debug methods, and e2e fixtures. Splitting requires extracting ~80+ methods across 5+ modules while preserving all public debug_ and simulate_ signatures. Future high-priority task.
 
 ## Decisions
 
