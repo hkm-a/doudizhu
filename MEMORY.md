@@ -4,7 +4,7 @@
 
 - Tag: v0.9.1 (shipped as git tag v0.9.1)
 - Theme: Drag-to-Select Cards
-- Status: All roadmap tags v0.1.0–v0.9.1 archived and git-tagged. Post-archive backlog completed.
+- Status: main.gd refactor completed (668 lines, 62% reduction from 1775). 6 module files created. test_fan_layout fixed. 1 new bug found in card_rules.gd (Array/Array[Dictionary] type mismatch).
 
 ## Decisions
 
@@ -46,6 +46,7 @@
 - Special combinations beyond the roadmap scope, such as airplane with wings and four-with-two, remain deferred.
 - Animation, audio, and improved AI are intentionally deferred to later roadmap tags.
 - v0.4.0 improves basic AI policy, but full expert Doudizhu AI and difficulty settings remain out of scope unless the roadmap is updated.
+- GDScript typed arrays (`Array[Dictionary]`, `Array[int]`) reject untyped `Array` assignment from operations like `.slice()`, `+` concatenation, or dictionary lookups. Remove type annotations when the RHS is untyped.
 
 ## Reviewer Triage Log
 

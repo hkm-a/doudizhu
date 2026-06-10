@@ -36,3 +36,7 @@ enabled=PackedStringArray("res://addons/gecs/plugin.cfg", "res://addons/gdUnit4/
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
+
+[resources]
+
+auto_load=[]

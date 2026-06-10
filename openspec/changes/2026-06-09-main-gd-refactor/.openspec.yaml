@@ -1,0 +1,7 @@
+name: 2026-06-09-main-gd-refactor
+title: "main.gd 重构 — 拆分为 5 个模块"
+created_at: 2026-06-09
+workflow: full
+phase: open
+archived: false
+auto_transition: false

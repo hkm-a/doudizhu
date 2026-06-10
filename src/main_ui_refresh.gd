@@ -86,7 +86,7 @@ func _refresh_seat(panel: Panel, seat: int, animation_system, loc: LocalizationU
 	else:
 		box.get_node("Role").add_theme_color_override("font_color", Color(0.4, 0.6, 1.0))
 
-	box.get_node("Count").text = "%d张" % game_ref.hands[seat].size()
+	box.get_node("Count").text = "%d张" % int(game_ref.hands[seat].size())
 	box.get_node("Count").add_theme_font_size_override("font_size", int(16.0 * layout_scale))
 	box.get_node("Turn").text = "回合" if game_ref.current_seat == seat and game_ref.phase == "play" else ""
 	box.get_node("Recent").text = "%s: %s" % [loc.string("label.recent"), (game_ref.recent_plays[seat] if game_ref.recent_plays[seat] != "" else "-")]

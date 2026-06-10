@@ -98,3 +98,159 @@ func test_low_cost_candidate_scoring_uses_bomb_when_required() -> void:
 	var candidate := CardRules.find_best_legal_candidate(hand, active_single, false)
 	assert_that(CardRules.classify(candidate.cards).play_type).is_equal(CardRules.TYPE_BOMB)
 	assert_that(String(candidate.reason).contains("override")).is_equal(true)
+
+
+func test_airplane_with_wings_classification_with_singles() -> void:
+	var deck := CardRules.create_deck()
+	var aaa = [deck[0], deck[1], deck[2]]
+	var bbb = [deck[4], deck[5], deck[6]]
+	var kicker_a = [deck[8]]
+	var combined = aaa + bbb + kicker_a
+	assert_that(CardRules.classify(combined).valid).is_equal(true)
+	assert_that(CardRules.classify(combined).play_type).is_equal(CardRules.TYPE_AIRPLANE_WITH_WINGS)
+	assert_that(CardRules.classify(combined).primary_rank).is_equal(4)
+	assert_that(CardRules.classify(combined).length).is_equal(8)
+
+
+func test_airplane_with_wings_classification_with_pairs() -> void:
+	var deck := CardRules.create_deck()
+	var aaa = [deck[0], deck[1], deck[2]]
+	var bbb = [deck[4], deck[5], deck[6]]
+	var kicker_a_pair = [deck[8], deck[9]]
+	var combined = aaa + bbb + kicker_a_pair
+	assert_that(CardRules.classify(combined).valid).is_equal(true)
+	assert_that(CardRules.classify(combined).play_type).is_equal(CardRules.TYPE_AIRPLANE_WITH_WINGS)
+	assert_that(CardRules.classify(combined).primary_rank).is_equal(4)
+	assert_that(CardRules.classify(combined).length).is_equal(8)
+
+
+func test_airplane_with_wings_comparison() -> void:
+	var deck := CardRules.create_deck()
+	var low_triplets = [
+		deck[0], deck[1], deck[2], deck[4], deck[5], deck[6], deck[8]
+	]
+	var high_triplets = [
+		deck[8], deck[9], deck[10], deck[12], deck[13], deck[14], deck[16]
+	]
+	assert_that(CardRules.can_beat(
+		CardRules.classify(high_triplets),
+		CardRules.classify(low_triplets)
+	)).is_equal(true)
+	assert_that(CardRules.can_beat(
+		CardRules.classify(low_triplets),
+		CardRules.classify(high_triplets)
+	)).is_equal(false)
+
+
+func test_airplane_with_wings_rejects_non_consecutive() -> void:
+	var deck := CardRules.create_deck()
+	var aaa = [deck[0], deck[1], deck[2]]
+	var ccc = [deck[8], deck[9], deck[10]]
+	var kicker = [deck[12]]
+	var combined = aaa + ccc + kicker
+	assert_that(CardRules.classify(combined).valid).is_equal(false)
+
+
+func test_airplane_with_wings_requires_minimum_two_triplets() -> void:
+	var deck := CardRules.create_deck()
+	var aaa = [deck[0], deck[1], deck[2]]
+	var kicker = [deck[4]]
+	var combined = aaa + kicker
+	assert_that(CardRules.classify(combined).valid).is_equal(false)
+
+
+func test_airplane_with_wings_uses_quad_as_triplet_plus_kicker() -> void:
+	var deck := CardRules.create_deck()
+	var aaaa = [deck[0], deck[1], deck[2], deck[3]]
+	var bbb = [deck[4], deck[5], deck[6]]
+	var kicker = [deck[8]]
+	var combined = aaaa + bbb + kicker
+	assert_that(CardRules.classify(combined).valid).is_equal(true)
+	assert_that(CardRules.classify(combined).play_type).is_equal(CardRules.TYPE_AIRPLANE_WITH_WINGS)
+
+
+func test_four_with_two_classification() -> void:
+	var deck := CardRules.create_deck()
+	var aaaa = [deck[0], deck[1], deck[2], deck[3]]
+	var kicker1 = [deck[8]]
+	var kicker2 = [deck[12]]
+	var combined = aaaa + kicker1 + kicker2
+	assert_that(CardRules.classify(combined).valid).is_equal(true)
+	assert_that(CardRules.classify(combined).play_type).is_equal(CardRules.TYPE_FOUR_WITH_TWO)
+	assert_that(CardRules.classify(combined).primary_rank).is_equal(3)
+	assert_that(CardRules.classify(combined).length).is_equal(6)
+
+
+func test_four_with_two_with_pair() -> void:
+	var deck := CardRules.create_deck()
+	var aaaa = [deck[0], deck[1], deck[2], deck[3]]
+	var pair = [deck[8], deck[9]]
+	var combined = aaaa + pair
+	assert_that(CardRules.classify(combined).valid).is_equal(true)
+	assert_that(CardRules.classify(combined).play_type).is_equal(CardRules.TYPE_FOUR_WITH_TWO)
+	assert_that(CardRules.classify(combined).primary_rank).is_equal(3)
+	assert_that(CardRules.classify(combined).length).is_equal(6)
+
+
+func test_four_with_two_comparison() -> void:
+	var deck := CardRules.create_deck()
+	var low_four = [
+		deck[0], deck[1], deck[2], deck[3], deck[8], deck[12]
+	]
+	var high_four = [
+		deck[40], deck[41], deck[42], deck[43], deck[8], deck[12]
+	]
+	assert_that(CardRules.can_beat(
+		CardRules.classify(high_four),
+		CardRules.classify(low_four)
+	)).is_equal(true)
+	assert_that(CardRules.can_beat(
+		CardRules.classify(low_four),
+		CardRules.classify(high_four)
+	)).is_equal(false)
+
+
+func test_four_with_two_rejects_without_attached() -> void:
+	var deck := CardRules.create_deck()
+	var aaaa = [deck[0], deck[1], deck[2], deck[3]]
+	assert_that(CardRules.classify(aaaa).play_type).is_equal(CardRules.TYPE_BOMB)
+	assert_that(CardRules.classify(aaaa).play_type).is_not_equal(CardRules.TYPE_FOUR_WITH_TWO)
+
+
+func test_four_with_two_bombs_beat_four_with_two() -> void:
+	var deck := CardRules.create_deck()
+	var four_with_two = [
+		deck[0], deck[1], deck[2], deck[3], deck[8], deck[12]
+	]
+	var bomb = [deck[20], deck[24], deck[28], deck[32]]
+	assert_that(CardRules.can_beat(
+		CardRules.classify(bomb),
+		CardRules.classify(four_with_two)
+	)).is_equal(true)
+
+
+func test_find_legal_candidates_includes_airplane_with_wings() -> void:
+	var deck := CardRules.create_deck()
+	var hand = [
+		deck[0], deck[1], deck[2], deck[4], deck[5], deck[6],
+		deck[12], deck[13]
+	]
+	var candidates = CardRules.find_legal_candidates(hand, {}, true)
+	var has_aws := false
+	for c in candidates:
+		if String(c.classification.play_type) == CardRules.TYPE_AIRPLANE_WITH_WINGS:
+			has_aws = true
+			break
+	assert_that(has_aws).is_equal(true)
+
+
+func test_find_legal_candidates_includes_four_with_two() -> void:
+	var deck := CardRules.create_deck()
+	var hand = deck.slice(0, 6)
+	var candidates = CardRules.find_legal_candidates(hand, {}, true)
+	var has_4w2 := false
+	for c in candidates:
+		if String(c.classification.play_type) == CardRules.TYPE_FOUR_WITH_TWO:
+			has_4w2 = true
+			break
+	assert_that(has_4w2).is_equal(true)

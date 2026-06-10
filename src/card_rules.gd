@@ -10,6 +10,8 @@ const TYPE_THREE_WITH_PAIR := "three_with_pair"
 const TYPE_STRAIGHT := "straight"
 const TYPE_CONSECUTIVE_PAIRS := "consecutive_pairs"
 const TYPE_AIRPLANE := "airplane"
+const TYPE_AIRPLANE_WITH_WINGS := "airplane_with_wings"
+const TYPE_FOUR_WITH_TWO := "four_with_two"
 const TYPE_BOMB := "bomb"
 const TYPE_JOKER_BOMB := "joker_bomb"
 
@@ -93,6 +95,10 @@ static func classify(cards: Array[Dictionary]) -> Dictionary:
 		return _result(TYPE_STRAIGHT, ranks.back(), cards.size())
 	if _is_consecutive_pairs(ranks, counts, cards.size()):
 		return _result(TYPE_CONSECUTIVE_PAIRS, ranks.back(), cards.size())
+	if _is_airplane_with_wings(ranks, counts, cards.size()):
+		return _result(TYPE_AIRPLANE_WITH_WINGS, ranks.back(), cards.size())
+	if _is_fours_with_attached(ranks, counts, cards.size()):
+		return _result(TYPE_FOUR_WITH_TWO, ranks.back(), cards.size())
 	if _is_airplane(ranks, counts, cards.size()):
 		return _result(TYPE_AIRPLANE, ranks.back(), cards.size())
 	return _invalid()
@@ -142,6 +148,8 @@ static func find_legal_candidates(hand: Array, active: Dictionary, has_initiativ
 	search_sets.append(_straights(sorted_hand))
 	search_sets.append(_consecutive_pairs(sorted_hand))
 	search_sets.append(_airplanes(sorted_hand))
+	search_sets.append(_airplane_with_wings(sorted_hand))
+	search_sets.append(_fours_with_attached(sorted_hand))
 	search_sets.append(_group_by_size(sorted_hand, 4))
 	search_sets.append(_joker_bomb(sorted_hand))
 
@@ -181,6 +189,10 @@ static func describe_play_type(play_type: String) -> String:
 			return "consecutive pairs"
 		TYPE_AIRPLANE:
 			return "airplane"
+		TYPE_AIRPLANE_WITH_WINGS:
+			return "airplane with wings"
+		TYPE_FOUR_WITH_TWO:
+			return "four with two"
 		TYPE_BOMB:
 			return "bomb"
 		TYPE_JOKER_BOMB:
@@ -217,7 +229,7 @@ static func _candidate_score(classification: Dictionary, active: Dictionary, has
 		score += 20000
 	elif play_type == TYPE_BOMB:
 		score += 10000
-	elif play_type in [TYPE_STRAIGHT, TYPE_CONSECUTIVE_PAIRS, TYPE_AIRPLANE]:
+	elif play_type in [TYPE_STRAIGHT, TYPE_CONSECUTIVE_PAIRS, TYPE_AIRPLANE, TYPE_AIRPLANE_WITH_WINGS, TYPE_FOUR_WITH_TWO]:
 		score += 20
 	elif play_type in [TYPE_THREE_WITH_ONE, TYPE_THREE_WITH_PAIR]:
 		score += 40
@@ -321,6 +333,71 @@ static func _airplanes(hand: Array) -> Array[Array]:
 	return result
 
 
+static func _airplane_with_wings(hand: Array) -> Array[Array]:
+	var by_rank := _cards_by_rank(hand)
+	var eligible_ranks := _eligible_chain_ranks(by_rank, 3)
+	var runs := _consecutive_rank_runs(eligible_ranks)
+	var result: Array[Array] = []
+	for run in runs:
+		for triple_count in range(2, run.size() + 1):
+			for start in range(0, run.size() - triple_count + 1):
+				var trip_ranks := run.slice(start, start + triple_count)
+				var triple_cards: Array[Dictionary] = []
+				var used_ids: Dictionary = {}
+				for rank in trip_ranks:
+					for card in by_rank[rank].slice(0, 3):
+						triple_cards.append(card)
+						used_ids[int(card.id)] = true
+				var available: Array[Dictionary] = []
+				for rank in by_rank.keys():
+					for card in by_rank[rank]:
+						if not used_ids.has(int(card.id)):
+							available.append(card)
+				available.sort_custom(CardRules.card_sort)
+				if available.size() >= triple_count:
+					var kickers: Array[Dictionary] = available.slice(0, triple_count)
+					result.append(triple_cards + kickers)
+	return result
+
+
+static func _fours_with_attached(hand: Array) -> Array[Array]:
+	var by_rank := _cards_by_rank(hand)
+	var quad_ranks: Array[int] = []
+	for rank in by_rank.keys():
+		if int(rank) < 15 and by_rank[rank].size() >= 4:
+			quad_ranks.append(int(rank))
+	quad_ranks.sort()
+	var result: Array[Array] = []
+	for i in range(quad_ranks.size()):
+		var qrank := quad_ranks[i]
+		var quad_cards = by_rank[qrank].slice(0, 4)
+		var used_ids: Dictionary = {}
+		for c in quad_cards:
+			used_ids[int(c.id)] = true
+		var other_ranks: Array[int] = quad_ranks.duplicate()
+		other_ranks.remove_at(i)
+		var kickers: Array[Dictionary] = []
+		for rank in by_rank.keys():
+			var r := int(rank)
+			if other_ranks.has(r):
+				continue
+			var cards = by_rank[r]
+			for card in cards:
+				if not used_ids.has(int(card.id)):
+					kickers.append(card)
+		kickers.sort_custom(CardRules.card_sort)
+		if kickers.size() >= 2:
+			var combo = quad_cards + kickers.slice(0, 2)
+			if _is_valid_four_with_two(combo):
+				result.append(combo)
+	return result
+
+
+static func _is_valid_four_with_two(cards: Array[Dictionary]) -> bool:
+	var classification := CardRules.classify(cards)
+	return classification.play_type == TYPE_FOUR_WITH_TWO
+
+
 static func _cards_by_rank(hand: Array) -> Dictionary:
 	var by_rank := {}
 	for card in hand:
@@ -354,6 +431,62 @@ static func _is_airplane(ranks: Array[int], counts: Dictionary, card_count: int)
 	if card_count < 6 or card_count % 3 != 0 or ranks.size() != card_count / 3:
 		return false
 	return _is_valid_chain(ranks, counts, 3)
+
+
+static func _is_airplane_with_wings(ranks: Array[int], counts: Dictionary, card_count: int) -> bool:
+	var triple_ranks: Array[int] = []
+	for rank in ranks:
+		var cnt := int(counts[rank])
+		if rank < 15 and cnt >= 3 and cnt <= 4:
+			triple_ranks.append(rank)
+	triple_ranks.sort()
+	if triple_ranks.size() < 2:
+		return false
+	for i in range(1, triple_ranks.size()):
+		if triple_ranks[i - 1] + 1 != triple_ranks[i]:
+			return false
+	var triple_count := triple_ranks.size()
+	var trip_cards := triple_count * 3
+	var attached := card_count - trip_cards
+	if attached != triple_count and attached != triple_count * 2:
+		return false
+	var non_triple_count := 0
+	for rank in ranks:
+		if not triple_ranks.has(rank):
+			non_triple_count += 1
+			var cnt := int(counts[rank])
+			if cnt < 1 or cnt > 2:
+				return false
+	if attached == triple_count and non_triple_count != triple_count:
+		return false
+	if attached == triple_count * 2 and non_triple_count != triple_count:
+		return false
+	return true
+
+
+static func _is_fours_with_attached(ranks: Array[int], counts: Dictionary, card_count: int) -> bool:
+	if card_count != 6:
+		return false
+	var four_ranks: Array[int] = []
+	for rank in ranks:
+		if int(counts[rank]) >= 4 and rank < 15:
+			four_ranks.append(rank)
+	if four_ranks.size() != 1:
+		return false
+	var quad_count := four_ranks.size()
+	var attached_count := card_count - quad_count * 4
+	if attached_count != 2:
+		return false
+	for rank in four_ranks:
+		if rank < 3 or rank >= 15:
+			return false
+	for rank in ranks:
+		if int(counts[rank]) >= 4 and rank < 15:
+			continue
+		var cnt := int(counts[rank])
+		if cnt < 1 or cnt > 2:
+			return false
+	return true
 
 
 static func _is_valid_chain(ranks: Array[int], counts: Dictionary, count_per_rank: int) -> bool:
