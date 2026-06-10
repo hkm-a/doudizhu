@@ -10,7 +10,7 @@ const SELECTED_CARD_COLOR := Color(1.0, 0.94, 0.55)
 func build_ui(main: Control, loc: LocalizationUtils, layout_scale: float, card_assets_cls) -> Dictionary:
 	card_assets_cls.initialize()
 
-	var table_bg_texture: Texture2D = card_assets_cls.get_table_bg()
+	var table_bg_texture: Texture2D = card_assets_cls.get_table_bg() as Texture2D
 	if table_bg_texture != null:
 		var bg_sprite := TextureRect.new()
 		bg_sprite.name = "TableBackground"

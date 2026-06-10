@@ -13,7 +13,7 @@ func on_decline_pressed(game, audio_controller) -> void:
 
 
 func on_play_pressed(game, audio_controller, animation_system, _hand_area_path: String) -> bool:
-	var played: bool = game.play_selected()
+	var played: bool = bool(game.play_selected())
 	if played:
 		audio_controller.play_event("play")
 		_animate_cards_to_table(game, animation_system)
@@ -23,7 +23,7 @@ func on_play_pressed(game, audio_controller, animation_system, _hand_area_path: 
 
 
 func on_pass_pressed(game, audio_controller) -> bool:
-	var passed: bool = game.pass_turn()
+	var passed: bool = bool(game.pass_turn())
 	if passed:
 		audio_controller.play_event("pass")
 	else:
@@ -103,8 +103,8 @@ func on_volume_pressed(audio_controller) -> void:
 
 
 func on_ai_difficulty_pressed(ai_utils_cls) -> void:
-	var current: int = ai_utils_cls.get_difficulty()
-	var next: int = (current + 1) % 2
+	var current: int = int(ai_utils_cls.get_difficulty())
+	var next: int = int((current + 1) % 2)
 	ai_utils_cls.save_difficulty(next)
 
 

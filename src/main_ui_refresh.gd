@@ -38,8 +38,9 @@ func refresh_all(game, score_state, audio_controller,
 	_apply_result_score_once(game, score_state, audio_controller, parent, layout_scale)
 	_refresh_seat(ai_left_panel, DoudizhuGame.AI_LEFT, animation_system, loc, layout_scale, parent)
 	_refresh_seat(ai_right_panel, DoudizhuGame.AI_RIGHT, animation_system, loc, layout_scale, parent)
-	var left_hand: Array[Dictionary] = parent._game_ref.hands[DoudizhuGame.AI_LEFT]
-	var right_hand: Array[Dictionary] = parent._game_ref.hands[DoudizhuGame.AI_RIGHT]
+	var game_ref = parent._game_ref
+	var left_hand: Array[Dictionary] = game_ref.hands[DoudizhuGame.AI_LEFT]
+	var right_hand: Array[Dictionary] = game_ref.hands[DoudizhuGame.AI_RIGHT]
 	_refresh_ai_hand(ai_left_hand, left_hand, DoudizhuGame.AI_LEFT,
 		parent, layout_scale, loc, game)
 	_refresh_ai_hand(ai_right_hand, right_hand, DoudizhuGame.AI_RIGHT,
@@ -68,10 +69,11 @@ func refresh_all(game, score_state, audio_controller,
 
 
 func _refresh_seat(panel: Panel, seat: int, animation_system, loc: LocalizationUtils, layout_scale: float, parent) -> void:
+	var game_ref = parent._game_ref
 	var box := panel.get_node("Content")
 	box.get_node("Name").text = loc.string("seat.player") if seat == DoudizhuGame.HUMAN else DoudizhuGame.SEAT_NAMES[seat]
 
-	var role: String = parent._game_ref.roles[seat]
+	var role: String = game_ref.roles[seat]
 	var role_text := "%s: %s" % [loc.string("label.role"), role]
 	if role == "地主":
 		role_text = "【地主】%s" % role
@@ -84,12 +86,12 @@ func _refresh_seat(panel: Panel, seat: int, animation_system, loc: LocalizationU
 	else:
 		box.get_node("Role").add_theme_color_override("font_color", Color(0.4, 0.6, 1.0))
 
-	box.get_node("Count").text = "%d张" % parent._game_ref.hands[seat].size()
+	box.get_node("Count").text = "%d张" % game_ref.hands[seat].size()
 	box.get_node("Count").add_theme_font_size_override("font_size", int(16.0 * layout_scale))
-	box.get_node("Turn").text = "回合" if parent._game_ref.current_seat == seat and parent._game_ref.phase == "play" else ""
-	box.get_node("Recent").text = "%s: %s" % [loc.string("label.recent"), (parent._game_ref.recent_plays[seat] if parent._game_ref.recent_plays[seat] != "" else "-")]
-	box.get_node("Reason").text = "%s: %s" % [loc.string("label.reason"), (parent._game_ref.ai_reasons[seat] if parent._game_ref.ai_reasons[seat] != "" else "-")]
-	var active: bool = parent._game_ref.current_seat == seat and parent._game_ref.phase == "play"
+	box.get_node("Turn").text = "回合" if game_ref.current_seat == seat and game_ref.phase == "play" else ""
+	box.get_node("Recent").text = "%s: %s" % [loc.string("label.recent"), (game_ref.recent_plays[seat] if game_ref.recent_plays[seat] != "" else "-")]
+	box.get_node("Reason").text = "%s: %s" % [loc.string("label.reason"), (game_ref.ai_reasons[seat] if game_ref.ai_reasons[seat] != "" else "-")]
+	var active: bool = game_ref.current_seat == seat and game_ref.phase == "play"
 	panel.add_theme_stylebox_override("panel", _panel_style(active, layout_scale))
 
 
@@ -114,7 +116,8 @@ func _refresh_trick(game, trick_box: HBoxContainer, trick_owner_label: Label, lo
 
 func _refresh_hand(game, hand_area: Control, layout_scale: float, animation_system, loc: LocalizationUtils, parent) -> void:
 	_clear_children(hand_area)
-	var cards: Array = parent._game_ref.hands[DoudizhuGame.HUMAN]
+	var game_ref = parent._game_ref
+	var cards: Array = game_ref.hands[DoudizhuGame.HUMAN]
 	var count: int = cards.size()
 	if count == 0:
 		return
@@ -124,7 +127,7 @@ func _refresh_hand(game, hand_area: Control, layout_scale: float, animation_syst
 
 	for index in range(count):
 		var card: Dictionary = cards[index]
-		var selected: bool = parent._game_ref.selected_cards.has(int(card.id))
+		var selected: bool = game_ref.selected_cards.has(int(card.id))
 		var button := _card_button(card, true, selected, parent, layout_scale, loc)
 
 		if index < positions.size():
@@ -147,8 +150,8 @@ func _refresh_hand(game, hand_area: Control, layout_scale: float, animation_syst
 func _refresh_actions(game, action_bar: HBoxContainer, call_button: Button, decline_button: Button,
 		play_button: Button, pass_button: Button, hint_button: Button, help_button: Button,
 		settings_button: Button, new_round_button: Button) -> void:
-	var landlord: bool = game.phase == "landlord"
-	var player_turn: bool = game.phase == "play" and game.current_seat == DoudizhuGame.HUMAN
+	var landlord: bool = String(game.phase) == "landlord"
+	var player_turn: bool = String(game.phase) == "play" and int(game.current_seat) == DoudizhuGame.HUMAN
 	call_button.visible = landlord
 	decline_button.visible = landlord
 	play_button.visible = player_turn
@@ -171,7 +174,7 @@ func _refresh_settings_ui(settings_blocker: ColorRect, settings_panel: PanelCont
 	sfx_toggle_button.text = "SFX: %s" % ("On" if audio_controller.sfx_enabled else "Off")
 	music_toggle_button.text = "Music: %s" % ("On" if audio_controller.music_enabled else "Off")
 	volume_button.text = "Volume: %s" % audio_controller.volume_preset.capitalize()
-	var current: int = parent.AIUtils.get_difficulty()
+	var current: int = int(parent.AIUtils.get_difficulty())
 	ai_difficulty_button.text = "AI Difficulty: %s" % ("Normal" if current == 0 else "Hard")
 	var focus_mode := Control.FOCUS_ALL if parent.settings_visible else Control.FOCUS_NONE
 	for button in [sfx_toggle_button, music_toggle_button, volume_button, ai_difficulty_button, settings_close_button]:
@@ -185,9 +188,9 @@ func _refresh_result_action_focus(result_panel: PanelContainer, result_new_hand_
 
 
 func _apply_result_score_once(game, score_state, audio_controller, parent, layout_scale: float) -> Dictionary:
-	if game.phase != "result":
+	if String(game.phase) != "result":
 		return score_state.debug_state()
-	var summary: Dictionary = game.result_summary()
+	var summary: Dictionary = Dictionary(game.result_summary())
 	var result: Dictionary = score_state.apply_hand_result(
 		String(summary.winner_side),
 		int(summary.landlord_seat),
@@ -205,9 +208,9 @@ func _auto_save_after_result(game, score_state, audio_controller, parent) -> voi
 
 
 func _result_summary_text(game, score_state) -> String:
-	if game.phase != "result":
+	if String(game.phase) != "result":
 		return ""
-	var result: Dictionary = game.result_summary()
+	var result: Dictionary = Dictionary(game.result_summary())
 	var lines := [
 		"%s win" % String(result.winner_side).capitalize(),
 		"Winner: %s | Landlord: %s" % [String(result.winner_name), String(result.landlord_name)],
