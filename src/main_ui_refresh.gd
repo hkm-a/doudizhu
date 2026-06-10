@@ -91,9 +91,9 @@ func _refresh_bottom_cards(game, bottom_cards_box: HBoxContainer, parent, layout
 func _refresh_trick(game, trick_box: HBoxContainer, trick_owner_label: Label, loc: LocalizationUtilsScript, layout_scale: float, parent) -> void:
 	_clear_children(trick_box)
 	if game.active_trick.is_empty():
-		trick_owner_label.text = loc.string("label.current_trick_none")
+		trick_owner_label.text = ""
 		return
-	trick_owner_label.text = "%s: %s" % [loc.string("label.recent"), DoudizhuGame.SEAT_NAMES[int(game.active_trick.owner_seat)]]
+	trick_owner_label.text = "%s出牌" % DoudizhuGame.SEAT_NAMES[int(game.active_trick.owner_seat)]
 	for card in game.active_trick.cards:
 		trick_box.add_child(_card_button(card, false, false, parent, layout_scale, loc))
 

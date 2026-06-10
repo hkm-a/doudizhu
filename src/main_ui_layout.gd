@@ -76,8 +76,8 @@ func layout_ui(main: Control, ai_left_panel: Panel, ai_right_panel: Panel,
 	bottom_cards_box.size = bottom_size
 	bottom_cards_box.add_theme_constant_override("separation", int(8.0 * layout_scale))
 
-	var trick_size := Vector2(clampf(viewport_size.x * 0.46, 480.0 * layout_scale, 620.0 * layout_scale), 170.0 * layout_scale)
-	trick_panel.position = Vector2((viewport_size.x - trick_size.x) * 0.5, viewport_size.y * 0.30)
+	var trick_size := Vector2(clampf(viewport_size.x * 0.60, 600.0 * layout_scale, 780.0 * layout_scale), 200.0 * layout_scale)
+	trick_panel.position = Vector2((viewport_size.x - trick_size.x) * 0.5, viewport_size.y * 0.32)
 	trick_panel.custom_minimum_size = trick_size
 	trick_panel.size = trick_size
 	trick_box.add_theme_constant_override("separation", int(6.0 * layout_scale))
