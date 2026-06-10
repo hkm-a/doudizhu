@@ -10,7 +10,7 @@ const SELECTED_CARD_COLOR := Color(1.0, 0.94, 0.55)
 func build_ui(main: Control, loc: LocalizationUtils, layout_scale: float, card_assets_cls) -> Dictionary:
 	card_assets_cls.initialize()
 
-	var table_bg_texture := card_assets_cls.get_table_bg()
+	var table_bg_texture: Texture2D = card_assets_cls.get_table_bg()
 	if table_bg_texture != null:
 		var bg_sprite := TextureRect.new()
 		bg_sprite.name = "TableBackground"
@@ -60,7 +60,7 @@ func build_ui(main: Control, loc: LocalizationUtils, layout_scale: float, card_a
 	var trick_panel := PanelContainer.new()
 	trick_panel.name = "TrickPanel"
 	_pin_top_left(main, trick_panel)
-	trick_panel.add_theme_stylebox_override("panel", _box_style(PANEL_COLOR, Color(0.03, 0.1, 0.08), layout_scale))
+	trick_panel.add_theme_stylebox_override("panel", _box_style(PANEL_COLOR, Color(0.03, 0.1, 0.08), 0, layout_scale))
 	main.add_child(trick_panel)
 	var trick_vbox := VBoxContainer.new()
 	trick_vbox.name = "TrickLayout"
@@ -512,7 +512,9 @@ func _box_style(bg_color: Color, border_color: Color, border_width: int, layout_
 func _button_style(highlighted: bool, layout_scale: float) -> StyleBoxFlat:
 	var style := _box_style(
 		Color(0.13, 0.2, 0.17, 1.0) if highlighted else Color(0.09, 0.15, 0.13, 1.0),
-		ACTIVE_BORDER_COLOR if highlighted else Color(0.18, 0.26, 0.22, 1.0)
+		ACTIVE_BORDER_COLOR if highlighted else Color(0.18, 0.26, 0.22, 1.0),
+		1,
+		layout_scale
 	)
 	style.content_margin_left = 14
 	style.content_margin_top = 8

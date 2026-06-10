@@ -38,8 +38,8 @@ func refresh_all(game, score_state, audio_controller,
 	_apply_result_score_once(game, score_state, audio_controller, parent, layout_scale)
 	_refresh_seat(ai_left_panel, DoudizhuGame.AI_LEFT, animation_system, loc, layout_scale, parent)
 	_refresh_seat(ai_right_panel, DoudizhuGame.AI_RIGHT, animation_system, loc, layout_scale, parent)
-	var left_hand := parent._game_ref.hands[DoudizhuGame.AI_LEFT]
-	var right_hand := parent._game_ref.hands[DoudizhuGame.AI_RIGHT]
+	var left_hand: Array[Dictionary] = parent._game_ref.hands[DoudizhuGame.AI_LEFT]
+	var right_hand: Array[Dictionary] = parent._game_ref.hands[DoudizhuGame.AI_RIGHT]
 	_refresh_ai_hand(ai_left_hand, left_hand, DoudizhuGame.AI_LEFT,
 		parent, layout_scale, loc, game)
 	_refresh_ai_hand(ai_right_hand, right_hand, DoudizhuGame.AI_RIGHT,
@@ -71,7 +71,7 @@ func _refresh_seat(panel: Panel, seat: int, animation_system, loc: LocalizationU
 	var box := panel.get_node("Content")
 	box.get_node("Name").text = loc.string("seat.player") if seat == DoudizhuGame.HUMAN else DoudizhuGame.SEAT_NAMES[seat]
 
-	var role := parent._game_ref.roles[seat]
+	var role: String = parent._game_ref.roles[seat]
 	var role_text := "%s: %s" % [loc.string("label.role"), role]
 	if role == "地主":
 		role_text = "【地主】%s" % role
@@ -89,7 +89,7 @@ func _refresh_seat(panel: Panel, seat: int, animation_system, loc: LocalizationU
 	box.get_node("Turn").text = "回合" if parent._game_ref.current_seat == seat and parent._game_ref.phase == "play" else ""
 	box.get_node("Recent").text = "%s: %s" % [loc.string("label.recent"), (parent._game_ref.recent_plays[seat] if parent._game_ref.recent_plays[seat] != "" else "-")]
 	box.get_node("Reason").text = "%s: %s" % [loc.string("label.reason"), (parent._game_ref.ai_reasons[seat] if parent._game_ref.ai_reasons[seat] != "" else "-")]
-	var active := parent._game_ref.current_seat == seat and parent._game_ref.phase == "play"
+	var active: bool = parent._game_ref.current_seat == seat and parent._game_ref.phase == "play"
 	panel.add_theme_stylebox_override("panel", _panel_style(active, layout_scale))
 
 
@@ -120,11 +120,11 @@ func _refresh_hand(game, hand_area: Control, layout_scale: float, animation_syst
 		return
 
 	var card_size := CARD_SIZE * layout_scale
-	var positions := parent._calculate_fan_positions(count)
+	var positions: Array = parent._calculate_fan_positions(count)
 
 	for index in range(count):
 		var card: Dictionary = cards[index]
-		var selected := parent._game_ref.selected_cards.has(int(card.id))
+		var selected: bool = parent._game_ref.selected_cards.has(int(card.id))
 		var button := _card_button(card, true, selected, parent, layout_scale, loc)
 
 		if index < positions.size():
@@ -147,8 +147,8 @@ func _refresh_hand(game, hand_area: Control, layout_scale: float, animation_syst
 func _refresh_actions(game, action_bar: HBoxContainer, call_button: Button, decline_button: Button,
 		play_button: Button, pass_button: Button, hint_button: Button, help_button: Button,
 		settings_button: Button, new_round_button: Button) -> void:
-	var landlord := game.phase == "landlord"
-	var player_turn := game.phase == "play" and game.current_seat == DoudizhuGame.HUMAN
+	var landlord: bool = game.phase == "landlord"
+	var player_turn: bool = game.phase == "play" and game.current_seat == DoudizhuGame.HUMAN
 	call_button.visible = landlord
 	decline_button.visible = landlord
 	play_button.visible = player_turn
@@ -171,7 +171,7 @@ func _refresh_settings_ui(settings_blocker: ColorRect, settings_panel: PanelCont
 	sfx_toggle_button.text = "SFX: %s" % ("On" if audio_controller.sfx_enabled else "Off")
 	music_toggle_button.text = "Music: %s" % ("On" if audio_controller.music_enabled else "Off")
 	volume_button.text = "Volume: %s" % audio_controller.volume_preset.capitalize()
-	var current := parent.AIUtils.get_difficulty()
+	var current: int = parent.AIUtils.get_difficulty()
 	ai_difficulty_button.text = "AI Difficulty: %s" % ("Normal" if current == 0 else "Hard")
 	var focus_mode := Control.FOCUS_ALL if parent.settings_visible else Control.FOCUS_NONE
 	for button in [sfx_toggle_button, music_toggle_button, volume_button, ai_difficulty_button, settings_close_button]:
@@ -187,8 +187,8 @@ func _refresh_result_action_focus(result_panel: PanelContainer, result_new_hand_
 func _apply_result_score_once(game, score_state, audio_controller, parent, layout_scale: float) -> Dictionary:
 	if game.phase != "result":
 		return score_state.debug_state()
-	var summary := game.result_summary()
-	var result := score_state.apply_hand_result(
+	var summary: Dictionary = game.result_summary()
+	var result: Dictionary = score_state.apply_hand_result(
 		String(summary.winner_side),
 		int(summary.landlord_seat),
 		String(summary.result_key)
@@ -207,7 +207,7 @@ func _auto_save_after_result(game, score_state, audio_controller, parent) -> voi
 func _result_summary_text(game, score_state) -> String:
 	if game.phase != "result":
 		return ""
-	var result := game.result_summary()
+	var result: Dictionary = game.result_summary()
 	var lines := [
 		"%s win" % String(result.winner_side).capitalize(),
 		"Winner: %s | Landlord: %s" % [String(result.winner_name), String(result.landlord_name)],

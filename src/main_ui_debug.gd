@@ -203,7 +203,7 @@ func animate_cards_to_table(game, animation_system, main) -> void:
 	for child in main.hand_area.get_children():
 		if child is Button and selected_cards.has(child.get_meta("card_id", -1)):
 			selected_buttons.append(child)
-	var table_area := main.trick_panel.get_node("TrickLayout/CurrentTrick")
+	var table_area: Control = main.trick_panel.get_node("TrickLayout/CurrentTrick") as Control
 	var start_positions: Array[Vector2] = []
 	for btn in selected_buttons:
 		start_positions.append(btn.position)
