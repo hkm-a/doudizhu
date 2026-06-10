@@ -70,8 +70,8 @@ func layout_ui(main: Control, ai_left_panel: Panel, ai_right_panel: Panel,
 	_layout_seat_content(ai_right_panel, seat_size)
 
 	var card_size := CARD_SIZE * layout_scale
-	var bottom_size := Vector2((card_size.x * 3.0) + (8.0 * layout_scale * 2.0), card_size.y + 12.0 * layout_scale)
-	bottom_cards_box.position = Vector2((viewport_size.x - bottom_size.x) * 0.5, margin)
+	var bottom_size := Vector2((card_size.x * 1.6) + (16.0 * layout_scale), (card_size.y * 1.6) + 20.0 * layout_scale)
+	bottom_cards_box.position = Vector2((viewport_size.x - bottom_size.x) * 0.5, 8.0 * layout_scale)
 	bottom_cards_box.custom_minimum_size = bottom_size
 	bottom_cards_box.size = bottom_size
 	bottom_cards_box.add_theme_constant_override("separation", int(8.0 * layout_scale))
