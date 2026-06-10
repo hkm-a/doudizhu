@@ -5,7 +5,6 @@ const HUMAN := 0
 const AI_LEFT := 1
 const AI_RIGHT := 2
 const SEAT_NAMES := ["Player", "AI Left", "AI Right"]
-const AIUtilsScript := preload("res://src/utils/ai_utils.gd")
 
 var cards_by_id: Dictionary = {}
 var hands: Array[Array] = [[], [], []]
@@ -288,7 +287,7 @@ func process_ai_until_human(max_steps: int = 12) -> void:
 
 
 func _start_ai_delay(seat: int) -> void:
-	var difficulty := AIUtilsScript.get_difficulty()
+	var difficulty := AIUtils.get_difficulty()
 	var delay := 0.3 if difficulty == 0 else 0.5
 	ai_delay_active = true
 	ai_delay_seat = seat
@@ -322,7 +321,7 @@ func get_ai_delay_remaining() -> float:
 
 func _ai_step() -> void:
 	var seat := current_seat
-	var difficulty := AIUtilsScript.get_difficulty()
+	var difficulty := AIUtils.get_difficulty()
 	var candidate := CardRules.find_best_legal_candidate(hands[seat], active_trick, _has_initiative(seat))
 	if candidate.is_empty():
 		ai_reasons[seat] = "No legal response"
@@ -340,7 +339,7 @@ func _ai_step_hard(seat: int, candidate: Dictionary) -> void:
 	var my_hands := hands[seat].size()
 	var is_farmer := roles[seat] == "farmer"
 	var is_landlord := roles[seat] == "landlord"
-	var seen_map := AIUtilsScript.build_seen_cards_map(
+	var seen_map := AIUtils.build_seen_cards_map(
 		get_hand_ids(seat),
 		bottom_cards
 	)
@@ -348,20 +347,20 @@ func _ai_step_hard(seat: int, candidate: Dictionary) -> void:
 	var play_type := String(candidate.classification.play_type) if candidate.has("classification") else ""
 	if is_farmer and landlord_seat >= 0:
 		if _has_initiative(seat):
-			play_candidate = AIUtilsScript.coordinate_farmer_lead(
+			play_candidate = AIUtils.coordinate_farmer_lead(
 				seat, landlord_seat, my_hands,
 				hands[landlord_seat].size(), true, play_candidate
 			)
 			if not play_candidate.is_empty() and play_candidate.has("classification"):
 				var leader_rank := int(play_candidate.classification.primary_rank)
-				var remaining = AIUtilsScript.cards_of_rank_remaining(
+				var remaining = AIUtils.cards_of_rank_remaining(
 					leader_rank, seen_map,
-					AIUtilsScript.count_total_of_rank(leader_rank)
+					AIUtils.count_total_of_rank(leader_rank)
 				)
 				if remaining > 0 and my_hands <= 5:
 					var bomb_candidate := _find_bomb_in_hand(seat, leader_rank)
 					if not bomb_candidate.is_empty():
-						if AIUtilsScript.should_play_bomb_for_farmer(
+						if AIUtils.should_play_bomb_for_farmer(
 							seat, landlord_seat, my_hands,
 							hands[landlord_seat].size(), active_trick, bomb_candidate
 						):
@@ -371,7 +370,7 @@ func _ai_step_hard(seat: int, candidate: Dictionary) -> void:
 		else:
 			if play_type in [CardRules.TYPE_BOMB, CardRules.TYPE_JOKER_BOMB]:
 				var landlord_remaining := hands[landlord_seat].size() if landlord_seat >= 0 else 99
-				if AIUtilsScript.should_play_bomb_for_farmer(
+				if AIUtils.should_play_bomb_for_farmer(
 					seat, landlord_seat, my_hands,
 					landlord_remaining, active_trick, play_candidate
 				):
@@ -383,7 +382,7 @@ func _ai_step_hard(seat: int, candidate: Dictionary) -> void:
 			if rank <= 15:
 				seen_map[rank] = seen_map.get(rank, 0) + 1
 	if play_type in [CardRules.TYPE_BOMB, CardRules.TYPE_JOKER_BOMB]:
-		var should_conserve := AIUtilsScript.should_conserve_bomb(
+		var should_conserve := AIUtils.should_conserve_bomb(
 			seat, hands, landlord_seat,
 			my_hands, play_type == CardRules.TYPE_JOKER_BOMB,
 			active_trick, play_candidate, []

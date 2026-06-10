@@ -67,7 +67,7 @@ func refresh_all(game, score_state, audio_controller,
 	_ensure_timer_label_bottom(main).text = debug_timer_label_text(layout_scale)
 
 
-func _refresh_seat(panel: Panel, seat: int, animation_system, loc: LocalizationUtilsScript, layout_scale: float, parent) -> void:
+func _refresh_seat(panel: Panel, seat: int, animation_system, loc: LocalizationUtils, layout_scale: float, parent) -> void:
 	var box := panel.get_node("Content")
 	box.get_node("Name").text = loc.string("seat.player") if seat == DoudizhuGame.HUMAN else DoudizhuGame.SEAT_NAMES[seat]
 
@@ -93,7 +93,7 @@ func _refresh_seat(panel: Panel, seat: int, animation_system, loc: LocalizationU
 	panel.add_theme_stylebox_override("panel", _panel_style(active, layout_scale))
 
 
-func _refresh_bottom_cards(game, bottom_cards_box: HBoxContainer, parent, layout_scale: float, loc: LocalizationUtilsScript) -> void:
+func _refresh_bottom_cards(game, bottom_cards_box: HBoxContainer, parent, layout_scale: float, loc: LocalizationUtils) -> void:
 	_clear_children(bottom_cards_box)
 	for card in game.bottom_cards:
 		if game.phase == "landlord":
@@ -102,7 +102,7 @@ func _refresh_bottom_cards(game, bottom_cards_box: HBoxContainer, parent, layout
 			bottom_cards_box.add_child(_card_button(card, false, false, parent, layout_scale, loc))
 
 
-func _refresh_trick(game, trick_box: HBoxContainer, trick_owner_label: Label, loc: LocalizationUtilsScript, layout_scale: float, parent) -> void:
+func _refresh_trick(game, trick_box: HBoxContainer, trick_owner_label: Label, loc: LocalizationUtils, layout_scale: float, parent) -> void:
 	_clear_children(trick_box)
 	if game.active_trick.is_empty():
 		trick_owner_label.text = ""
@@ -112,7 +112,7 @@ func _refresh_trick(game, trick_box: HBoxContainer, trick_owner_label: Label, lo
 		trick_box.add_child(_card_button(card, false, false, parent, layout_scale, loc))
 
 
-func _refresh_hand(game, hand_area: Control, layout_scale: float, animation_system, loc: LocalizationUtilsScript, parent) -> void:
+func _refresh_hand(game, hand_area: Control, layout_scale: float, animation_system, loc: LocalizationUtils, parent) -> void:
 	_clear_children(hand_area)
 	var cards: Array = parent._game_ref.hands[DoudizhuGame.HUMAN]
 	var count: int = cards.size()
@@ -171,7 +171,7 @@ func _refresh_settings_ui(settings_blocker: ColorRect, settings_panel: PanelCont
 	sfx_toggle_button.text = "SFX: %s" % ("On" if audio_controller.sfx_enabled else "Off")
 	music_toggle_button.text = "Music: %s" % ("On" if audio_controller.music_enabled else "Off")
 	volume_button.text = "Volume: %s" % audio_controller.volume_preset.capitalize()
-	var current := parent.AIUtilsScript.get_difficulty()
+	var current := parent.AIUtils.get_difficulty()
 	ai_difficulty_button.text = "AI Difficulty: %s" % ("Normal" if current == 0 else "Hard")
 	var focus_mode := Control.FOCUS_ALL if parent.settings_visible else Control.FOCUS_NONE
 	for button in [sfx_toggle_button, music_toggle_button, volume_button, ai_difficulty_button, settings_close_button]:
@@ -199,7 +199,7 @@ func _apply_result_score_once(game, score_state, audio_controller, parent, layou
 
 
 func _auto_save_after_result(game, score_state, audio_controller, parent) -> void:
-	var ok := SaveLoadUtilsScript.save_game(game, score_state, audio_controller)
+	var ok := SaveLoadUtils.save_game(game, score_state, audio_controller)
 	if ok:
 		parent.has_save = true
 
@@ -229,7 +229,7 @@ func play_result_audio_if_needed(game, audio_controller) -> void:
 		audio_controller.play_event("result_loss")
 
 
-func _card_button(card: Dictionary, interactive: bool, selected: bool, parent, layout_scale: float, loc: LocalizationUtilsScript) -> Button:
+func _card_button(card: Dictionary, interactive: bool, selected: bool, parent, layout_scale: float, loc: LocalizationUtils) -> Button:
 	var button := Button.new()
 	var card_size := CARD_SIZE * layout_scale
 	button.custom_minimum_size = card_size
@@ -238,7 +238,7 @@ func _card_button(card: Dictionary, interactive: bool, selected: bool, parent, l
 	if card.is_empty():
 		button.name = "HiddenCard"
 		button.tooltip_text = ""
-		var back_tex := CardAssetsScript.get_card_back()
+		var back_tex := CardAssets.get_card_back()
 		if back_tex != null:
 			button.text = ""
 			var icon := TextureRect.new()
@@ -258,7 +258,7 @@ func _card_button(card: Dictionary, interactive: bool, selected: bool, parent, l
 		var card_id := int(card.id)
 		button.set_meta("card_id", card_id)
 		button.tooltip_text = String(card.label)
-		var tex := CardAssetsScript.get_card_image(card_id)
+		var tex := CardAssets.get_card_image(card_id)
 		if tex != null:
 			button.text = ""
 			var card_icon := TextureRect.new()
@@ -425,7 +425,7 @@ func card_button_factory(card: Dictionary, interactive: bool, selected: bool, pa
 	if card.is_empty():
 		button.name = "HiddenCard"
 		button.tooltip_text = ""
-		var back_tex := CardAssetsScript.get_card_back()
+		var back_tex := CardAssets.get_card_back()
 		if back_tex != null:
 			button.text = ""
 			var icon := TextureRect.new()
@@ -445,7 +445,7 @@ func card_button_factory(card: Dictionary, interactive: bool, selected: bool, pa
 		var card_id := int(card.id)
 		button.set_meta("card_id", card_id)
 		button.tooltip_text = String(card.label)
-		var tex := CardAssetsScript.get_card_image(card_id)
+		var tex := CardAssets.get_card_image(card_id)
 		if tex != null:
 			button.text = ""
 			var card_icon := TextureRect.new()
@@ -491,7 +491,7 @@ func card_style(card: Dictionary, selected: bool) -> StyleBoxFlat:
 
 
 func _refresh_ai_hand(hand_area: Control, cards: Array, seat: int,
-		parent, layout_scale: float, loc: LocalizationUtilsScript,
+		parent, layout_scale: float, loc: LocalizationUtils,
 		_game) -> void:
 	_clear_children(hand_area)
 	var count: int = cards.size()

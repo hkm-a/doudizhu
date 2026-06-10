@@ -9,18 +9,7 @@ const ACTIVE_PANEL_COLOR := Color(0.18, 0.24, 0.13, 0.95)
 const ACTIVE_BORDER_COLOR := Color(0.95, 0.72, 0.25)
 const RESULT_PANEL_COLOR := Color(0.08, 0.11, 0.1, 0.96)
 const SELECTED_CARD_COLOR := Color(1.0, 0.94, 0.55)
-const AudioControllerScript := preload("res://src/audio_controller.gd")
-const ScoreStateScript := preload("res://src/score_state.gd")
-const AnimationSystemScript := preload("res://src/systems/s_animation.gd")
-const AIUtilsScript := preload("res://src/utils/ai_utils.gd")
-const SaveLoadUtilsScript := preload("res://src/utils/save_load_utils.gd")
-const LocalizationUtilsScript := preload("res://src/utils/localization_utils.gd")
-const CardAssetsScript := preload("res://src/utils/card_assets.gd")
-const MainUILayoutScript := preload("res://src/main_ui_layout.gd")
-const MainUIRefreshScript := preload("res://src/main_ui_refresh.gd")
-const MainUICallbacksScript := preload("res://src/main_ui_callbacks.gd")
-const MainUIDebugScript := preload("res://src/main_ui_debug.gd")
-const MainUIFlowScript := preload("res://src/main_ui_flow.gd")
+
 const TUTORIAL_STEPS := [
 	{
 		"title": "Table Tour",
@@ -49,14 +38,14 @@ const TUTORIAL_STEPS := [
 ]
 
 var game := DoudizhuGame.new()
-var score_state := ScoreStateScript.new()
-var audio_controller := AudioControllerScript.new()
+var score_state := ScoreState.new()
+var audio_controller := AudioController.new()
 var round_counter := 0
 var layout_scale := 1.0
 var debug_viewport_override := Vector2.ZERO
-var loc := LocalizationUtilsScript.new()
+var loc := LocalizationUtils.new()
 
-var animation_system: AnimationSystemScript
+var animation_system: AnimationSystem
 
 # UI control references
 var ai_left_panel: Panel
@@ -129,20 +118,20 @@ func _ready() -> void:
 	name = "Main"
 	audio_controller.name = "AudioController"
 	add_child(audio_controller)
-	animation_system = AnimationSystemScript.new()
+	animation_system = AnimationSystem.new()
 	add_child(animation_system)
-	_layout = MainUILayoutScript.new()
-	_ui_refresh = MainUIRefreshScript.new()
-	_callbacks = MainUICallbacksScript.new()
-	_debug = MainUIDebugScript.new()
-	_builder = MainUIBuilderScript.new()
-	_flow = MainUIFlowScript.new()
-	var controls: Dictionary = _builder.build_ui(self, loc, layout_scale, CardAssetsScript)
+	_layout = MainUILayout.new()
+	_ui_refresh = MainUIRefresh.new()
+	_callbacks = MainUICallbacks.new()
+	_debug = MainUIDebug.new()
+	_builder = MainUIBuilder.new()
+	_flow = MainUIFlow.new()
+	var controls: Dictionary = _builder.build_ui(self, loc, layout_scale, CardAssets)
 	_assign_controls(controls)
 	_connect_signals()
 	_layout_ui()
 	_refresh_all()
-	has_save = SaveLoadUtilsScript.save_exists()
+	has_save = SaveLoadUtils.save_exists()
 	if has_save:
 		_show_continue_dialog()
 	else:
@@ -410,7 +399,7 @@ func _on_volume_pressed() -> void:
 	_refresh()
 
 func _on_ai_difficulty_pressed() -> void:
-	_callbacks.on_ai_difficulty_pressed(AIUtilsScript)
+	_callbacks.on_ai_difficulty_pressed(AIUtils)
 	_refresh()
 
 func _on_reset_stats_pressed() -> void:
@@ -442,7 +431,7 @@ func _on_save_game_pressed() -> void:
 	_refresh()
 
 func _on_load_game_pressed() -> void:
-	if not SaveLoadUtilsScript.save_exists():
+	if not SaveLoadUtils.save_exists():
 		game.message = "No save file found."
 		audio_controller.play_event("invalid")
 		_refresh()
@@ -517,7 +506,7 @@ func debug_result_text() -> String:
 	return _debug.result_text(self)
 
 func debug_clear_save() -> void:
-	SaveLoadUtilsScript.delete_save()
+	SaveLoadUtils.delete_save()
 	await get_tree().process_frame
 
 func debug_settings_visible() -> bool:

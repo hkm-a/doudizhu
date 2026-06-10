@@ -7,7 +7,7 @@ const RESULT_PANEL_COLOR := Color(0.08, 0.11, 0.1, 0.96)
 const SELECTED_CARD_COLOR := Color(1.0, 0.94, 0.55)
 
 
-func build_ui(main: Control, loc: LocalizationUtilsScript, layout_scale: float, card_assets_cls) -> Dictionary:
+func build_ui(main: Control, loc: LocalizationUtils, layout_scale: float, card_assets_cls) -> Dictionary:
 	card_assets_cls.initialize()
 
 	var table_bg_texture := card_assets_cls.get_table_bg()
@@ -317,7 +317,7 @@ func _pin_top_left(main: Control, control: Control) -> void:
 	control.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
 
 
-func _seat_panel(main: Control, node_name: String, loc: LocalizationUtilsScript, layout_scale: float) -> Panel:
+func _seat_panel(main: Control, node_name: String, loc: LocalizationUtils, layout_scale: float) -> Panel:
 	var panel := Panel.new()
 	panel.name = node_name
 	var box := VBoxContainer.new()
@@ -335,7 +335,7 @@ func _seat_panel(main: Control, node_name: String, loc: LocalizationUtilsScript,
 	return panel
 
 
-func _action_button(main: Control, action_bar: HBoxContainer, node_name: String, text: String, loc: LocalizationUtilsScript, layout_scale: float) -> Button:
+func _action_button(main: Control, action_bar: HBoxContainer, node_name: String, text: String, loc: LocalizationUtils, layout_scale: float) -> Button:
 	var button := Button.new()
 	button.name = node_name
 	button.text = text
@@ -344,7 +344,7 @@ func _action_button(main: Control, action_bar: HBoxContainer, node_name: String,
 	return button
 
 
-func _result_button(parent: Container, text: String, loc: LocalizationUtilsScript, layout_scale: float) -> Button:
+func _result_button(parent: Container, text: String, loc: LocalizationUtils, layout_scale: float) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.focus_mode = Control.FOCUS_NONE
@@ -356,7 +356,7 @@ func _result_button(parent: Container, text: String, loc: LocalizationUtilsScrip
 	return button
 
 
-func _modal_close_button(parent: Container, loc: LocalizationUtilsScript, layout_scale: float) -> Button:
+func _modal_close_button(parent: Container, loc: LocalizationUtils, layout_scale: float) -> Button:
 	var button := Button.new()
 	button.text = loc.string("label.close")
 	button.focus_mode = Control.FOCUS_NONE
@@ -367,7 +367,7 @@ func _modal_close_button(parent: Container, loc: LocalizationUtilsScript, layout
 	return button
 
 
-func _tutorial_button(parent: Container, text: String, loc: LocalizationUtilsScript, layout_scale: float) -> Button:
+func _tutorial_button(parent: Container, text: String, loc: LocalizationUtils, layout_scale: float) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.focus_mode = Control.FOCUS_NONE
@@ -375,7 +375,7 @@ func _tutorial_button(parent: Container, text: String, loc: LocalizationUtilsScr
 	return button
 
 
-func _tutorial_close_button(parent: Container, loc: LocalizationUtilsScript, layout_scale: float) -> Button:
+func _tutorial_close_button(parent: Container, loc: LocalizationUtils, layout_scale: float) -> Button:
 	var button := Button.new()
 	button.text = loc.string("label.close")
 	button.focus_mode = Control.FOCUS_NONE
@@ -383,7 +383,7 @@ func _tutorial_close_button(parent: Container, loc: LocalizationUtilsScript, lay
 	return button
 
 
-func _create_continue_dialog(main: Control, loc: LocalizationUtilsScript, layout_scale: float) -> ColorRect:
+func _create_continue_dialog(main: Control, loc: LocalizationUtils, layout_scale: float) -> ColorRect:
 	var overlay := ColorRect.new()
 	overlay.name = "ContinueOverlay"
 	overlay.color = Color(0.0, 0.0, 0.0, 0.65)
@@ -453,19 +453,19 @@ func _create_continue_dialog(main: Control, loc: LocalizationUtilsScript, layout
 	return overlay
 
 
-func _settings_toggle_button(parent: Container, loc: LocalizationUtilsScript, layout_scale: float) -> Button:
+func _settings_toggle_button(parent: Container, loc: LocalizationUtils, layout_scale: float) -> Button:
 	var button := Button.new()
 	parent.add_child(button)
 	return button
 
 
-func _settings_preset_button(parent: Container, loc: LocalizationUtilsScript, layout_scale: float) -> Button:
+func _settings_preset_button(parent: Container, loc: LocalizationUtils, layout_scale: float) -> Button:
 	var button := Button.new()
 	parent.add_child(button)
 	return button
 
 
-func _settings_action_button(parent: Container, loc: LocalizationUtilsScript, layout_scale: float) -> Button:
+func _settings_action_button(parent: Container, loc: LocalizationUtils, layout_scale: float) -> Button:
 	var button := Button.new()
 	parent.add_child(button)
 	return button
