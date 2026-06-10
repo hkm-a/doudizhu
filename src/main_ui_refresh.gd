@@ -70,9 +70,23 @@ func refresh_all(game, score_state, audio_controller,
 func _refresh_seat(panel: Panel, seat: int, animation_system, loc: LocalizationUtilsScript, layout_scale: float, parent) -> void:
 	var box := panel.get_node("Content")
 	box.get_node("Name").text = loc.string("seat.player") if seat == DoudizhuGame.HUMAN else DoudizhuGame.SEAT_NAMES[seat]
-	box.get_node("Role").text = "%s: %s" % [loc.string("label.role"), parent._game_ref.roles[seat]]
-	box.get_node("Count").text = "%s: %d" % [loc.string("label.count"), parent._game_ref.hands[seat].size()]
-	box.get_node("Turn").text = loc.string("label.turn") if parent._game_ref.current_seat == seat and parent._game_ref.phase == "play" else ""
+
+	var role := parent._game_ref.roles[seat]
+	var role_text := "%s: %s" % [loc.string("label.role"), role]
+	if role == "地主":
+		role_text = "【地主】%s" % role
+	elif role == "农民":
+		role_text = "【农民】%s" % role
+	box.get_node("Role").text = role_text
+	# Apply role-based color
+	if role == "地主":
+		box.get_node("Role").add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+	else:
+		box.get_node("Role").add_theme_color_override("font_color", Color(0.4, 0.6, 1.0))
+
+	box.get_node("Count").text = "%d张" % parent._game_ref.hands[seat].size()
+	box.get_node("Count").add_theme_font_size_override("font_size", int(16.0 * layout_scale))
+	box.get_node("Turn").text = "回合" if parent._game_ref.current_seat == seat and parent._game_ref.phase == "play" else ""
 	box.get_node("Recent").text = "%s: %s" % [loc.string("label.recent"), (parent._game_ref.recent_plays[seat] if parent._game_ref.recent_plays[seat] != "" else "-")]
 	box.get_node("Reason").text = "%s: %s" % [loc.string("label.reason"), (parent._game_ref.ai_reasons[seat] if parent._game_ref.ai_reasons[seat] != "" else "-")]
 	var active := parent._game_ref.current_seat == seat and parent._game_ref.phase == "play"
