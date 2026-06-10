@@ -101,24 +101,33 @@ func _refresh_trick(game, trick_box: HBoxContainer, trick_owner_label: Label, lo
 func _refresh_hand(game, hand_area: Control, layout_scale: float, animation_system, loc: LocalizationUtilsScript, parent) -> void:
 	_clear_children(hand_area)
 	var cards: Array = parent._game_ref.hands[DoudizhuGame.HUMAN]
-	var count: int = max(cards.size(), 1)
+	var count: int = cards.size()
+	if count == 0:
+		return
+
 	var card_size := CARD_SIZE * layout_scale
-	var step: float = CARD_SIZE.x + CARD_GAP
-	if count > 1:
-		step = min(card_size + (CARD_GAP * layout_scale), (hand_area.size.x - card_size) / float(count - 1))
-	for index in range(cards.size()):
+	var positions := parent._calculate_fan_positions(count)
+
+	for index in range(count):
 		var card: Dictionary = cards[index]
 		var selected := parent._game_ref.selected_cards.has(int(card.id))
 		var button := _card_button(card, true, selected, parent, layout_scale, loc)
-		var target_position := Vector2(index * step, 18.0 * layout_scale if not selected else 0.0)
-		button.position = target_position
+
+		if index < positions.size():
+			var pos_data: Dictionary = positions[index]
+			button.position = pos_data["position"]
+			button.rotation = pos_data["rotation"]
+
+			if selected:
+				button.position += Vector2(0.0, -18.0 * layout_scale)
+				var bounce_tween: Tween = animation_system.play_bounce_animation(button, 6.0 * layout_scale, 0.18)
+				bounce_tween.finished.connect(func() -> void:
+					button.position += Vector2(0.0, -18.0 * layout_scale)
+				)
+		else:
+			button.position = Vector2(index * (card_size.x + 8.0), 10.0 * layout_scale)
+
 		hand_area.add_child(button)
-		if selected:
-			button.position = target_position + Vector2(0.0, 10.0 * layout_scale)
-			var bounce_tween: Tween = animation_system.play_bounce_animation(button, 6.0 * layout_scale, 0.18)
-			bounce_tween.finished.connect(func() -> void:
-				button.position = target_position + Vector2(0.0, 10.0 * layout_scale)
-			)
 
 
 func _refresh_actions(game, action_bar: HBoxContainer, call_button: Button, decline_button: Button,

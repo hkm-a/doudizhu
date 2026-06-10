@@ -666,6 +666,6 @@ func _card_size() -> Vector2:
 	return CARD_SIZE * layout_scale
 
 
-func _calculate_fan_positions(card_count: int) -> Array[Vector2]:
+func _calculate_fan_positions(card_count: int) -> Array:
 	var card_size := CARD_SIZE * layout_scale
 	return _layout.calculate_fan_positions(card_count, card_size, hand_area.size, layout_scale, CARD_GAP)
