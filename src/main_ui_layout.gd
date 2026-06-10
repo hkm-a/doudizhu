@@ -21,8 +21,8 @@ func layout_ui(main: Control, ai_left_panel: Panel, ai_right_panel: Panel,
 		bottom_cards_box: HBoxContainer, trick_panel: PanelContainer,
 		trick_box: HBoxContainer,
 		status_label: Label, hand_summary_label: Label,
-		scoreboard_panel: PanelContainer, scoreboard_label: Label,
-		stats_panel: PanelContainer, stats_label: Label,
+		scoreboard_label: Label,
+		stats_label: Label,
 		hand_area: Control, action_bar: HBoxContainer,
 		call_button: Button, decline_button: Button, play_button: Button,
 		pass_button: Button, hint_button: Button, help_button: Button,
@@ -43,7 +43,7 @@ func layout_ui(main: Control, ai_left_panel: Panel, ai_right_panel: Panel,
 
 	for control in [
 		ai_left_panel, ai_right_panel, bottom_cards_box, trick_panel,
-		status_label, hand_summary_label, scoreboard_panel, stats_panel,
+		status_label, hand_summary_label,
 		action_bar, hand_area, result_panel,
 		help_panel, tutorial_panel, settings_panel,
 	]:
@@ -97,21 +97,17 @@ func layout_ui(main: Control, ai_left_panel: Panel, ai_right_panel: Panel,
 	hand_summary_label.size = summary_size
 	hand_summary_label.add_theme_font_size_override("font_size", int(14.0 * layout_scale))
 
-	var scoreboard_size := Vector2(clampf(viewport_size.x * 0.44, 460.0 * layout_scale, 620.0 * layout_scale), 34.0 * layout_scale)
-	scoreboard_panel.position = Vector2((viewport_size.x - scoreboard_size.x) * 0.5, bottom_cards_box.position.y + bottom_size.y + 8.0 * layout_scale)
-	scoreboard_panel.custom_minimum_size = scoreboard_size
-	scoreboard_panel.size = scoreboard_size
-	scoreboard_label.custom_minimum_size = scoreboard_size - Vector2(16.0 * layout_scale, 6.0 * layout_scale)
-	scoreboard_label.size = scoreboard_label.custom_minimum_size
-	scoreboard_label.add_theme_font_size_override("font_size", int(15.0 * layout_scale))
+	# Score label - bottom left corner
+	var score_label_size := Vector2(clampf(viewport_size.x * 0.44, 460.0 * layout_scale, 620.0 * layout_scale), 24.0 * layout_scale)
+	scoreboard_label.position = Vector2(margin, viewport_size.y - margin - score_label_size.y)
+	scoreboard_label.custom_minimum_size = score_label_size
+	scoreboard_label.size = score_label_size
 
-	var stats_size := Vector2(clampf(viewport_size.x * 0.48, 560.0 * layout_scale, 720.0 * layout_scale), 30.0 * layout_scale)
-	stats_panel.position = Vector2((viewport_size.x - stats_size.x) * 0.5, scoreboard_panel.position.y + scoreboard_size.y + 6.0 * layout_scale)
-	stats_panel.custom_minimum_size = stats_size
-	stats_panel.size = stats_size
-	stats_label.custom_minimum_size = stats_size - Vector2(14.0 * layout_scale, 4.0 * layout_scale)
-	stats_label.size = stats_label.custom_minimum_size
-	stats_label.add_theme_font_size_override("font_size", int(13.0 * layout_scale))
+	# Stats label - bottom right corner
+	var stats_label_size := Vector2(clampf(viewport_size.x * 0.48, 560.0 * layout_scale, 720.0 * layout_scale), 24.0 * layout_scale)
+	stats_label.position = Vector2(viewport_size.x - margin - stats_label_size.x, viewport_size.y - margin - stats_label_size.y)
+	stats_label.custom_minimum_size = stats_label_size
+	stats_label.size = stats_label_size
 
 	var hand_size := Vector2(viewport_size.x - (margin * 2.0), 128.0 * layout_scale)
 	hand_area.position = Vector2(margin, viewport_size.y - margin - hand_size.y)

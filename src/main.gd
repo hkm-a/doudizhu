@@ -67,9 +67,7 @@ var trick_box: HBoxContainer
 var trick_owner_label: Label
 var status_label: Label
 var hand_summary_label: Label
-var scoreboard_panel: PanelContainer
 var scoreboard_label: Label
-var stats_panel: PanelContainer
 var stats_label: Label
 var hand_area: Control
 var ai_left_hand: Control
@@ -174,9 +172,7 @@ func _assign_controls(controls: Dictionary) -> void:
 	trick_owner_label = controls.trick_owner_label
 	status_label = controls.status_label
 	hand_summary_label = controls.hand_summary_label
-	scoreboard_panel = controls.scoreboard_panel
 	scoreboard_label = controls.scoreboard_label
-	stats_panel = controls.stats_panel
 	stats_label = controls.stats_label
 	action_bar = controls.action_bar
 	call_button = controls.call_button
@@ -254,8 +250,8 @@ func _layout_ui() -> void:
 		self, ai_left_panel, ai_right_panel,
 		bottom_cards_box, trick_panel, trick_box,
 		status_label, hand_summary_label,
-		scoreboard_panel, scoreboard_label,
-		stats_panel, stats_label,
+		scoreboard_label,
+		stats_label,
 		hand_area, action_bar,
 		call_button, decline_button, play_button, pass_button, hint_button, help_button,
 		tutorial_button, settings_button, new_round_button,

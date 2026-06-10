@@ -91,27 +91,19 @@ func build_ui(main: Control, loc: LocalizationUtilsScript, layout_scale: float, 
 	hand_summary_label.add_theme_color_override("font_color", Color(0.92, 0.96, 0.9))
 	main.add_child(hand_summary_label)
 
-	var scoreboard_panel := PanelContainer.new()
-	scoreboard_panel.name = "ScoreboardBand"
-	_pin_top_left(main, scoreboard_panel)
-	scoreboard_panel.add_theme_stylebox_override("panel", _box_style(Color(0.07, 0.13, 0.11, 0.88), ACTIVE_BORDER_COLOR, 1, layout_scale))
-	main.add_child(scoreboard_panel)
-	var scoreboard_label := Label.new()
-	scoreboard_label.name = "ScoreboardText"
-	scoreboard_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	scoreboard_label.add_theme_color_override("font_color", Color(0.96, 0.94, 0.76))
-	scoreboard_panel.add_child(scoreboard_label)
+	var score_label := Label.new()
+	score_label.name = "ScoreText"
+	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	score_label.add_theme_color_override("font_color", Color(0.96, 0.94, 0.76))
+	score_label.add_theme_font_size_override("font_size", int(13.0 * layout_scale))
+	main.add_child(score_label)
 
-	var stats_panel := PanelContainer.new()
-	stats_panel.name = "StatsPanel"
-	_pin_top_left(main, stats_panel)
-	stats_panel.add_theme_stylebox_override("panel", _box_style(Color(0.06, 0.12, 0.1, 0.82), Color(0.18, 0.36, 0.26), 1, layout_scale))
-	main.add_child(stats_panel)
 	var stats_label := Label.new()
 	stats_label.name = "StatsText"
-	stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	stats_label.add_theme_color_override("font_color", Color(0.86, 0.94, 0.84))
-	stats_panel.add_child(stats_label)
+	stats_label.add_theme_font_size_override("font_size", int(13.0 * layout_scale))
+	main.add_child(stats_label)
 
 	var action_bar := HBoxContainer.new()
 	action_bar.name = "ActionBar"
@@ -275,9 +267,7 @@ func build_ui(main: Control, loc: LocalizationUtilsScript, layout_scale: float, 
 	controls.trick_owner_label = trick_owner_label
 	controls.status_label = status_label
 	controls.hand_summary_label = hand_summary_label
-	controls.scoreboard_panel = scoreboard_panel
-	controls.scoreboard_label = scoreboard_label
-	controls.stats_panel = stats_panel
+	controls.scoreboard_label = score_label
 	controls.stats_label = stats_label
 	controls.action_bar = action_bar
 	controls.call_button = call_button
