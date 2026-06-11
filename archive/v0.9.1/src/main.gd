@@ -271,7 +271,8 @@ func _refresh_all() -> void:
 
 
 func _process(_delta: float) -> void:
-	_ui_refresh._process_turn_timer(game, self, _layout.layout_scale)
+	if _ui_refresh != null:
+		_ui_refresh._process_turn_timer(game, self, _layout.layout_scale)
 
 
 # --- Game flow ---

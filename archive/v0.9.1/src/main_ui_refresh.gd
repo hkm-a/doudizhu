@@ -33,14 +33,13 @@ func refresh_all(game, score_state, audio_controller,
 		settings_close_button: Button,
 		result_new_hand_button: Button, result_new_match_button: Button,
 		quit_button: Button, help_visible: bool, layout_scale: float,
-		animation_system, loc, main, parent) -> void:
+		animation_system, loc: LocalizationUtils, main: Control, parent) -> void:
 
 	_apply_result_score_once(game, score_state, audio_controller, parent, layout_scale)
-	_refresh_seat(ai_left_panel, DoudizhuGame.AI_LEFT, animation_system, loc, layout_scale, parent)
-	_refresh_seat(ai_right_panel, DoudizhuGame.AI_RIGHT, animation_system, loc, layout_scale, parent)
-	var game_ref = parent._game_ref
-	var left_hand: Array[Dictionary] = game_ref.hands[DoudizhuGame.AI_LEFT]
-	var right_hand: Array[Dictionary] = game_ref.hands[DoudizhuGame.AI_RIGHT]
+	_refresh_seat(ai_left_panel, DoudizhuGame.AI_LEFT, animation_system, loc, layout_scale, parent, game)
+	_refresh_seat(ai_right_panel, DoudizhuGame.AI_RIGHT, animation_system, loc, layout_scale, parent, game)
+	var left_hand: Array = game.hands[DoudizhuGame.AI_LEFT]
+	var right_hand: Array = game.hands[DoudizhuGame.AI_RIGHT]
 	_refresh_ai_hand(ai_left_hand, left_hand, DoudizhuGame.AI_LEFT,
 		parent, layout_scale, loc, game)
 	_refresh_ai_hand(ai_right_hand, right_hand, DoudizhuGame.AI_RIGHT,
@@ -49,7 +48,7 @@ func refresh_all(game, score_state, audio_controller,
 	_refresh_trick(game, trick_box, trick_owner_label, loc, layout_scale, parent)
 	_refresh_hand(game, hand_area, layout_scale, animation_system, loc, parent)
 	_refresh_actions(game, action_bar, call_button, decline_button, play_button, pass_button, hint_button, help_button, settings_button, new_round_button)
-	label.text = game.message
+	label.text = _format_status_message(game, loc, layout_scale)
 	hand_summary_label.text = game.hand_summary_text()
 	scoreboard_label.text = score_state.score_line()
 	stats_label.text = score_state.hand_record_line()
@@ -68,40 +67,102 @@ func refresh_all(game, score_state, audio_controller,
 	_ensure_timer_label_bottom(main).text = debug_timer_label_text(layout_scale)
 
 
-func _refresh_seat(panel: Panel, seat: int, animation_system, loc: LocalizationUtils, layout_scale: float, parent) -> void:
-	var game_ref = parent._game_ref
-	var box := panel.get_node("Content")
-	box.get_node("Name").text = loc.string("seat.player") if seat == DoudizhuGame.HUMAN else DoudizhuGame.SEAT_NAMES[seat]
+func _refresh_seat(panel: Panel, seat: int, animation_system, loc: LocalizationUtils, layout_scale: float, parent, game) -> void:
+	var game_ref: Dictionary = {}
+	game_ref["roles"] = game.roles
+	game_ref["landlord_seat"] = game.landlord_seat
+	game_ref["phase"] = game.phase
+	game_ref["current_seat"] = game.current_seat
+	game_ref["initiative_seat"] = game.initiative_seat
+	game_ref["hands"] = game.hands
+	game_ref["recent_plays"] = game.recent_plays
+	game_ref["ai_reasons"] = game.ai_reasons
+	
+	var box: VBoxContainer = panel.get_node("Content")
+	var name_label: Label = box.get_node("Name")
+	name_label.text = loc.string("seat.player") if seat == DoudizhuGame.HUMAN else DoudizhuGame.SEAT_NAMES[seat]
+	name_label.add_theme_font_size_override("font_size", int(14.0 * layout_scale))
 
-	var role: String = game_ref.roles[seat]
-	var role_text := "%s: %s" % [loc.string("label.role"), role]
-	if role == "地主":
-		role_text = "【地主】%s" % role
-	elif role == "农民":
-		role_text = "【农民】%s" % role
-	box.get_node("Role").text = role_text
-	# Apply role-based color
-	if role == "地主":
-		box.get_node("Role").add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+	var role: String = game_ref["roles"][seat]
+	var role_label: Label = box.get_node("Role")
+	var landlord_crown: Label = box.get_node_or_null("LandlordCrown") as Label
+	
+	# Show crown icon when landlord is determined
+	if landlord_crown == null:
+		landlord_crown = Label.new()
+		landlord_crown.name = "LandlordCrown"
+		landlord_crown.add_theme_font_size_override("font_size", int(24.0 * layout_scale))
+		landlord_crown.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		landlord_crown.custom_minimum_size = Vector2(40 * layout_scale, 36 * layout_scale)
+		box.add_child(landlord_crown)
+	
+	if game_ref["landlord_seat"] >= 0:
+		if game_ref["roles"][seat] == "地主":
+			landlord_crown.text = "👑"
+			landlord_crown.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+			landlord_crown.visible = true
+			role_label.text = "【地主】%s" % DoudizhuGame.SEAT_NAMES[seat]
+			role_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+		else:
+			landlord_crown.text = ""
+			landlord_crown.visible = false
+			role_label.text = "【农民】%s" % DoudizhuGame.SEAT_NAMES[seat]
+			role_label.add_theme_color_override("font_color", Color(0.4, 0.6, 1.0))
+	elif game_ref["phase"] == "landlord":
+		landlord_crown.visible = false
+		role_label.text = "%s: 待定" % [DoudizhuGame.SEAT_NAMES[seat]]
+		role_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
 	else:
-		box.get_node("Role").add_theme_color_override("font_color", Color(0.4, 0.6, 1.0))
+		landlord_crown.visible = false
+		role_label.text = "%s: %s" % [loc.string("label.role"), role]
+		if role == "地主":
+			role_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+		else:
+			role_label.add_theme_color_override("font_color", Color(0.4, 0.6, 1.0))
 
-	box.get_node("Count").text = "%d张" % int(game_ref.hands[seat].size())
-	box.get_node("Count").add_theme_font_size_override("font_size", int(16.0 * layout_scale))
-	box.get_node("Turn").text = "回合" if game_ref.current_seat == seat and game_ref.phase == "play" else ""
-	box.get_node("Recent").text = "%s: %s" % [loc.string("label.recent"), (game_ref.recent_plays[seat] if game_ref.recent_plays[seat] != "" else "-")]
-	box.get_node("Reason").text = "%s: %s" % [loc.string("label.reason"), (game_ref.ai_reasons[seat] if game_ref.ai_reasons[seat] != "" else "-")]
-	var active: bool = game_ref.current_seat == seat and game_ref.phase == "play"
+	var count_label: Label = box.get_node("Count")
+	count_label.text = "%d张" % int(game_ref["hands"][seat].size())
+	count_label.add_theme_font_size_override("font_size", int(18.0 * layout_scale))
+	
+	var turn_label: Label = box.get_node("Turn")
+	var is_active_player: bool = game_ref["current_seat"] == seat and game_ref["phase"] == "play"
+	turn_label.text = "▶ 出牌中" if is_active_player else ""
+	turn_label.add_theme_font_size_override("font_size", int(14.0 * layout_scale))
+	if is_active_player:
+		turn_label.add_theme_color_override("font_color", ACTIVE_BORDER_COLOR)
+	else:
+		turn_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	
+	var recent_label: Label = box.get_node("Recent")
+	recent_label.text = "%s: %s" % [loc.string("label.recent"), (game_ref["recent_plays"][seat] if game_ref["recent_plays"][seat] != "" else "-")]
+	recent_label.add_theme_font_size_override("font_size", int(12.0 * layout_scale))
+	
+	var reason_label: Label = box.get_node("Reason")
+	reason_label.text = "%s: %s" % [loc.string("label.reason"), (game_ref["ai_reasons"][seat] if game_ref["ai_reasons"][seat] != "" else "-")]
+	reason_label.add_theme_font_size_override("font_size", int(11.0 * layout_scale))
+	
+	var active: bool = is_active_player
 	panel.add_theme_stylebox_override("panel", _panel_style(active, layout_scale))
 
 
 func _refresh_bottom_cards(game, bottom_cards_box: HBoxContainer, parent, layout_scale: float, loc: LocalizationUtils) -> void:
 	_clear_children(bottom_cards_box)
+	var label := Label.new()
+	label.name = "BottomCardsLabel"
+	label.text = "底牌:" if game.phase != "result" else "底牌: 已翻开"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", int(12.0 * layout_scale))
+	label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+	bottom_cards_box.add_child(label)
 	for card in game.bottom_cards:
-		if game.phase == "landlord":
-			bottom_cards_box.add_child(_card_button({}, false, false, parent, layout_scale, loc))
-		else:
+		var revealed: bool = game.phase == "play" or game.phase == "result"
+		if revealed:
 			bottom_cards_box.add_child(_card_button(card, false, false, parent, layout_scale, loc))
+		else:
+			# Show face-down during landlord phase
+			var hidden_card := _card_button({}, false, false, parent, layout_scale, loc)
+			hidden_card.name = "HiddenBottomCard"
+			bottom_cards_box.add_child(hidden_card)
 
 
 func _refresh_trick(game, trick_box: HBoxContainer, trick_owner_label: Label, loc: LocalizationUtils, layout_scale: float, parent) -> void:
@@ -116,8 +177,7 @@ func _refresh_trick(game, trick_box: HBoxContainer, trick_owner_label: Label, lo
 
 func _refresh_hand(game, hand_area: Control, layout_scale: float, animation_system, loc: LocalizationUtils, parent) -> void:
 	_clear_children(hand_area)
-	var game_ref = parent._game_ref
-	var cards: Array = game_ref.hands[DoudizhuGame.HUMAN]
+	var cards: Array = game.hands[DoudizhuGame.HUMAN]
 	var count: int = cards.size()
 	if count == 0:
 		return
@@ -127,7 +187,7 @@ func _refresh_hand(game, hand_area: Control, layout_scale: float, animation_syst
 
 	for index in range(count):
 		var card: Dictionary = cards[index]
-		var selected: bool = game_ref.selected_cards.has(int(card.id))
+		var selected: bool = game.selected_cards.has(int(card.id))
 		var button := _card_button(card, true, selected, parent, layout_scale, loc)
 
 		if index < positions.size():
@@ -153,15 +213,23 @@ func _refresh_actions(game, action_bar: HBoxContainer, call_button: Button, decl
 	var landlord: bool = String(game.phase) == "landlord"
 	var player_turn: bool = String(game.phase) == "play" and int(game.current_seat) == DoudizhuGame.HUMAN
 	call_button.visible = landlord
+	call_button.text = "叫地主" if landlord else ""
+	call_button.add_theme_font_size_override("font_size", int(14.0))
 	decline_button.visible = landlord
+	decline_button.text = "不叫" if landlord else ""
+	decline_button.add_theme_font_size_override("font_size", int(14.0))
 	play_button.visible = player_turn
+	play_button.text = "出牌" if player_turn else ""
 	pass_button.visible = player_turn
+	pass_button.text = "不出" if player_turn else ""
 	hint_button.visible = player_turn
+	hint_button.text = "提示" if player_turn else ""
 	help_button.visible = game.phase != "result"
 	settings_button.visible = true
 	new_round_button.visible = false
 	for button in [call_button, decline_button, play_button, pass_button, hint_button, help_button, settings_button, new_round_button]:
 		button.focus_mode = Control.FOCUS_NONE if not button.visible else Control.FOCUS_ALL
+		button.disabled = not button.visible
 
 
 func _refresh_settings_ui(settings_blocker: ColorRect, settings_panel: PanelContainer,
@@ -174,7 +242,7 @@ func _refresh_settings_ui(settings_blocker: ColorRect, settings_panel: PanelCont
 	sfx_toggle_button.text = "SFX: %s" % ("On" if audio_controller.sfx_enabled else "Off")
 	music_toggle_button.text = "Music: %s" % ("On" if audio_controller.music_enabled else "Off")
 	volume_button.text = "Volume: %s" % audio_controller.volume_preset.capitalize()
-	var current: int = int(parent.AIUtils.get_difficulty())
+	var current: int = int(AIUtils.get_difficulty())
 	ai_difficulty_button.text = "AI Difficulty: %s" % ("Normal" if current == 0 else "Hard")
 	var focus_mode := Control.FOCUS_ALL if parent.settings_visible else Control.FOCUS_NONE
 	for button in [sfx_toggle_button, music_toggle_button, volume_button, ai_difficulty_button, settings_close_button]:
@@ -230,6 +298,43 @@ func play_result_audio_if_needed(game, audio_controller) -> void:
 		audio_controller.play_event("result_win")
 	else:
 		audio_controller.play_event("result_loss")
+
+
+func _format_status_message(game, loc: LocalizationUtils, layout_scale: float) -> String:
+	var msg: String = game.message
+	var lines: Array[String] = []
+	
+	# Add phase indicator
+	if game.phase == "landlord":
+		lines.append("[地主待定]")
+	elif game.phase == "play":
+		if game.current_seat == DoudizhuGame.HUMAN:
+			if game.initiative_seat == DoudizhuGame.HUMAN:
+				lines.append("[你的回合 - 你可以先出]")
+			else:
+				lines.append("[你的回合 - 请跟牌或不出]")
+		else:
+			lines.append("[%s出牌中...]" % DoudizhuGame.SEAT_NAMES[game.current_seat])
+	elif game.phase == "result":
+		lines.append("[牌局结束]")
+	
+	# Add landlord info if revealed
+	if game.landlord_seat >= 0:
+		var landlord_role: String = "地主"
+		lines.append("地主: %s" % DoudizhuGame.SEAT_NAMES[game.landlord_seat])
+	
+	# Add current trick info
+	if not game.active_trick.is_empty() and game.phase == "play":
+		lines.append("当前牌: %s" % CardRules.labels(game.active_trick.get("cards", [])))
+	
+	# Add hand count for human player
+	lines.append("手牌: %d张" % game.hands[DoudizhuGame.HUMAN].size())
+	
+	# Combine: phase info first, then game message
+	var prefix: String = "\n".join(lines)
+	if msg and msg != "":
+		return "%s\n\n%s" % [prefix, msg]
+	return prefix
 
 
 func _card_button(card: Dictionary, interactive: bool, selected: bool, parent, layout_scale: float, loc: LocalizationUtils) -> Button:
@@ -359,8 +464,9 @@ func _ensure_timer_label_bottom(main: Control) -> Label:
 		_turn_timer_label_bottom.name = "TurnTimerLabelBottom"
 		_turn_timer_label_bottom.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_turn_timer_label_bottom.visible = false
-		_turn_timer_label_bottom.text = "0:30"
-		_turn_timer_label_bottom.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+		_turn_timer_label_bottom.text = "⏱ 0:30"
+		_turn_timer_label_bottom.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3))
+		_turn_timer_label_bottom.add_theme_font_size_override("font_size", int(20.0))
 		main.add_child(_turn_timer_label_bottom)
 		_turn_timer_label_bottom_created = true
 	return _turn_timer_label_bottom
@@ -370,7 +476,10 @@ func debug_timer_label_text(layout_scale: float) -> String:
 	var total_secs: int = ceili(turn_timer_remaining)
 	var mins: int = total_secs / 60
 	var secs: int = total_secs % 60
-	return "%d:%02d" % [mins, secs]
+	var text := "⏱ %d:%02d" % [mins, secs]
+	if turn_timer_remaining <= 5.0:
+		text = "⚠️ %d:%02d" % [mins, secs]
+	return text
 
 
 func _process_turn_timer(game, main: Control, layout_scale: float) -> void:
@@ -381,12 +490,22 @@ func _process_turn_timer(game, main: Control, layout_scale: float) -> void:
 	var is_human_seat: bool = game.current_seat == DoudizhuGame.HUMAN
 	if is_landlord_phase and is_human_seat:
 		_turn_timer_active = true
-		_ensure_timer_label_bottom(main).text = debug_timer_label_text(layout_scale)
-		_ensure_timer_label_bottom(main).visible = true
+		var timer_label := _ensure_timer_label_bottom(main)
+		timer_label.text = debug_timer_label_text(layout_scale)
+		timer_label.visible = true
+		if turn_timer_remaining <= 5.0:
+			timer_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+		else:
+			timer_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3))
 	elif game.phase == "play" and is_human_seat:
 		_turn_timer_active = true
-		_ensure_timer_label_bottom(main).text = debug_timer_label_text(layout_scale)
-		_ensure_timer_label_bottom(main).visible = true
+		var timer_label := _ensure_timer_label_bottom(main)
+		timer_label.text = debug_timer_label_text(layout_scale)
+		timer_label.visible = true
+		if turn_timer_remaining <= 5.0:
+			timer_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+		else:
+			timer_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3))
 		if turn_timer_remaining <= 0.0:
 			game.pass_turn()
 			_turn_timer_active = false
