@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="description" content="斗地主 - 纯前端单机斗地主网页游戏，AI对手，语音播报">
+    <meta name="theme-color" content="#1a4a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>斗地主 - 网页版</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="header">
+            <div id="ai-left-panel" class="seat-panel">
+                <div class="seat-name">AI Left</div>
+                <div id="ai-left-role" class="seat-role">待定</div>
+                <div id="ai-left-count" class="seat-count">0张</div>
+            </div>
+            <div id="bottom-cards">
+                <span class="bottom-label">底牌:</span>
+                <div id="bottom-cards-display"></div>
+            </div>
+            <div id="ai-right-panel" class="seat-panel">
+                <div class="seat-name">AI Right</div>
+                <div id="ai-right-role" class="seat-role">待定</div>
+                <div id="ai-right-count" class="seat-count">0张</div>
+            </div>
+        </div>
+
+        <div id="table-area">
+            <div class="play-label" id="play-label"></div>
+            <div id="play-display"></div>
+        </div>
+
+        <div id="status-area">
+            <div id="status-text">[地主待定]</div>
+            <div id="hand-info">手牌: 0张</div>
+        </div>
+
+        <div id="timer-bar-container"><div id="timer-bar"></div></div>
+
+        <div id="play-log-container">
+            <div id="play-log-label" onclick="togglePlayLog()">出牌记录 ▾</div>
+            <div id="play-log"></div>
+        </div>
+
+        <div id="hand-summary"></div>
+
+        <div id="action-bar">
+            <button id="btn-call1" class="action-btn" onclick="humanBid(1)">1分</button>
+            <button id="btn-call2" class="action-btn" onclick="humanBid(2)">2分</button>
+            <button id="btn-call3" class="action-btn" onclick="humanBid(3)">3分</button>
+            <button id="btn-decline" class="action-btn" onclick="humanPass()">不出</button>
+            <button id="btn-play" class="action-btn" onclick="playCards()">出牌</button>
+            <button id="btn-pass" class="action-btn" onclick="humanPassTurn()">不出</button>
+            <button id="btn-hint" class="action-btn" onclick="showHint()">提示</button>
+            <button id="btn-sort" class="action-btn" onclick="toggleSort()">排序</button>
+            <button id="btn-help" class="action-btn" onclick="toggleHelp()">?</button>
+            <button id="btn-mute" class="action-btn" onclick="toggleMute()">🔊</button>
+            <button id="btn-settings" class="action-btn" onclick="openSettings()">设置</button>
+        </div>
+
+        <div id="player-hand"></div>
+
+        <div id="result-banner" style="display:none">
+            <div id="result-text"></div>
+            <div id="result-stats"></div>
+            <button class="result-btn" onclick="newRound()">新牌局</button>
+        </div>
+
+        <div id="settings-panel" style="display:none">
+            <div id="settings-content">
+                <div id="settings-title">设置</div>
+                <div class="setting-row">
+                    <span class="setting-label">AI 速度</span>
+                    <select id="setting-speed" onchange="applySettings()">
+                        <option value="800">慢速</option>
+                        <option value="500" selected>正常</option>
+                        <option value="200">快速</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">AI 难度</span>
+                    <select id="setting-difficulty" onchange="applySettings()">
+                        <option value="easy">简单</option>
+                        <option value="normal" selected>普通</option>
+                        <option value="hard">困难</option>
+                    </select>
+                </div>
+                <button class="result-btn" onclick="closeSettings()">确定</button>
+            </div>
+        </div>
+
+        <div id="score-bar">
+            <span id="score-text">Score: 1</span>
+            <span id="hand-number">Hand #1</span>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+    <script src="audio.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
