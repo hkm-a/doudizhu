@@ -301,6 +301,7 @@ function renderPlayDisplay() {
             div.innerHTML = makeCardHTML(rankText, suitText, isJoker, isRed);
             display.appendChild(div);
         });
+        setTimeout(() => spawnPlayParticles(display, at.pattern), 100);
         if (display._fadeTimer) clearTimeout(display._fadeTimer);
         display._fadeTimer = setTimeout(() => {
             display.style.animation = 'playFadeOut 0.4s ease-in forwards';
@@ -350,6 +351,7 @@ function showResult() {
     if (game.springBonus) resultText += game.springType === 'spring' ? ' 🌸春天!' : ' ❄️反春天!';
     text.textContent = resultText;
     text.style.color = humanWon ? '#4ade80' : '#f87171';
+    if (humanWon) { setTimeout(spawnWinConfetti, 300); } else { setTimeout(spawnLoseParticles, 300); }
 
     const stats = document.getElementById('result-stats');
     const total = history.length;
@@ -472,3 +474,63 @@ document.addEventListener('keydown', function(e) {
         if (key === 'p' || key === 'P') humanPassTurn();
     }
 });
+
+// ========== Particle System ==========
+function spawnParticles(x, y, count, colors, opts) {
+    const container = document.getElementById('game-container');
+    const o = Object.assign({ minSize: 4, maxSize: 8, minDist: 40, maxDist: 120, gravity: 0, fadeDuration: 600, shapes: ['circle'] }, opts || {});
+    for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const size = o.minSize + Math.random() * (o.maxSize - o.minSize);
+        const angle = Math.random() * Math.PI * 2;
+        const dist = o.minDist + Math.random() * (o.maxDist - o.minDist);
+        const dx = Math.cos(angle) * dist;
+        const dy = Math.sin(angle) * dist - (o.gravity > 0 ? 30 : 0);
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const shape = o.shapes[Math.floor(Math.random() * o.shapes.length)];
+        const br = shape === 'circle' ? '50%' : shape === 'square' ? '2px' : '0';
+        p.style.cssText = 'left:' + x + 'px;top:' + y + 'px;width:' + size + 'px;height:' + size + 'px;background:' + color + ';border-radius:' + br + ';position:fixed;z-index:100;pointer-events:none;opacity:1;transition:all ' + o.fadeDuration + 'ms cubic-bezier(.25,.46,.45,.94);';
+        container.appendChild(p);
+        requestAnimationFrame(function() {
+            p.style.transform = 'translate(' + dx + 'px,' + (dy + o.gravity * 2) + 'px) scale(0)';
+            p.style.opacity = '0';
+        });
+        setTimeout(function() { p.remove(); }, o.fadeDuration + 50);
+    }
+}
+
+function spawnPlayParticles(el, pattern) {
+    var rect = el.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top + rect.height / 2;
+    if (pattern === 'Bomb') {
+        spawnParticles(cx, cy, 30, ['#ff4444', '#ff8800', '#ffcc00', '#ff6600', '#ffffff'], { minSize: 3, maxSize: 10, maxDist: 180, gravity: 1, fadeDuration: 800, shapes: ['circle', 'square'] });
+    } else if (pattern === 'Rocket') {
+        spawnParticles(cx, cy, 25, ['#ff00ff', '#ff44ff', '#ff88ff', '#ffff00', '#ffffff'], { minSize: 2, maxSize: 6, maxDist: 200, gravity: -0.5, fadeDuration: 700, shapes: ['circle'] });
+        for (var i = 0; i < 8; i++) {
+            (function(idx) { setTimeout(function() { spawnParticles(cx, cy - idx * 15, 3, ['#ff44ff', '#ffffff'], { minSize: 2, maxSize: 4, maxDist: 20, fadeDuration: 400 }); }, idx * 60); })(i);
+        }
+    } else {
+        spawnParticles(cx, cy, 8, ['#f0d060', '#e8b830', '#ffffff'], { minSize: 2, maxSize: 5, maxDist: 60, fadeDuration: 400 });
+    }
+}
+
+function spawnWinConfetti() {
+    var colors = ['#ff4444', '#44ff44', '#4444ff', '#ffff44', '#ff44ff', '#44ffff', '#ff8800', '#ffffff'];
+    for (var i = 0; i < 60; i++) {
+        (function(idx) { setTimeout(function() {
+            var x = Math.random() * window.innerWidth;
+            spawnParticles(x, -10, 3, colors, { minSize: 4, maxSize: 8, maxDist: 0, minDist: 0, gravity: 2, fadeDuration: 2000, shapes: ['circle', 'square'] });
+        }, idx * 30); })(i);
+    }
+}
+
+function spawnLoseParticles() {
+    for (var i = 0; i < 20; i++) {
+        (function(idx) { setTimeout(function() {
+            var x = Math.random() * window.innerWidth;
+            spawnParticles(x, -10, 2, ['#666', '#888', '#555'], { minSize: 3, maxSize: 6, maxDist: 0, minDist: 0, gravity: 1.5, fadeDuration: 1500, shapes: ['circle'] });
+        }, idx * 50); })(i);
+    }
+}

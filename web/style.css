@@ -26,6 +26,7 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
 @keyframes playAppear { from { opacity: 0; transform: translateY(40px) scale(0.6); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes playFadeOut { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-30px) scale(0.7); } }
 .play-appear { animation: playAppear 0.35s ease-out both; }
+.particle { position: fixed; z-index: 100; pointer-events: none; will-change: transform, opacity; }
 .play-label { position: absolute; top: calc(50% - 55px); left: 50%; transform: translateX(-50%); font-size: 13px; color: rgba(255,255,255,0.5); white-space: nowrap; z-index: 4; }
 
 #status-area { text-align: center; padding: 4px; }
