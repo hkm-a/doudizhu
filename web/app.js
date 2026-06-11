@@ -230,27 +230,62 @@ function makeCardHTML(rank, suit, isJoker, isRed) {
     if (isJoker) {
         const isBig = rank === '大';
         const cls = isBig ? 'joker-big' : 'joker-small';
-        return `<div class="joker-layout ${cls}"><span class="joker-side-l">JOKER</span><span class="joker-emoji">${isBig ? '🃏' : '🂠'}</span><span class="joker-side-r">JOKER</span></div>`;
+        return `<div class="joker-layout ${cls}"><span class="joker-side-l">JOKER</span><div class="joker-art"><div class="joker-star">${isBig ? '★' : '☆'}</div><div class="joker-label">JOKER</div></div><span class="joker-side-r">JOKER</span></div>`;
     }
     const cornerClass = isRed ? 'card-corner red' : 'card-corner black';
     return `<div class="${cornerClass} tl"><span class="cr">${rank}</span><span class="cs">${suit}</span></div><div class="card-center">${suit}</div><div class="${cornerClass} br"><span class="cr">${rank}</span><span class="cs">${suit}</span></div>`;
 }
 
+let dragInfo = null;
 function initCardInteractions(container) {
     container.onmousedown = (e) => {
-        const card = e.target.closest('.card');
         if (game.phase !== Phase.PLAY || game.currentSeat !== Seat.HUMAN) return;
+        const card = e.target.closest('.card');
         if (card) {
-            const cid = parseInt(card.dataset.cardId);
-            const wasSelected = game.selectedCards.includes(cid);
-            game.toggleSelection(cid);
-            wasSelected ? Sound.deselect() : Sound.select();
-            refreshUI();
+            e.preventDefault();
+            dragInfo = { startX: e.clientX, startY: e.clientY, cardId: parseInt(card.dataset.cardId), isDragging: false };
         } else {
             game.selectedCards = [];
+            Sound.deselect();
             refreshUI();
         }
     };
+    container.onmousemove = (e) => {
+        if (!dragInfo) return;
+        const dx = Math.abs(e.clientX - dragInfo.startX);
+        const dy = Math.abs(e.clientY - dragInfo.startY);
+        if (!dragInfo.isDragging && (dx > 5 || dy > 5)) {
+            dragInfo.isDragging = true;
+            if (!game.selectedCards.includes(dragInfo.cardId)) {
+                game.selectedCards.push(dragInfo.cardId);
+            }
+        }
+        if (dragInfo.isDragging) {
+            const cards = container.querySelectorAll('.card');
+            const selRect = { left: Math.min(dragInfo.startX, e.clientX), right: Math.max(dragInfo.startX, e.clientX), top: Math.min(dragInfo.startY, e.clientY), bottom: Math.max(dragInfo.startY, e.clientY) };
+            cards.forEach(c => {
+                const r = c.getBoundingClientRect();
+                const overlap = !(r.right < selRect.left || r.left > selRect.right || r.bottom < selRect.top || r.top > selRect.bottom);
+                const cid = parseInt(c.dataset.cardId);
+                if (overlap && !game.selectedCards.includes(cid)) game.selectedCards.push(cid);
+                else if (!overlap && game.selectedCards.includes(cid)) game.selectedCards.splice(game.selectedCards.indexOf(cid), 1);
+                c.classList.toggle('selected', game.selectedCards.includes(cid));
+            });
+        }
+    };
+    container.onmouseup = (e) => {
+        if (!dragInfo) return;
+        if (!dragInfo.isDragging) {
+            game.toggleSelection(dragInfo.cardId);
+            const wasSelected = game.selectedCards.includes(dragInfo.cardId);
+            wasSelected ? Sound.deselect() : Sound.select();
+            refreshUI();
+        } else {
+            refreshUI();
+        }
+        dragInfo = null;
+    };
+    container.onmouseleave = () => { dragInfo = null; };
 }
 
 function renderBottomCards() {

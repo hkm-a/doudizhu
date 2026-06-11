@@ -88,9 +88,9 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
     box-shadow: 0 2px 8px rgba(0,0,0,0.25), 0 1px 2px rgba(0,0,0,0.1);
 }
 .card.selected {
-    margin-top: -20px;
     box-shadow: 0 0 0 2px #e8b830, 0 4px 16px rgba(232,184,48,0.5);
     z-index: 3;
+    transform: translateY(-2px);
 }
 
 .card .card-corner { position: absolute; display: flex; flex-direction: column; align-items: center; line-height: 1; }
@@ -107,16 +107,17 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
 .joker-layout { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
 .joker-side-l { position: absolute; left: 3px; top: 50%; transform: translateY(-50%) rotate(-90deg); font-size: 9px; font-weight: 900; letter-spacing: 1.5px; }
 .joker-side-r { position: absolute; right: 3px; top: 50%; transform: translateY(-50%) rotate(90deg); font-size: 9px; font-weight: 900; letter-spacing: 1.5px; }
-.joker-emoji { font-size: 32px; line-height: 1; }
+.joker-art { text-align: center; line-height: 1; }
+.joker-star { font-size: 30px; line-height: 1; }
+.joker-label { font-size: 8px; font-weight: 900; letter-spacing: 2px; margin-top: 2px; }
 .joker-big .joker-side-l, .joker-big .joker-side-r { color: #cc0000; }
-.joker-big .joker-emoji { filter: saturate(1.2); }
+.joker-big .joker-star { color: #cc0000; text-shadow: 0 0 8px rgba(200,0,0,0.3); }
+.joker-big .joker-label { color: #cc0000; }
+.joker-big { border-color: #e88; background: linear-gradient(170deg, #fff8f8, #fff0f0); }
 .joker-small .joker-side-l, .joker-small .joker-side-r { color: #333; }
-.joker-small .joker-emoji { filter: grayscale(0.7) contrast(1.1); }
-
-.card.mini .joker-side-l, .card.mini .joker-side-r { font-size: 6px; letter-spacing: 0.5px; }
-.card.mini .joker-emoji { font-size: 20px; }
-.card.small .joker-side-l, .card.small .joker-side-r { display: none; }
-.card.small .joker-emoji { font-size: 16px; }
+.joker-small .joker-star { color: #333; }
+.joker-small .joker-label { color: #333; }
+.joker-small { border-color: #88a; background: linear-gradient(170deg, #f8f8ff, #f0f0f8); }
 
 .card.small { width: 36px; height: 52px; }
 .card.small .card-corner .cr { font-size: 10px; }
@@ -169,7 +170,9 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
     .card .card-corner .cr { font-size: 13px; }
     .card .card-corner .cs { font-size: 10px; }
     .card .card-center { font-size: 22px; }
-    .card.selected { margin-top: -16px; }
+    .joker-star { font-size: 24px; }
+    .joker-label { font-size: 7px; }
+    .joker-side-l, .joker-side-r { font-size: 7px; }
 }
 
 @media (max-width: 480px) {
