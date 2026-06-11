@@ -849,7 +849,7 @@ class DoudizhuGame {
         switch (trickPattern) {
             case "Single":
                 for (const card of hand) {
-                    if (card.rank > trickPr && card.rank < Rank.JOKER_SMALL)
+                    if (card.rank > trickPr)
                         results.push({ cards: [card], pattern: "Single", primary_rank: card.rank, pattern_name: "单张", structural_length: 1 });
                 }
                 break;

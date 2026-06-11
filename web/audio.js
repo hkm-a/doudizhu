@@ -19,7 +19,7 @@ function playTone(freq, duration, type = 'sine', volume = 0.12, delay = 0) {
         osc.type = type;
         osc.frequency.setValueAtTime(freq, t);
         gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(volume, t + 0.01);
+        gain.gain.linearRampToValueAtTime(volume, t + 0.008);
         gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -28,7 +28,7 @@ function playTone(freq, duration, type = 'sine', volume = 0.12, delay = 0) {
     } catch (e) {}
 }
 
-function playNoise(duration, volume = 0.08, delay = 0) {
+function playNoise(duration, volume = 0.06, delay = 0) {
     if (muted) return;
     try {
         const ctx = getAudioCtx();
@@ -48,54 +48,124 @@ function playNoise(duration, volume = 0.08, delay = 0) {
     } catch (e) {}
 }
 
+function playSweep(startFreq, endFreq, duration, type = 'sawtooth', volume = 0.1, delay = 0) {
+    if (muted) return;
+    try {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime + delay;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(startFreq, t);
+        osc.frequency.exponentialRampToValueAtTime(endFreq, t + duration);
+        gain.gain.setValueAtTime(volume, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + duration);
+    } catch (e) {}
+}
+
 const Sound = {
     deal() {
-        playNoise(0.04, 0.05);
-        playTone(1200, 0.03, 'sine', 0.04, 0.02);
+        for (let i = 0; i < 3; i++) {
+            playNoise(0.03, 0.04, i * 0.06);
+            playTone(800 + i * 200, 0.04, 'triangle', 0.03, i * 0.06);
+        }
     },
-    card() {
-        playTone(300, 0.06, 'triangle', 0.1);
-        playNoise(0.03, 0.04);
+
+    select() {
+        playTone(1200, 0.04, 'sine', 0.06);
     },
+
+    deselect() {
+        playTone(800, 0.03, 'sine', 0.04);
+    },
+
+    card(count) {
+        if (count <= 1) {
+            playTone(350, 0.05, 'triangle', 0.08);
+            playNoise(0.025, 0.04);
+        } else if (count === 2) {
+            playTone(350, 0.04, 'triangle', 0.08);
+            playTone(450, 0.04, 'triangle', 0.07, 0.02);
+            playNoise(0.03, 0.04);
+        } else if (count <= 4) {
+            for (let i = 0; i < Math.min(count, 4); i++) {
+                playTone(300 + i * 80, 0.03, 'triangle', 0.06, i * 0.02);
+            }
+            playNoise(0.04, 0.05);
+        } else {
+            for (let i = 0; i < 4; i++) {
+                playTone(300 + i * 60, 0.025, 'square', 0.04, i * 0.015);
+            }
+            playNoise(0.05, 0.06);
+        }
+    },
+
     pass() {
-        playTone(400, 0.1, 'sine', 0.05);
-        playTone(300, 0.15, 'sine', 0.03, 0.05);
+        playTone(500, 0.08, 'sine', 0.04);
+        playTone(350, 0.12, 'sine', 0.03, 0.04);
     },
+
     bid() {
-        playTone(660, 0.08, 'sine', 0.08);
-        playTone(880, 0.12, 'sine', 0.06, 0.06);
+        playTone(660, 0.08, 'sine', 0.07);
+        playTone(880, 0.1, 'sine', 0.06, 0.06);
     },
+
     bomb() {
-        playTone(60, 0.5, 'sawtooth', 0.18);
-        playTone(45, 0.4, 'square', 0.12, 0.05);
-        playNoise(0.35, 0.15);
-        playTone(90, 0.3, 'triangle', 0.1, 0.1);
+        playTone(45, 0.6, 'sawtooth', 0.15);
+        playTone(55, 0.5, 'square', 0.12, 0.02);
+        playNoise(0.4, 0.18);
+        playTone(80, 0.4, 'triangle', 0.1, 0.05);
+        playTone(35, 0.3, 'sawtooth', 0.08, 0.1);
+        playNoise(0.2, 0.1, 0.15);
     },
+
     rocket() {
-        const ctx = getAudioCtx();
-        if (muted || !ctx) return;
-        try {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(150, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(2500, ctx.currentTime + 0.6);
-            gain.gain.setValueAtTime(0.12, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.7);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.7);
-            playNoise(0.2, 0.08, 0.3);
-        } catch (e) {}
+        playSweep(100, 3000, 0.6, 'sawtooth', 0.12);
+        playSweep(80, 2800, 0.65, 'square', 0.06, 0.02);
+        playNoise(0.15, 0.06, 0.25);
+        playTone(3000, 0.2, 'sine', 0.08, 0.55);
+        playNoise(0.1, 0.08, 0.55);
     },
+
+    turn() {
+        playTone(880, 0.06, 'sine', 0.05);
+        playTone(1100, 0.08, 'sine', 0.04, 0.04);
+    },
+
+    tick() {
+        playTone(2000, 0.02, 'sine', 0.03);
+    },
+
+    error() {
+        playTone(200, 0.15, 'square', 0.08);
+        playTone(150, 0.2, 'square', 0.06, 0.05);
+    },
+
+    hint() {
+        playTone(1000, 0.05, 'sine', 0.04);
+        playTone(1200, 0.06, 'sine', 0.03, 0.03);
+    },
+
+    landlord() {
+        [523, 659, 784].forEach((f, i) => playTone(f, 0.2, 'triangle', 0.08, i * 0.1));
+        playTone(1047, 0.4, 'triangle', 0.06, 0.3);
+    },
+
     win() {
-        [523, 659, 784, 1047, 1319].forEach((f, i) => playTone(f, 0.25, 'sine', 0.1, i * 0.12));
-        playTone(1047, 0.5, 'triangle', 0.06, 0.5);
+        [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => playTone(f, 0.2, 'sine', 0.08, i * 0.1));
+        playTone(1047, 0.6, 'triangle', 0.05, 0.6);
+        playTone(1319, 0.5, 'sine', 0.04, 0.65);
     },
+
     lose() {
-        [440, 392, 349, 311, 262].forEach((f, i) => playTone(f, 0.3, 'sine', 0.08, i * 0.18));
+        [440, 392, 349, 311, 262, 220].forEach((f, i) => playTone(f, 0.25, 'sine', 0.06, i * 0.15));
+        playTone(180, 0.8, 'triangle', 0.04, 0.8);
     },
+
     speak(text) {
         if (muted) return;
         try {
@@ -112,6 +182,7 @@ const Sound = {
             speechSynthesis.speak(u);
         } catch (e) {}
     },
+
     toggleMute() { muted = !muted; return muted; },
     isMuted() { return muted; }
 };

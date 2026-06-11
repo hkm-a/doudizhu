@@ -8,9 +8,12 @@ function newRound() {
     game.newRound(Date.now() % 10000);
     clearLog();
     document.getElementById('result-banner').style.display = 'none';
+    Sound.deal();
     refreshUI();
 }
 
+let lastTurnSeat = -1;
+let lastPhase = -1;
 function refreshUI() {
     updateStatus();
     updateHandInfo();
@@ -22,6 +25,14 @@ function refreshUI() {
     renderPlayDisplay();
     renderAiPanels();
     updateTimerBar();
+    if (lastPhase !== game.phase) {
+        if (game.phase === Phase.PLAY && lastPhase === Phase.BIDDING) Sound.landlord();
+        lastPhase = game.phase;
+    }
+    if (game.phase === Phase.PLAY && game.currentSeat === Seat.HUMAN && lastTurnSeat !== Seat.HUMAN) {
+        Sound.turn();
+    }
+    lastTurnSeat = game.currentSeat;
     scheduleIfNeeded();
 }
 
@@ -59,9 +70,9 @@ function aiPlay() {
     const trickChanged = at.owner_seat !== prevTrickOwner || at.primary_rank !== prevTrickPr || at.count !== prevTrickCount;
     if (trickChanged && at.cards) {
         addLogEntry(seat, `${at.pattern_name} (${at.cards.map(c => RANK_SYMBOLS[c.rank] + SUIT_SYMBOLS[c.suit]).join(' ')})`);
-        if (at.pattern === 'Bomb') Sound.bomb();
-        else if (at.pattern === 'Rocket') Sound.rocket();
-        else Sound.card();
+        if (at.pattern === 'Bomb') { Sound.bomb(); document.getElementById('game-container').classList.add('bomb-flash'); setTimeout(() => document.getElementById('game-container').classList.remove('bomb-flash'), 300); }
+        else if (at.pattern === 'Rocket') { Sound.rocket(); document.getElementById('game-container').classList.add('rocket-flash'); setTimeout(() => document.getElementById('game-container').classList.remove('rocket-flash'), 500); }
+        else Sound.card(at.cards.length);
         speakPlay(at.cards, at.pattern_name);
     } else if (at.owner_seat !== seat) {
         addLogEntry(seat, '不出', true);
@@ -105,20 +116,22 @@ function speakPlay(cards, pattern) {
 
 function playCards() {
     if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
-    const classified = game.selectedCards.length > 0 ? game.classifyCards(game._getSelectedCardDicts()) : null;
+    const playCardsData = game._getSelectedCardDicts();
+    const classified = playCardsData.length > 0 ? game.classifyCards(playCardsData) : null;
     const ok = game.playSelected();
     refreshUI();
     if (ok) {
         if (classified) {
             addLogEntry(0, `${classified.pattern_name} (${classified.count}张)`);
-            if (classified.pattern === 'Bomb') Sound.bomb();
-            else if (classified.pattern === 'Rocket') Sound.rocket();
-            else Sound.card();
-            speakPlay(classified.cards || game._getSelectedCardDicts(), classified.pattern_name);
+            if (classified.pattern === 'Bomb') { Sound.bomb(); document.getElementById('game-container').classList.add('bomb-flash'); setTimeout(() => document.getElementById('game-container').classList.remove('bomb-flash'), 300); }
+            else if (classified.pattern === 'Rocket') { Sound.rocket(); document.getElementById('game-container').classList.add('rocket-flash'); setTimeout(() => document.getElementById('game-container').classList.remove('rocket-flash'), 500); }
+            else Sound.card(classified.count);
+            speakPlay(playCardsData, classified.pattern_name);
         }
         if (game.phase === Phase.RESULT) showResult();
     }
     if (!ok && game.selectedCards.length > 0) {
+        Sound.error();
         document.getElementById('status-text').textContent += '\n❌ 无效出牌，请检查牌型或点提示';
     }
 }
@@ -229,7 +242,9 @@ function initCardInteractions(container) {
         if (game.phase !== Phase.PLAY || game.currentSeat !== Seat.HUMAN) return;
         if (card) {
             const cid = parseInt(card.dataset.cardId);
+            const wasSelected = game.selectedCards.includes(cid);
             game.toggleSelection(cid);
+            wasSelected ? Sound.deselect() : Sound.select();
             refreshUI();
         } else {
             game.selectedCards = [];
@@ -303,14 +318,17 @@ function initDragSelect() {}
 function renderAiPanels() {
     ['ai-left', 'ai-right'].forEach((name, i) => {
         const seat = i + 1;
-        document.getElementById(`${name}-role`).textContent = game.roles[seat] || '待定';
+        const isLandlord = game.landlordSeat === seat;
+        document.getElementById(`${name}-role`).textContent = isLandlord ? '👑 地主' : (game.roles[seat] || '待定');
         document.getElementById(`${name}-count`).textContent = `${game.hands[seat].length}张`;
+        document.getElementById(`${name}-panel`).classList.toggle('landlord-panel', isLandlord);
     });
 }
 
 function showHint() {
     const hint = game.getHint();
     if (hint) {
+        Sound.hint();
         game.selectedCards = hint.map(c => c.id);
         refreshUI();
     }
@@ -331,6 +349,7 @@ function showResult() {
     let resultText = `${game.winnerSide === 'landlord' ? '地主' : '农民'}胜! 倍数: x${game.multiplier}`;
     if (game.springBonus) resultText += game.springType === 'spring' ? ' 🌸春天!' : ' ❄️反春天!';
     text.textContent = resultText;
+    text.style.color = humanWon ? '#4ade80' : '#f87171';
 
     const stats = document.getElementById('result-stats');
     const total = history.length;
@@ -340,6 +359,9 @@ function showResult() {
     stats.innerHTML = `<div class="stats-row"><span>总场次: ${total}</span><span>胜: ${wins}</span><span>负: ${losses}</span><span>春天: ${springs}</span></div><div class="stats-row"><span>胜率: ${total > 0 ? Math.round(wins / total * 100) : 0}%</span></div>`;
 
     banner.style.display = 'block';
+    banner.classList.remove('confetti');
+    void banner.offsetWidth;
+    banner.classList.add('confetti');
 }
 
 function toggleHelp() { alert('斗地主规则:\n\n1. 三人游戏，一人为地主，两人为农民\n2. 地主获得底牌，先出完牌获胜\n3. 牌型：单张、对子、三条、炸弹、火箭等\n4. 炸弹可压制普通牌型，火箭最大\n5. 农民合作对抗地主'); }
@@ -397,7 +419,10 @@ function gameLoop(timestamp) {
     const dt = (timestamp - lastFrameTime) / 1000;
     lastFrameTime = timestamp;
     if (game.timerActive && game.timerRemaining > 0) {
+        const prev = game.timerRemaining;
         game.timerRemaining -= dt * 1000;
+        if (game.timerRemaining <= 5000 && prev > 5000) Sound.tick();
+        if (game.timerRemaining <= 3000 && Math.floor(game.timerRemaining / 1000) < Math.floor(prev / 1000)) Sound.tick();
         if (game.timerRemaining <= 0) {
             game.timerRemaining = 0;
             game.timerActive = false;
@@ -419,6 +444,8 @@ function gameLoop(timestamp) {
         }
         updateTimerBar();
     }
+    requestAnimationFrame(gameLoop);
+}
 requestAnimationFrame(gameLoop);
 
 document.addEventListener('keydown', function(e) {
@@ -445,5 +472,3 @@ document.addEventListener('keydown', function(e) {
         if (key === 'p' || key === 'P') humanPassTurn();
     }
 });
-}
-requestAnimationFrame(gameLoop);
