@@ -465,7 +465,7 @@ function gameLoop(timestamp) {
             game.timerActive = false;
             if (game.phase === Phase.PLAY && game.currentSeat === Seat.HUMAN) {
                 if (game.initiativeSeat === Seat.HUMAN) {
-                    const smallest = game._findSmallestSingle();
+                    const smallest = game._findSmallestSingle(Seat.HUMAN);
                     if (smallest.length > 0) {
                         game.selectedCards = smallest.map(c => c.id);
                         game.playSelected();

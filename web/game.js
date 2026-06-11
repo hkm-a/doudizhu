@@ -104,6 +104,10 @@ class DoudizhuGame {
 
         this.bidAmount = points; this.highestBid = points; this.highestBidder = playerSeat;
         this.bidCounter++;
+        if (this._biddingComplete()) {
+            this._resolveLandlord();
+            return true;
+        }
         this._nextBidder();
         return true;
     }
@@ -168,7 +172,7 @@ class DoudizhuGame {
                 return true;
             } else if (this.phase === Phase.PLAY) {
                 if (this.initiativeSeat === this.currentSeat) {
-                    const smallest = this._findSmallestSingle();
+                    const smallest = this._findSmallestSingle(this.currentSeat);
                     if (smallest.length > 0) {
                         const classified = this.classifyCards(smallest);
                         this._executePlay(this.currentSeat, smallest, classified);
@@ -461,9 +465,9 @@ class DoudizhuGame {
         return score;
     }
 
-    _findSmallestSingle() {
-        for (const card of this.hands[Seat.HUMAN]) {
-            if (card.rank < Rank.JOKER_SMALL) return [card];
+    _findSmallestSingle(seat) {
+        for (const card of this.hands[seat]) {
+            return [card];
         }
         return [];
     }
@@ -522,15 +526,17 @@ class DoudizhuGame {
         for (const v of Object.values(rankCounts)) if (v > maxCount) maxCount = v;
 
         if (maxCount === 1 && count === 1) return this._mk("Single", ranks[0], count, "单张");
+        if (count === 2 && rankCounts[Rank.JOKER_SMALL] === 1 && rankCounts[Rank.JOKER_BIG] === 1) return this._mk("Rocket", -1, count, "火箭");
         if (maxCount === 4 && count === 4) return this._mk("Bomb", ranks[0], count, "炸弹");
-        if (maxCount === 4 && count === 6) return this._mk("Rocket", -1, count, "火箭");
-        if (maxCount === 4 && count === 8) return this._mk("Bomb", ranks[0], count, "炸弹");
 
         if (maxCount === 3) {
             const tripleRank = this._findRankCount(rankCounts, 3);
             if (count === 3) return this._mk("Triple", tripleRank, count, "三不带");
             if (count === 4) return this._mk("Triple+1", tripleRank, count, "三带一");
-            if (count === 5) return this._mk("Triple+2", tripleRank, count, "三带二");
+            if (count === 5) {
+                const kickerRank = ranks.find(r => r !== tripleRank);
+                if (kickerRank !== undefined && rankCounts[kickerRank] === 2) return this._mk("Triple+2", tripleRank, count, "三带二");
+            }
             if (count >= 6 && count % 3 === 0) {
                 if (this._isConsecutiveMap(rankCounts, count / 3, ranks))
                     return this._mk("Airplane", tripleRank, count, "飞机");
