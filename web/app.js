@@ -7,6 +7,8 @@ function newRound() {
     if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
     game.newRound(Date.now() % 10000);
     clearLog();
+    counterOpen = false;
+    document.getElementById('counter-panel').style.display = 'none';
     document.getElementById('result-banner').style.display = 'none';
     Sound.deal();
     refreshUI();
@@ -33,6 +35,7 @@ function refreshUI() {
         Sound.turn();
     }
     lastTurnSeat = game.currentSeat;
+    if (counterOpen) renderCounter();
     scheduleIfNeeded();
 }
 
@@ -278,7 +281,7 @@ function getPipPositions(count) {
         7: ['top:15%;left:30%;transform:translate(-50%,-50%)', 'top:15%;right:30%;transform:translate(50%,-50%)', 'top:38%;left:30%;transform:translate(-50%,-50%)', 'top:50%;left:50%;transform:translate(-50%,-50%)', 'bottom:38%;right:30%;transform:translate(50%,50%)', 'bottom:15%;left:30%;transform:translate(-50%,50%)', 'bottom:15%;right:30%;transform:translate(50%,50%)'],
         8: ['top:15%;left:30%;transform:translate(-50%,-50%)', 'top:15%;right:30%;transform:translate(50%,-50%)', 'top:38%;left:30%;transform:translate(-50%,-50%)', 'top:38%;right:30%;transform:translate(50%,-50%)', 'bottom:15%;left:30%;transform:translate(-50%,50%)', 'bottom:15%;right:30%;transform:translate(50%,50%)', 'bottom:38%;left:30%;transform:translate(-50%,50%)', 'bottom:38%;right:30%;transform:translate(50%,50%)'],
         9: ['top:15%;left:25%;transform:translate(-50%,-50%)', 'top:15%;right:25%;transform:translate(50%,-50%)', 'top:38%;left:25%;transform:translate(-50%,-50%)', 'top:38%;right:25%;transform:translate(50%,-50%)', 'top:50%;left:50%;transform:translate(-50%,-50%)', 'bottom:15%;left:25%;transform:translate(-50%,50%)', 'bottom:15%;right:25%;transform:translate(50%,50%)', 'bottom:38%;left:25%;transform:translate(-50%,50%)', 'bottom:38%;right:25%;transform:translate(50%,50%)'],
-        10: ['top:12%;left:25%;transform:translate(-50%,-50%)', 'top:12%;right:25%;transform:translate(50%,-50%)', 'top:34%;left:25%;transform:translate(-50%,-50%)', 'top:34%;right:25%;transform:translate(50%,-50%)', 'top:50%;left:35%;transform:translate(-50%,-50%)', 'bottom:12%;left:25%;transform:translate(-50%,50%)', 'bottom:12%;right:25%;transform:translate(50%,50%)', 'bottom:34%;left:25%;transform:translate(-50%,50%)', 'bottom:34%;right:25%;transform:translate(50%,50%)', 'top:50%;right:35%;transform:translate(50%,-50%)']
+        10: ['top:16%;left:30%;transform:translate(-50%,-50%)', 'top:16%;right:30%;transform:translate(50%,-50%)', 'top:36%;left:30%;transform:translate(-50%,-50%)', 'top:36%;right:30%;transform:translate(50%,-50%)', 'top:52%;left:38%;transform:translate(-50%,-50%)', 'bottom:16%;left:30%;transform:translate(-50%,50%)', 'bottom:16%;right:30%;transform:translate(50%,50%)', 'bottom:36%;left:30%;transform:translate(-50%,50%)', 'bottom:36%;right:30%;transform:translate(50%,50%)', 'top:52%;right:38%;transform:translate(50%,-50%)']
     };
     return positions[count] || [];
 }
@@ -403,8 +406,35 @@ function renderPlayDisplay() {
     }
 }
 
-let dragState = null;
-function initDragSelect() {}
+var counterOpen = false;
+function toggleCounter() {
+    counterOpen = !counterOpen;
+    document.getElementById('counter-panel').style.display = counterOpen ? 'block' : 'none';
+    if (counterOpen) renderCounter();
+}
+function renderCounter() {
+    var grid = document.getElementById('counter-grid');
+    grid.innerHTML = '';
+    var RANK_NAMES = { 3:'3', 4:'4', 5:'5', 6:'6', 7:'7', 8:'8', 9:'9', 10:'10', 11:'J', 12:'Q', 13:'K', 14:'A', 15:'2' };
+    var ranks = [3,4,5,6,7,8,9,10,11,12,13,14,15];
+    ranks.forEach(function(rank) {
+        var remaining = game.getRemainingCount(rank);
+        var item = document.createElement('div');
+        item.className = 'counter-item' + (remaining === 0 ? ' done' : '');
+        item.innerHTML = '<div class="c-rank">' + RANK_NAMES[rank] + '</div><div class="c-count">' + remaining + '</div>';
+        grid.appendChild(item);
+    });
+    var jokers = [
+        { name: '小王', remaining: game.getRemainingCount(Rank.JOKER_SMALL) },
+        { name: '大王', remaining: game.getRemainingCount(Rank.JOKER_BIG) }
+    ];
+    jokers.forEach(function(j) {
+        var item = document.createElement('div');
+        item.className = 'counter-item' + (j.remaining === 0 ? ' done' : '');
+        item.innerHTML = '<div class="c-rank">' + j.name + '</div><div class="c-count">' + j.remaining + '</div>';
+        grid.appendChild(item);
+    });
+}
 
 function renderAiPanels() {
     ['ai-left', 'ai-right'].forEach((name, i) => {

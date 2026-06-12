@@ -481,7 +481,8 @@ class DoudizhuGame {
     }
 
     getRemainingCount(rank) {
-        return 4 - (this.playedRanks[rank] || 0);
+        var max = (rank === Rank.JOKER_SMALL || rank === Rank.JOKER_BIG) ? 1 : 4;
+        return max - (this.playedRanks[rank] || 0);
     }
 
     getUnplayedCards(excludeSeat) {

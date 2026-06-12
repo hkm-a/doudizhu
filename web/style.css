@@ -165,6 +165,14 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
 .setting-label { font-size: 14px; }
 .setting-row select { background: #0d2a18; border: 1px solid #2a4a35; color: #d0d0d0; padding: 6px 10px; border-radius: 4px; font-size: 14px; font-family: inherit; }
 
+#counter-panel { position: absolute; bottom: 80px; right: 16px; background: rgba(0,0,0,0.85); border-radius: 10px; padding: 12px; z-index: 15; backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.1); min-width: 200px; }
+#counter-title { font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #f0d060; }
+#counter-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.counter-item { text-align: center; font-size: 11px; padding: 3px 2px; border-radius: 4px; background: rgba(255,255,255,0.05); }
+.counter-item .c-rank { font-weight: bold; color: #ddd; }
+.counter-item .c-count { color: #888; font-size: 10px; }
+.counter-item.done { opacity: 0.3; }
+
 @media (max-width: 768px) {
     #header { padding: 6px 10px; }
     .seat-panel { min-width: 100px; padding: 6px 10px; }
