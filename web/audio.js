@@ -153,10 +153,11 @@ var Sound = {
     },
 
     airplane: function() {
-        playTone(300, 0.1, 'triangle', 0.06);
-        playTone(400, 0.1, 'triangle', 0.05, 0.08);
-        playTone(500, 0.1, 'triangle', 0.05, 0.16);
-        playFilteredNoise(0.08, 3000, 0.06, 0.1);
+        playSweep(150, 600, 0.3, 'sawtooth', 0.08);
+        playSweep(200, 800, 0.35, 'triangle', 0.06, 0.05);
+        playFilteredNoise(0.25, 2000, 0.12, 0.1);
+        playTone(350, 0.4, 'square', 0.05, 0.2);
+        playSweep(100, 500, 0.3, 'sawtooth', 0.04, 0.35);
     },
 
     pass: function() {
@@ -180,12 +181,14 @@ var Sound = {
     },
 
     rocket: function() {
-        playSweep(80, 3000, 0.7, 'sawtooth', 0.10);
-        playSweep(60, 2500, 0.75, 'square', 0.05, 0.02);
-        playFilteredNoise(0.2, 1500, 0.06, 0.3);
-        playTone(3200, 0.15, 'sine', 0.07, 0.6);
-        playFilteredNoise(0.12, 2000, 0.07, 0.6);
-        playFilteredNoise(0.4, 400, 0.03, 0.7);
+        playSweep(80, 3500, 0.8, 'sawtooth', 0.12);
+        playSweep(60, 3000, 0.85, 'square', 0.06, 0.02);
+        playSweep(100, 4000, 0.7, 'triangle', 0.04, 0.1);
+        playFilteredNoise(0.25, 1800, 0.08, 0.3);
+        playTone(3500, 0.2, 'sine', 0.08, 0.65);
+        playFilteredNoise(0.15, 2200, 0.08, 0.65);
+        playFilteredNoise(0.5, 300, 0.04, 0.75);
+        playTone(2800, 0.1, 'sine', 0.05, 0.8);
     },
 
     turn: function() {

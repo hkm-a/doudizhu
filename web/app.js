@@ -130,10 +130,32 @@ function speakPlay(cards, pattern) {
 }
 
 function playSoundForPattern(pattern, count) {
-    if (pattern === 'Bomb') { Sound.bomb(); document.getElementById('game-container').classList.add('bomb-flash'); setTimeout(function() { document.getElementById('game-container').classList.remove('bomb-flash'); }, 300); }
-    else if (pattern === 'Rocket') { Sound.rocket(); document.getElementById('game-container').classList.add('rocket-flash'); setTimeout(function() { document.getElementById('game-container').classList.remove('rocket-flash'); }, 500); }
-    else if (pattern === 'Straight' || pattern === 'Consecutive Pairs') Sound.straight();
-    else if (pattern === 'Airplane') Sound.airplane();
+    if (pattern === 'Bomb') {
+        Sound.bomb();
+        document.getElementById('game-container').classList.add('bomb-flash');
+        setTimeout(function() { document.getElementById('game-container').classList.remove('bomb-flash'); }, 600);
+        var bombEl = document.getElementById('bomb-effect');
+        bombEl.classList.remove('active');
+        void bombEl.offsetWidth;
+        bombEl.classList.add('active');
+        setTimeout(function() { bombEl.classList.remove('active'); }, 800);
+    } else if (pattern === 'Rocket') {
+        Sound.rocket();
+        document.getElementById('game-container').classList.add('rocket-flash');
+        setTimeout(function() { document.getElementById('game-container').classList.remove('rocket-flash'); }, 800);
+        var planeEl = document.getElementById('airplane-effect');
+        planeEl.classList.remove('active');
+        void planeEl.offsetWidth;
+        planeEl.classList.add('active');
+        setTimeout(function() { planeEl.classList.remove('active'); }, 1500);
+    } else if (pattern === 'Airplane' || pattern === '飞机' || pattern === '飞机带单' || pattern === '飞机带对') {
+        Sound.airplane();
+        var planeEl2 = document.getElementById('airplane-effect');
+        planeEl2.classList.remove('active');
+        void planeEl2.offsetWidth;
+        planeEl2.classList.add('active');
+        setTimeout(function() { planeEl2.classList.remove('active'); }, 1500);
+    } else if (pattern === 'Straight' || pattern === 'Consecutive Pairs') Sound.straight();
     else Sound.card(count);
 }
 
