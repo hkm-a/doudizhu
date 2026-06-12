@@ -69,14 +69,10 @@ function aiPlay() {
     const at = game.activeTrick;
     const trickChanged = at.owner_seat !== prevTrickOwner || at.primary_rank !== prevTrickPr || at.count !== prevTrickCount;
     if (trickChanged && at.cards) {
-        addLogEntry(seat, `${at.pattern_name} (${at.cards.map(c => RANK_SYMBOLS[c.rank] + SUIT_SYMBOLS[c.suit]).join(' ')})`);
-        if (at.pattern === 'Bomb') { Sound.bomb(); document.getElementById('game-container').classList.add('bomb-flash'); setTimeout(() => document.getElementById('game-container').classList.remove('bomb-flash'), 300); }
-        else if (at.pattern === 'Rocket') { Sound.rocket(); document.getElementById('game-container').classList.add('rocket-flash'); setTimeout(() => document.getElementById('game-container').classList.remove('rocket-flash'), 500); }
-        else Sound.card(at.cards.length);
-        speakPlay(at.cards, at.pattern_name);
+        addLogEntry(seat, at.pattern_name + ' (' + at.cards.map(function(c) { return RANK_SYMBOLS[c.rank] + SUIT_SYMBOLS[c.suit]; }).join(' ') + ')');
+        playSoundForPattern(at.pattern, at.cards.length);
     } else if (at.owner_seat !== seat) {
         addLogEntry(seat, '不出', true);
-        Sound.speak('不出');
     }
     refreshUI();
     if (game.phase === Phase.RESULT) showResult();
@@ -102,30 +98,46 @@ function humanPass() {
 
 function speakPlay(cards, pattern) {
     if (!cards || cards.length === 0) return;
-    const RANK_CN = { 3:'三', 4:'四', 5:'五', 6:'六', 7:'七', 8:'八', 9:'九', 10:'十', 11:'J', 12:'Q', 13:'K', 14:'A', 15:'二' };
-    const SUIT_CN = { 0:'♠', 1:'♥', 2:'♦', 3:'♣' };
-    const sorted = [...cards].sort((a, b) => a.rank - b.rank);
-    const cardNames = sorted.map(c => {
-        if (c.is_joker) return c.rank === Rank.JOKER_BIG ? '大王' : '小王';
-        return RANK_CN[c.rank] + SUIT_CN[c.suit];
-    });
-    const desc = cardNames.join('');
-    let text = pattern + ' ' + desc;
-    Sound.speak(text);
+    var RANK_CN = { 3:'三', 4:'四', 5:'五', 6:'六', 7:'七', 8:'八', 9:'九', 10:'十', 11:'J', 12:'Q', 13:'K', 14:'A', 15:'二' };
+    var simplePatterns = { 'Single': true, 'Pair': true, 'Triple': true, 'Bomb': true, 'Rocket': true };
+    if (cards.length === 1 && cards[0].is_joker) {
+        Sound.speak(cards[0].rank === Rank.JOKER_BIG ? '大王' : '小王');
+        return;
+    }
+    if (simplePatterns[pattern]) {
+        var sorted = cards.slice().sort(function(a, b) { return a.rank - b.rank; });
+        var names = sorted.map(function(c) {
+            if (c.is_joker) return c.rank === Rank.JOKER_BIG ? '大王' : '小王';
+            return RANK_CN[c.rank];
+        });
+        if (pattern === 'Single') Sound.speak(names.join(''));
+        else if (pattern === 'Pair') Sound.speak('对' + names[0]);
+        else if (pattern === 'Triple') Sound.speak('三条' + names[0]);
+        else if (pattern === 'Bomb') Sound.speak('炸弹' + names[0]);
+        else if (pattern === 'Rocket') Sound.speak('火箭');
+    } else {
+        Sound.speak(pattern);
+    }
+}
+
+function playSoundForPattern(pattern, count) {
+    if (pattern === 'Bomb') { Sound.bomb(); document.getElementById('game-container').classList.add('bomb-flash'); setTimeout(function() { document.getElementById('game-container').classList.remove('bomb-flash'); }, 300); }
+    else if (pattern === 'Rocket') { Sound.rocket(); document.getElementById('game-container').classList.add('rocket-flash'); setTimeout(function() { document.getElementById('game-container').classList.remove('rocket-flash'); }, 500); }
+    else if (pattern === 'Straight' || pattern === 'Consecutive Pairs') Sound.straight();
+    else if (pattern === 'Airplane') Sound.airplane();
+    else Sound.card(count);
 }
 
 function playCards() {
     if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
-    const playCardsData = game._getSelectedCardDicts();
-    const classified = playCardsData.length > 0 ? game.classifyCards(playCardsData) : null;
-    const ok = game.playSelected();
+    var playCardsData = game._getSelectedCardDicts();
+    var classified = playCardsData.length > 0 ? game.classifyCards(playCardsData) : null;
+    var ok = game.playSelected();
     refreshUI();
     if (ok) {
         if (classified) {
-            addLogEntry(0, `${classified.pattern_name} (${classified.count}张)`);
-            if (classified.pattern === 'Bomb') { Sound.bomb(); document.getElementById('game-container').classList.add('bomb-flash'); setTimeout(() => document.getElementById('game-container').classList.remove('bomb-flash'), 300); }
-            else if (classified.pattern === 'Rocket') { Sound.rocket(); document.getElementById('game-container').classList.add('rocket-flash'); setTimeout(() => document.getElementById('game-container').classList.remove('rocket-flash'), 500); }
-            else Sound.card(classified.count);
+            addLogEntry(0, classified.pattern_name + ' (' + classified.count + '张)');
+            playSoundForPattern(classified.pattern, classified.count);
             speakPlay(playCardsData, classified.pattern_name);
         }
         if (game.phase === Phase.RESULT) showResult();
