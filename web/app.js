@@ -230,7 +230,8 @@ function makeCardHTML(rank, suit, isJoker, isRed) {
     if (isJoker) {
         const isBig = rank === '大';
         const cls = isBig ? 'joker-big' : 'joker-small';
-        return `<div class="joker-layout ${cls}"><span class="joker-side-l">JOKER</span><div class="joker-art"><div class="joker-star">${isBig ? '★' : '☆'}</div><div class="joker-label">JOKER</div></div><span class="joker-side-r">JOKER</span></div>`;
+        const color = isBig ? 'red' : 'black';
+        return `<div class="card-corner ${color} tl"><span class="cr">J</span><span class="cs">K</span></div><div class="joker-art"><div class="joker-crown">${isBig ? '👑' : '🎭'}</div></div><div class="card-corner ${color} br"><span class="cr">J</span><span class="cs">K</span></div>`;
     }
     const cornerClass = isRed ? 'card-corner red' : 'card-corner black';
     return `<div class="${cornerClass} tl"><span class="cr">${rank}</span><span class="cs">${suit}</span></div><div class="card-center">${suit}</div><div class="${cornerClass} br"><span class="cr">${rank}</span><span class="cs">${suit}</span></div>`;
