@@ -334,7 +334,7 @@ function makeCardHTML(rank, suit, isJoker, isRed) {
     if (isJoker) {
         var isBig = rank === Rank.JOKER_BIG;
         var color = isBig ? 'red' : 'black';
-        return '<div class="joker-corner ' + color + ' tl"><span>J</span><span>O</span><span>K</span><span>E</span><span>R</span></div><div class="joker-center"><div class="joker-star">' + (isBig ? '★' : '☆') + '</div><div class="joker-word">' + (isBig ? 'JOKER' : 'joker') + '</div></div><div class="joker-corner ' + color + ' br"><span>R</span><span>E</span><span>K</span><span>O</span><span>J</span></div>';
+        return '<div class="joker-corner ' + color + ' tl"><span>J</span><span>O</span><span>K</span><span>E</span><span>R</span></div><div class="joker-center"><div class="joker-star">' + (isBig ? '★' : '☆') + '</div><div class="joker-word">' + (isBig ? 'JOKER' : 'joker') + '</div></div><div class="joker-corner ' + color + ' br"><span>J</span><span>O</span><span>K</span><span>E</span><span>R</span></div>';
     }
     var suitSvg = SVG_SUIT[suit] || '';
     var rankLabel = RANK_SYMBOLS[rank] || rank;

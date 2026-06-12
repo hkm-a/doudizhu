@@ -120,8 +120,8 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
 .card.joker-black .joker-star { color: #444; }
 .card.joker-black .joker-word { color: #444; }
 
-.card.small { width: 48px; height: 68px; }
-.card.small .card-corner .cr { font-size: 11px; }
+.card.small { width: 60px; height: 84px; }
+.card.small .card-corner .cr { font-size: 12px; }
 .card.small .card-corner .cs { font-size: 8px; }
 .card.small .card-center { font-size: 16px; }
 
