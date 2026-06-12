@@ -23,9 +23,9 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
 #table-area { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; position: relative; }
 
 #play-display { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 6px; align-items: center; justify-content: center; z-index: 3; pointer-events: none; }
-@keyframes playAppear { from { opacity: 0; transform: translateY(40px) scale(0.6); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@keyframes playFadeOut { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-30px) scale(0.7); } }
-.play-appear { animation: playAppear 0.35s ease-out both; }
+@keyframes playAppear { 0% { opacity: 0; transform: translateY(40px) scale(0.6); } 60% { transform: translateY(-4px) scale(1.05); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes playFadeOut { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-40px) scale(0.6); } }
+.play-appear { animation: playAppear 0.3s cubic-bezier(.34,1.56,.64,1) both; }
 .particle { position: fixed; z-index: 100; pointer-events: none; will-change: transform, opacity; }
 .play-label { position: absolute; top: calc(50% - 55px); left: 50%; transform: translateX(-50%); font-size: 13px; color: rgba(255,255,255,0.5); white-space: nowrap; z-index: 4; }
 
@@ -85,8 +85,9 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
 .card.face-up {
     background: linear-gradient(170deg, #ffffff 0%, #fafafa 30%, #f0f0f0 100%);
     border: 1px solid #b0b0b0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25), 0 1px 2px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25), 0 1px 2px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.8);
 }
+#player-hand .card { box-shadow: 0 2px 4px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.6); }
 .card.selected {
     box-shadow: 0 0 0 2px #e8b830, 0 4px 16px rgba(232,184,48,0.5);
 }
@@ -97,6 +98,7 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
 .card .card-corner .cr { font-size: 15px; font-weight: 700; }
 .card .card-corner .cs { font-size: 12px; margin-top: -1px; }
 .card .card-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 28px; }
+.card .pip { font-size: 16px; line-height: 1; }
 .card.red { color: #cc0000; }
 .card.black { color: #1a1a1a; }
 .card.joker-red { background: linear-gradient(170deg, #fff 0%, #f8f8f8 100%); border: 1px solid #bbb; box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
@@ -131,10 +133,14 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
 .card.mini .card-center { font-size: 20px; }
 
 /* === ANIMATIONS === */
-.card.deal-anim { animation: dealFan 0.35s ease-out both; }
-@keyframes dealFan { from { opacity: 0; transform: translateY(60px) scale(0.3) rotate(10deg); } to { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); } }
-.card.bounce-anim { animation: cardBounce 0.25s ease; }
-@keyframes cardBounce { 0% { transform: translateY(0); } 50% { transform: translateY(-8px); } 100% { transform: translateY(0); } }
+.card.deal-anim { animation: dealFan 0.4s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes dealFan { from { opacity: 0; transform: translateY(80px) scale(0.3) rotate(15deg); } to { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); } }
+.card.play-anim { animation: playSlam 0.3s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes playSlam { 0% { transform: scale(0.7) translateY(20px); opacity: 0; } 60% { transform: scale(1.08) translateY(-4px); opacity: 1; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+.card.bounce-anim { animation: cardBounce 0.2s ease; }
+@keyframes cardBounce { 0% { transform: translateY(0); } 50% { transform: translateY(-6px); } 100% { transform: translateY(0); } }
+.card.selected { box-shadow: 0 0 0 2px #e8b830, 0 4px 16px rgba(232,184,48,0.5); transform: translateY(-6px); }
+#player-hand .card:hover { transform: translateY(-3px); }
 
 /* === HOVER SUGGESTION === */
 .hover-suggestion { pointer-events: none; }

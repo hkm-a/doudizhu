@@ -230,22 +230,55 @@ function renderPlayerHand() {
         const isJoker = card.is_joker;
         if (isJoker) div.classList.add(card.rank === Rank.JOKER_BIG ? 'joker-red' : 'joker-black');
         else div.classList.add(isRed ? 'red' : 'black');
-        const rankText = isJoker ? (card.rank === Rank.JOKER_BIG ? '大' : '小') : RANK_SYMBOLS[card.rank];
-        const suitText = isJoker ? (card.rank === Rank.JOKER_BIG ? '王' : '王') : SUIT_SYMBOLS[card.suit];
-        div.innerHTML = makeCardHTML(rankText, suitText, isJoker, isRed);
+        div.innerHTML = makeCardHTML(card.rank, card.suit, isJoker, isRed);
         container.appendChild(div);
     });
     initCardInteractions(container);
 }
 
+var SVG_SUIT = {
+    0: '<svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M12 2L9 9H2l6 5-2 7 6-4 6 4-2-7 6-5h-7z" fill="currentColor"/></svg>',
+    1: '<svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M12 3C12 3 4 10 4 15a8 8 0 0016 0c0-5-8-12-8-12z" fill="currentColor"/></svg>',
+    2: '<svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M12 3L3 12l9 9 9-9z" fill="currentColor"/></svg>',
+    3: '<svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M12 2C8 2 4 6 4 10c0 5 8 12 8 12s8-7 8-12c0-4-4-8-8-8zm0 3a3 3 0 110 6 3 3 0 010-6z" fill="currentColor"/></svg>'
+};
+
 function makeCardHTML(rank, suit, isJoker, isRed) {
     if (isJoker) {
         const isBig = rank === '大';
         const color = isBig ? 'red' : 'black';
-        return `<div class="joker-corner ${color} tl"><span>J</span><span>O</span><span>K</span><span>E</span><span>R</span></div><div class="joker-center"><div class="joker-star">${isBig ? '★' : '☆'}</div><div class="joker-word">${isBig ? 'JOKER' : 'joker'}</div></div><div class="joker-corner ${color} br"><span>R</span><span>E</span><span>K</span><span>O</span><span>J</span></div>`;
+        return '<div class="joker-corner ' + color + ' tl"><span>J</span><span>O</span><span>K</span><span>E</span><span>R</span></div><div class="joker-center"><div class="joker-star">' + (isBig ? '★' : '☆') + '</div><div class="joker-word">' + (isBig ? 'JOKER' : 'joker') + '</div></div><div class="joker-corner ' + color + ' br"><span>R</span><span>E</span><span>K</span><span>O</span><span>J</span></div>';
     }
-    const cornerClass = isRed ? 'card-corner red' : 'card-corner black';
-    return `<div class="${cornerClass} tl"><span class="cr">${rank}</span><span class="cs">${suit}</span></div><div class="card-center">${suit}</div><div class="${cornerClass} br"><span class="cr">${rank}</span><span class="cs">${suit}</span></div>`;
+    var suitSvg = SVG_SUIT[suit] || '';
+    var rankLabel = RANK_SYMBOLS[rank] || rank;
+    var cornerClass = isRed ? 'card-corner red' : 'card-corner black';
+    var centerPips = '';
+    if (rank >= 2 && rank <= 10) {
+        var pipCount = rank <= 10 ? rank : 0;
+        var pipPositions = getPipPositions(pipCount);
+        pipPositions.forEach(function(pos) {
+            centerPips += '<span class="pip ' + (isRed ? 'red' : 'black') + '" style="position:absolute;' + pos + '">' + suitSvg + '</span>';
+        });
+    } else {
+        centerPips = '<div class="card-center">' + suitSvg + '</div>';
+    }
+    return '<div class="' + cornerClass + ' tl"><span class="cr">' + rankLabel + '</span><span class="cs">' + suitSvg + '</span></div>' + centerPips + '<div class="' + cornerClass + ' br"><span class="cr">' + rankLabel + '</span><span class="cs">' + suitSvg + '</span></div>';
+}
+
+function getPipPositions(count) {
+    var positions = {
+        1: ['top:50%;left:50%;transform:translate(-50%,-50%) scale(1.4)'],
+        2: ['top:25%;left:50%;transform:translate(-50%,-50%)', 'bottom:25%;left:50%;transform:translate(-50%,50%) rotate(180deg)'],
+        3: ['top:20%;left:50%;transform:translate(-50%,-50%)', 'top:50%;left:50%;transform:translate(-50%,-50%)', 'bottom:20%;left:50%;transform:translate(-50%,50%) rotate(180deg)'],
+        4: ['top:22%;left:30%;transform:translate(-50%,-50%)', 'top:22%;right:30%;transform:translate(50%,-50%)', 'bottom:22%;left:30%;transform:translate(-50%,50%)', 'bottom:22%;right:30%;transform:translate(50%,50%)'],
+        5: ['top:18%;left:30%;transform:translate(-50%,-50%)', 'top:18%;right:30%;transform:translate(50%,-50%)', 'top:50%;left:50%;transform:translate(-50%,-50%)', 'bottom:18%;left:30%;transform:translate(-50%,50%)', 'bottom:18%;right:30%;transform:translate(50%,50%)'],
+        6: ['top:18%;left:30%;transform:translate(-50%,-50%)', 'top:18%;right:30%;transform:translate(50%,-50%)', 'top:50%;left:30%;transform:translate(-50%,-50%)', 'top:50%;right:30%;transform:translate(50%,-50%)', 'bottom:18%;left:30%;transform:translate(-50%,50%)', 'bottom:18%;right:30%;transform:translate(50%,50%)'],
+        7: ['top:15%;left:30%;transform:translate(-50%,-50%)', 'top:15%;right:30%;transform:translate(50%,-50%)', 'top:38%;left:30%;transform:translate(-50%,-50%)', 'top:50%;left:50%;transform:translate(-50%,-50%)', 'bottom:38%;right:30%;transform:translate(50%,50%)', 'bottom:15%;left:30%;transform:translate(-50%,50%)', 'bottom:15%;right:30%;transform:translate(50%,50%)'],
+        8: ['top:15%;left:30%;transform:translate(-50%,-50%)', 'top:15%;right:30%;transform:translate(50%,-50%)', 'top:38%;left:30%;transform:translate(-50%,-50%)', 'top:38%;right:30%;transform:translate(50%,-50%)', 'bottom:15%;left:30%;transform:translate(-50%,50%)', 'bottom:15%;right:30%;transform:translate(50%,50%)', 'bottom:38%;left:30%;transform:translate(-50%,50%)', 'bottom:38%;right:30%;transform:translate(50%,50%)'],
+        9: ['top:15%;left:25%;transform:translate(-50%,-50%)', 'top:15%;right:25%;transform:translate(50%,-50%)', 'top:38%;left:25%;transform:translate(-50%,-50%)', 'top:38%;right:25%;transform:translate(50%,-50%)', 'top:50%;left:50%;transform:translate(-50%,-50%)', 'bottom:15%;left:25%;transform:translate(-50%,50%)', 'bottom:15%;right:25%;transform:translate(50%,50%)', 'bottom:38%;left:25%;transform:translate(-50%,50%)', 'bottom:38%;right:25%;transform:translate(50%,50%)'],
+        10: ['top:12%;left:25%;transform:translate(-50%,-50%)', 'top:12%;right:25%;transform:translate(50%,-50%)', 'top:34%;left:25%;transform:translate(-50%,-50%)', 'top:34%;right:25%;transform:translate(50%,-50%)', 'top:50%;left:35%;transform:translate(-50%,-50%)', 'bottom:12%;left:25%;transform:translate(-50%,50%)', 'bottom:12%;right:25%;transform:translate(50%,50%)', 'bottom:34%;left:25%;transform:translate(-50%,50%)', 'bottom:34%;right:25%;transform:translate(50%,50%)', 'top:50%;right:35%;transform:translate(50%,-50%)']
+    };
+    return positions[count] || [];
 }
 
 var dragInfo = null;
@@ -324,9 +357,7 @@ function renderBottomCards() {
             const isJoker = card.is_joker;
             if (isJoker) div.classList.add(card.rank === Rank.JOKER_BIG ? 'joker-red' : 'joker-black');
             else div.classList.add(isRed ? 'red' : 'black');
-            const rankText = isJoker ? (card.rank === Rank.JOKER_BIG ? '大' : '小') : RANK_SYMBOLS[card.rank];
-            const suitText = isJoker ? '' : SUIT_SYMBOLS[card.suit];
-            div.innerHTML = makeCardHTML(rankText, suitText, isJoker, isRed);
+            div.innerHTML = makeCardHTML(card.rank, card.suit, isJoker, isRed);
         } else {
             div.classList.add('face-down');
         }
@@ -355,9 +386,7 @@ function renderPlayDisplay() {
             const isRed = card.suit === Suit.HEARTS || card.suit === Suit.DIAMONDS;
             const isJoker = card.is_joker;
             div.classList.add(isRed ? 'red' : 'black');
-            const rankText = isJoker ? (card.rank === Rank.JOKER_BIG ? '大' : '小') : RANK_SYMBOLS[card.rank];
-            const suitText = isJoker ? '王' : SUIT_SYMBOLS[card.suit];
-            div.innerHTML = makeCardHTML(rankText, suitText, isJoker, isRed);
+            div.innerHTML = makeCardHTML(card.rank, card.suit, isJoker, isRed);
             display.appendChild(div);
         });
         setTimeout(() => spawnPlayParticles(display, at.pattern), 100);
