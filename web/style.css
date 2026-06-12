@@ -97,7 +97,6 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
 .card .card-corner .cr { font-size: 14px; font-weight: 700; }
 .card .card-corner .cs { font-size: 11px; }
 .card .card-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; }
-.card .pip { font-size: 14px; line-height: 1; }
 .card.red { color: #cc0000; }
 .card.black { color: #1a1a1a; }
 .card.joker-red { background: linear-gradient(170deg, #fff 0%, #f8f8f8 100%); border: 1px solid #bbb; box-shadow: 0 2px 8px rgba(0,0,0,0.25); }

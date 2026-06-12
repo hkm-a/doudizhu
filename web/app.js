@@ -332,40 +332,14 @@ var SVG_SUIT = {
 
 function makeCardHTML(rank, suit, isJoker, isRed) {
     if (isJoker) {
-        const isBig = rank === Rank.JOKER_BIG;
-        const color = isBig ? 'red' : 'black';
+        var isBig = rank === Rank.JOKER_BIG;
+        var color = isBig ? 'red' : 'black';
         return '<div class="joker-corner ' + color + ' tl"><span>J</span><span>O</span><span>K</span><span>E</span><span>R</span></div><div class="joker-center"><div class="joker-star">' + (isBig ? '★' : '☆') + '</div><div class="joker-word">' + (isBig ? 'JOKER' : 'joker') + '</div></div><div class="joker-corner ' + color + ' br"><span>R</span><span>E</span><span>K</span><span>O</span><span>J</span></div>';
     }
     var suitSvg = SVG_SUIT[suit] || '';
     var rankLabel = RANK_SYMBOLS[rank] || rank;
     var cornerClass = isRed ? 'card-corner red' : 'card-corner black';
-    var centerPips = '';
-    if (rank >= 2 && rank <= 10) {
-        var pipCount = rank <= 10 ? rank : 0;
-        var pipPositions = getPipPositions(pipCount);
-        pipPositions.forEach(function(pos) {
-            centerPips += '<span class="pip ' + (isRed ? 'red' : 'black') + '" style="position:absolute;' + pos + '">' + suitSvg + '</span>';
-        });
-    } else {
-        centerPips = '<div class="card-center">' + suitSvg + '</div>';
-    }
-    return '<div class="' + cornerClass + ' tl"><span class="cr">' + rankLabel + '</span><span class="cs">' + suitSvg + '</span></div>' + centerPips + '<div class="' + cornerClass + ' br"><span class="cr">' + rankLabel + '</span><span class="cs">' + suitSvg + '</span></div>';
-}
-
-function getPipPositions(count) {
-    var positions = {
-        1: ['top:50%;left:50%;transform:translate(-50%,-50%) scale(1.4)'],
-        2: ['top:25%;left:50%;transform:translate(-50%,-50%)', 'bottom:25%;left:50%;transform:translate(-50%,50%) rotate(180deg)'],
-        3: ['top:20%;left:50%;transform:translate(-50%,-50%)', 'top:50%;left:50%;transform:translate(-50%,-50%)', 'bottom:20%;left:50%;transform:translate(-50%,50%) rotate(180deg)'],
-        4: ['top:22%;left:30%;transform:translate(-50%,-50%)', 'top:22%;right:30%;transform:translate(50%,-50%)', 'bottom:22%;left:30%;transform:translate(-50%,50%)', 'bottom:22%;right:30%;transform:translate(50%,50%)'],
-        5: ['top:18%;left:30%;transform:translate(-50%,-50%)', 'top:18%;right:30%;transform:translate(50%,-50%)', 'top:50%;left:50%;transform:translate(-50%,-50%)', 'bottom:18%;left:30%;transform:translate(-50%,50%)', 'bottom:18%;right:30%;transform:translate(50%,50%)'],
-        6: ['top:18%;left:30%;transform:translate(-50%,-50%)', 'top:18%;right:30%;transform:translate(50%,-50%)', 'top:50%;left:30%;transform:translate(-50%,-50%)', 'top:50%;right:30%;transform:translate(50%,-50%)', 'bottom:18%;left:30%;transform:translate(-50%,50%)', 'bottom:18%;right:30%;transform:translate(50%,50%)'],
-        7: ['top:15%;left:30%;transform:translate(-50%,-50%)', 'top:15%;right:30%;transform:translate(50%,-50%)', 'top:38%;left:30%;transform:translate(-50%,-50%)', 'top:50%;left:50%;transform:translate(-50%,-50%)', 'bottom:38%;right:30%;transform:translate(50%,50%)', 'bottom:15%;left:30%;transform:translate(-50%,50%)', 'bottom:15%;right:30%;transform:translate(50%,50%)'],
-        8: ['top:15%;left:30%;transform:translate(-50%,-50%)', 'top:15%;right:30%;transform:translate(50%,-50%)', 'top:38%;left:30%;transform:translate(-50%,-50%)', 'top:38%;right:30%;transform:translate(50%,-50%)', 'bottom:15%;left:30%;transform:translate(-50%,50%)', 'bottom:15%;right:30%;transform:translate(50%,50%)', 'bottom:38%;left:30%;transform:translate(-50%,50%)', 'bottom:38%;right:30%;transform:translate(50%,50%)'],
-        9: ['top:15%;left:25%;transform:translate(-50%,-50%)', 'top:15%;right:25%;transform:translate(50%,-50%)', 'top:38%;left:25%;transform:translate(-50%,-50%)', 'top:38%;right:25%;transform:translate(50%,-50%)', 'top:50%;left:50%;transform:translate(-50%,-50%)', 'bottom:15%;left:25%;transform:translate(-50%,50%)', 'bottom:15%;right:25%;transform:translate(50%,50%)', 'bottom:38%;left:25%;transform:translate(-50%,50%)', 'bottom:38%;right:25%;transform:translate(50%,50%)'],
-        10: ['top:16%;left:30%;transform:translate(-50%,-50%)', 'top:16%;right:30%;transform:translate(50%,-50%)', 'top:36%;left:30%;transform:translate(-50%,-50%)', 'top:36%;right:30%;transform:translate(50%,-50%)', 'top:52%;left:38%;transform:translate(-50%,-50%)', 'bottom:16%;left:30%;transform:translate(-50%,50%)', 'bottom:16%;right:30%;transform:translate(50%,50%)', 'bottom:36%;left:30%;transform:translate(-50%,50%)', 'bottom:36%;right:30%;transform:translate(50%,50%)', 'top:52%;right:38%;transform:translate(50%,-50%)']
-    };
-    return positions[count] || [];
+    return '<div class="' + cornerClass + ' tl"><span class="cr">' + rankLabel + '</span><span class="cs">' + suitSvg + '</span></div><div class="card-center">' + suitSvg + '</div><div class="' + cornerClass + ' br"><span class="cr">' + rankLabel + '</span><span class="cs">' + suitSvg + '</span></div>';
 }
 
 function renderBottomCards() {
