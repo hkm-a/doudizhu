@@ -69,7 +69,8 @@ function aiPlay() {
     const at = game.activeTrick;
     const trickChanged = at.owner_seat !== prevTrickOwner || at.primary_rank !== prevTrickPr || at.count !== prevTrickCount;
     if (trickChanged && at.cards) {
-        addLogEntry(seat, at.pattern_name + ' (' + at.cards.map(function(c) { return RANK_SYMBOLS[c.rank] + SUIT_SYMBOLS[c.suit]; }).join(' ') + ')');
+        var logText = at.pattern === 'Single' ? at.cards.map(function(c) { return RANK_SYMBOLS[c.rank] + SUIT_SYMBOLS[c.suit]; }).join(' ') : at.pattern_name + ' (' + at.cards.map(function(c) { return RANK_SYMBOLS[c.rank] + SUIT_SYMBOLS[c.suit]; }).join(' ') + ')';
+        addLogEntry(seat, logText);
         playSoundForPattern(at.pattern, at.cards.length);
     } else if (at.owner_seat !== seat) {
         addLogEntry(seat, '不出', true);
@@ -136,7 +137,8 @@ function playCards() {
     refreshUI();
     if (ok) {
         if (classified) {
-            addLogEntry(0, classified.pattern_name + ' (' + classified.count + '张)');
+            var logText = classified.pattern === 'Single' ? playCardsData.map(function(c) { return RANK_SYMBOLS[c.rank] + SUIT_SYMBOLS[c.suit]; }).join(' ') : classified.pattern_name + ' (' + classified.count + '张)';
+            addLogEntry(0, logText);
             playSoundForPattern(classified.pattern, classified.count);
             speakPlay(playCardsData, classified.pattern_name);
         }
@@ -377,7 +379,7 @@ function renderPlayDisplay() {
     display.dataset.key = trickKey;
 
     if (isNew && at && Object.keys(at).length > 0 && ownerSeat >= 0) {
-        label.textContent = `${SEAT_NAMES[ownerSeat]}出牌: ${at.pattern_name || ''}`;
+        label.textContent = SEAT_NAMES[ownerSeat] + '出牌' + (at.pattern === 'Single' ? ': ' + RANK_SYMBOLS[at.cards[0].rank] : ': ' + (at.pattern_name || ''));
         display.innerHTML = '';
         (at.cards || []).forEach((card, i) => {
             const div = document.createElement('div');
