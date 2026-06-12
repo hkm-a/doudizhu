@@ -646,19 +646,20 @@ document.addEventListener('keydown', function(e) {
 
 // ========== Particle System ==========
 function spawnParticles(x, y, count, colors, opts) {
-    const container = document.getElementById('game-container');
-    const o = Object.assign({ minSize: 4, maxSize: 8, minDist: 40, maxDist: 120, gravity: 0, fadeDuration: 600, shapes: ['circle'] }, opts || {});
-    for (let i = 0; i < count; i++) {
-        const p = document.createElement('div');
+    var container = document.getElementById('game-container');
+    var o = { minSize: 4, maxSize: 8, minDist: 40, maxDist: 120, gravity: 0, fadeDuration: 600, shapes: ['circle'] };
+    if (opts) { for (var k in opts) o[k] = opts[k]; }
+    for (var i = 0; i < count; i++) {
+        var p = document.createElement('div');
         p.className = 'particle';
-        const size = o.minSize + Math.random() * (o.maxSize - o.minSize);
-        const angle = Math.random() * Math.PI * 2;
-        const dist = o.minDist + Math.random() * (o.maxDist - o.minDist);
-        const dx = Math.cos(angle) * dist;
-        const dy = Math.sin(angle) * dist - (o.gravity > 0 ? 30 : 0);
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        const shape = o.shapes[Math.floor(Math.random() * o.shapes.length)];
-        const br = shape === 'circle' ? '50%' : shape === 'square' ? '2px' : '0';
+        var size = o.minSize + Math.random() * (o.maxSize - o.minSize);
+        var angle = Math.random() * Math.PI * 2;
+        var dist = o.minDist + Math.random() * (o.maxDist - o.minDist);
+        var dx = Math.cos(angle) * dist;
+        var dy = Math.sin(angle) * dist - (o.gravity > 0 ? 30 : 0);
+        var color = colors[Math.floor(Math.random() * colors.length)];
+        var shape = o.shapes[Math.floor(Math.random() * o.shapes.length)];
+        var br = shape === 'circle' ? '50%' : shape === 'square' ? '2px' : '0';
         p.style.cssText = 'left:' + x + 'px;top:' + y + 'px;width:' + size + 'px;height:' + size + 'px;background:' + color + ';border-radius:' + br + ';position:fixed;z-index:100;pointer-events:none;opacity:1;transition:all ' + o.fadeDuration + 'ms cubic-bezier(.25,.46,.45,.94);';
         container.appendChild(p);
         requestAnimationFrame(function() {
@@ -674,14 +675,17 @@ function spawnPlayParticles(el, pattern) {
     var cx = rect.left + rect.width / 2;
     var cy = rect.top + rect.height / 2;
     if (pattern === 'Bomb') {
-        spawnParticles(cx, cy, 30, ['#ff4444', '#ff8800', '#ffcc00', '#ff6600', '#ffffff'], { minSize: 3, maxSize: 10, maxDist: 180, gravity: 1, fadeDuration: 800, shapes: ['circle', 'square'] });
+        spawnParticles(cx, cy, 40, ['#ff4444', '#ff8800', '#ffcc00', '#ff6600', '#ffffff'], { minSize: 3, maxSize: 12, maxDist: 200, gravity: 1.5, fadeDuration: 900, shapes: ['circle', 'square'] });
+        for (var i = 0; i < 12; i++) {
+            (function(idx) { setTimeout(function() { spawnParticles(cx, cy, 2, ['#ff4444', '#ff8800'], { minSize: 2, maxSize: 5, maxDist: 100 + idx * 15, fadeDuration: 500 }); }, idx * 30); })(i);
+        }
     } else if (pattern === 'Rocket') {
-        spawnParticles(cx, cy, 25, ['#ff00ff', '#ff44ff', '#ff88ff', '#ffff00', '#ffffff'], { minSize: 2, maxSize: 6, maxDist: 200, gravity: -0.5, fadeDuration: 700, shapes: ['circle'] });
-        for (var i = 0; i < 8; i++) {
-            (function(idx) { setTimeout(function() { spawnParticles(cx, cy - idx * 15, 3, ['#ff44ff', '#ffffff'], { minSize: 2, maxSize: 4, maxDist: 20, fadeDuration: 400 }); }, idx * 60); })(i);
+        spawnParticles(cx, cy, 30, ['#ff00ff', '#ff44ff', '#ff88ff', '#ffff00', '#ffffff'], { minSize: 2, maxSize: 8, maxDist: 250, gravity: -0.8, fadeDuration: 800, shapes: ['circle'] });
+        for (var i = 0; i < 10; i++) {
+            (function(idx) { setTimeout(function() { spawnParticles(cx + (Math.random() - 0.5) * 20, cy - idx * 20, 3, ['#ff44ff', '#ffffff'], { minSize: 2, maxSize: 5, maxDist: 25, fadeDuration: 400 }); }, idx * 50); })(i);
         }
     } else {
-        spawnParticles(cx, cy, 8, ['#f0d060', '#e8b830', '#ffffff'], { minSize: 2, maxSize: 5, maxDist: 60, fadeDuration: 400 });
+        spawnParticles(cx, cy, 10, ['#f0d060', '#e8b830', '#ffffff'], { minSize: 2, maxSize: 6, maxDist: 70, fadeDuration: 450 });
     }
 }
 

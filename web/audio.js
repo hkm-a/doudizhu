@@ -123,6 +123,7 @@ var Sound = {
 
     card: function(count) {
         count = count || 1;
+        playFilteredNoise(0.03, 2000, 0.04);
         if (count <= 1) {
             playFilteredNoise(0.04, 4000, 0.07);
             playTone(280, 0.06, 'triangle', 0.06);

@@ -360,26 +360,34 @@ class DoudizhuGame {
     }
 
     _aiSelectPlay(legalPlays, seat, hasInit) {
-        const safePlays = [], bombs = [], rocket = [];
-        for (const play of legalPlays) {
-            if (play.pattern === "Bomb") bombs.push(play);
-            else if (play.pattern === "Rocket") rocket.push(play);
-            else safePlays.push(play);
+        var safePlays = [], bombs = [], rocket = [];
+        for (var i = 0; i < legalPlays.length; i++) {
+            if (legalPlays[i].pattern === "Bomb") bombs.push(legalPlays[i]);
+            else if (legalPlays[i].pattern === "Rocket") rocket.push(legalPlays[i]);
+            else safePlays.push(legalPlays[i]);
         }
 
-        const isLandlord = seat === this.landlordSeat;
-        const partner = (seat + 2) % SEAT_COUNT;
-        const landlord = this.landlordSeat;
-        const landlordCards = this.hands[landlord].length;
-        const partnerCards = this.hands[partner].length;
-        const myCards = this.hands[seat].length;
-        const isHard = this.aiDifficulty === 'hard';
-        const isEasy = this.aiDifficulty === 'easy';
+        var isLandlord = seat === this.landlordSeat;
+        var partner = (seat + 2) % SEAT_COUNT;
+        var landlord = this.landlordSeat;
+        var landlordCards = this.hands[landlord].length;
+        var partnerCards = this.hands[partner].length;
+        var myCards = this.hands[seat].length;
+        var isHard = this.aiDifficulty === 'hard';
+        var isEasy = this.aiDifficulty === 'easy';
 
-        const cheapFirst = (a, b) => a.primary_rank - b.primary_rank;
-        const bigFirst = (a, b) => b.cards.length - a.cards.length || a.primary_rank - b.primary_rank;
+        var cheapFirst = function(a, b) { return a.primary_rank - b.primary_rank; };
+        var bigFirst = function(a, b) { return b.cards.length - a.cards.length || a.primary_rank - b.primary_rank; };
 
-        // Endgame detection: can finish in 1-2 plays
+        // Card type weight scoring: higher efficiency = higher weight
+        var patternWeight = { 'Straight': 5, 'Consecutive Pairs': 5, 'Airplane': 4, 'Triple+2': 3, 'Triple+1': 2, 'Triple': 1, 'Pair': 2, 'Single': 0 };
+        var weightedFirst = function(a, b) {
+            var aw = patternWeight[a.pattern] || 0;
+            var bw = patternWeight[b.pattern] || 0;
+            return bw - aw || a.primary_rank - b.primary_rank;
+        };
+
+        // Endgame detection
         if (myCards <= 4 && safePlays.length > 0) {
             var finisher = safePlays.find(function(p) { return p.cards.length >= myCards; });
             if (finisher) return finisher.cards;
@@ -387,7 +395,7 @@ class DoudizhuGame {
 
         if (hasInit) {
             if (isLandlord) {
-                safePlays.sort(bigFirst);
+                safePlays.sort(weightedFirst);
                 if (safePlays.length > 0) return safePlays[0].cards;
             } else {
                 if (partnerCards <= 2 && safePlays.length > 0) {
