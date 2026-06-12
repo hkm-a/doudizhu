@@ -108,7 +108,7 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
 
 .joker-corner { position: absolute; display: flex; flex-direction: column; align-items: center; line-height: 1.1; font-size: 13px; font-weight: 900; letter-spacing: 1px; }
 .joker-corner.tl { top: 3px; left: 4px; }
-.joker-corner.br { bottom: 3px; right: 4px; }
+.joker-corner.br { bottom: 3px; right: 4px; transform: rotate(180deg); }
 .joker-corner span { display: block; }
 
 .joker-big { border-color: #e88; background: linear-gradient(170deg, #fff8f8, #fff0f0); }
