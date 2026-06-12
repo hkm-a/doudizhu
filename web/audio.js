@@ -236,15 +236,16 @@ var Sound = {
         if (muted) return;
         try {
             if (!window.speechSynthesis) return;
+            speechSynthesis.cancel();
             var u = new SpeechSynthesisUtterance(text);
             u.lang = 'zh-CN';
-            u.rate = 1.0;
-            u.pitch = 1.0;
-            u.volume = 0.5;
+            u.rate = 1.2;
+            u.pitch = 1.2;
+            u.volume = 0.7;
             var voices = speechSynthesis.getVoices();
-            var zhVoice = voices.find(function(v) { return v.lang.startsWith('zh'); });
+            var zhVoice = voices.find(function(v) { return v.lang.startsWith('zh-CN') && v.localService; });
+            if (!zhVoice) zhVoice = voices.find(function(v) { return v.lang.startsWith('zh'); });
             if (zhVoice) u.voice = zhVoice;
-            speechSynthesis.cancel();
             speechSynthesis.speak(u);
         } catch (e) {}
     },

@@ -130,33 +130,44 @@ function speakPlay(cards, pattern) {
 }
 
 function playSoundForPattern(pattern, count) {
+    var gameContainer = document.getElementById('game-container');
+    var bombEl = document.getElementById('bomb-effect');
+    var planeEl = document.getElementById('airplane-effect');
+
     if (pattern === 'Bomb') {
         Sound.bomb();
-        document.getElementById('game-container').classList.add('bomb-flash');
-        setTimeout(function() { document.getElementById('game-container').classList.remove('bomb-flash'); }, 600);
-        var bombEl = document.getElementById('bomb-effect');
+        Sound.speak('炸弹');
+        gameContainer.classList.remove('bomb-flash');
+        void gameContainer.offsetWidth;
+        gameContainer.classList.add('bomb-flash');
         bombEl.classList.remove('active');
         void bombEl.offsetWidth;
         bombEl.classList.add('active');
-        setTimeout(function() { bombEl.classList.remove('active'); }, 800);
+        setTimeout(function() { gameContainer.classList.remove('bomb-flash'); bombEl.classList.remove('active'); }, 800);
     } else if (pattern === 'Rocket') {
         Sound.rocket();
-        document.getElementById('game-container').classList.add('rocket-flash');
-        setTimeout(function() { document.getElementById('game-container').classList.remove('rocket-flash'); }, 800);
-        var planeEl = document.getElementById('airplane-effect');
+        Sound.speak('火箭');
+        gameContainer.classList.remove('rocket-flash');
+        void gameContainer.offsetWidth;
+        gameContainer.classList.add('rocket-flash');
+        bombEl.classList.remove('active');
+        void bombEl.offsetWidth;
+        bombEl.classList.add('active');
+        setTimeout(function() { gameContainer.classList.remove('rocket-flash'); bombEl.classList.remove('active'); }, 1200);
+    } else if (pattern === '飞机' || pattern === '飞机带单' || pattern === '飞机带对') {
+        Sound.airplane();
+        Sound.speak(pattern);
         planeEl.classList.remove('active');
         void planeEl.offsetWidth;
         planeEl.classList.add('active');
-        setTimeout(function() { planeEl.classList.remove('active'); }, 1500);
-    } else if (pattern === 'Airplane' || pattern === '飞机' || pattern === '飞机带单' || pattern === '飞机带对') {
-        Sound.airplane();
-        var planeEl2 = document.getElementById('airplane-effect');
-        planeEl2.classList.remove('active');
-        void planeEl2.offsetWidth;
-        planeEl2.classList.add('active');
-        setTimeout(function() { planeEl2.classList.remove('active'); }, 1500);
-    } else if (pattern === 'Straight' || pattern === 'Consecutive Pairs') Sound.straight();
-    else Sound.card(count);
+        setTimeout(function() { planeEl.classList.remove('active'); }, 1600);
+    } else if (pattern === '顺子' || pattern === '连对') {
+        Sound.straight();
+        Sound.speak(pattern);
+    } else {
+        Sound.card(count);
+        Sound.speak(pattern);
+    }
 }
 
 function playCards() {
