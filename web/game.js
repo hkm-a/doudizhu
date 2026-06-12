@@ -784,7 +784,7 @@ class DoudizhuGame {
                         for (const card of hand) { if (card.rank === start + offset) { straight.push(card); found = true; break; } }
                         if (!found) { ok = false; break; }
                     }
-                    if (ok) results.push({ cards: straight, pattern: "Straight", primary_rank: start, pattern_name: "顺子", structural_length: len });
+                    if (ok) results.push({ cards: straight, pattern: "Straight", primary_rank: start, count: len, pattern_name: "顺子", structural_length: len });
                 }
             }
         }
@@ -812,7 +812,7 @@ class DoudizhuGame {
                         let cnt = 0;
                         for (const card of hand) { if (card.rank === start + offset && cnt < 2) { pairs.push(card); cnt++; } }
                     }
-                    if (pairs.length === pairCount * 2) results.push({ cards: pairs, pattern: "Consecutive Pairs", primary_rank: start, pattern_name: "连对", structural_length: pairCount });
+                    if (pairs.length === pairCount * 2) results.push({ cards: pairs, pattern: "Consecutive Pairs", primary_rank: start, count: pairCount * 2, pattern_name: "连对", structural_length: pairCount });
                 }
             }
         }

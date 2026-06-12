@@ -546,7 +546,6 @@ function toggleSort() {
     refreshUI();
 }
 function clearLog() { document.getElementById('play-log').innerHTML = ''; }
-function toggleSettings() { alert('设置功能开发中...'); }
 
 function closeTutorial() {
     document.getElementById('tutorial-overlay').style.display = 'none';
