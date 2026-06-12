@@ -112,13 +112,13 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
 .joker-corner span { display: block; }
 
 .joker-big { border-color: #e88; background: linear-gradient(170deg, #fff8f8, #fff0f0); }
-.joker-big .joker-corner { color: #cc0000 !important; }
-.joker-big .joker-star { color: #cc0000; }
-.joker-big .joker-word { color: #cc0000; }
+.card.joker-red .joker-corner { color: #cc0000 !important; }
+.card.joker-red .joker-star { color: #cc0000; }
+.card.joker-red .joker-word { color: #cc0000; }
 .joker-small { border-color: #aaa; background: linear-gradient(170deg, #f8f8f8, #eee); }
-.joker-small .joker-corner { color: #666 !important; }
-.joker-small .joker-star { color: #555; }
-.joker-small .joker-word { color: #555; }
+.card.joker-black .joker-corner { color: #555 !important; }
+.card.joker-black .joker-star { color: #444; }
+.card.joker-black .joker-word { color: #444; }
 
 .card.small { width: 36px; height: 52px; }
 .card.small .card-corner .cr { font-size: 10px; }
