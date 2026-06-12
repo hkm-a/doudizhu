@@ -248,56 +248,68 @@ function makeCardHTML(rank, suit, isJoker, isRed) {
     return `<div class="${cornerClass} tl"><span class="cr">${rank}</span><span class="cs">${suit}</span></div><div class="card-center">${suit}</div><div class="${cornerClass} br"><span class="cr">${rank}</span><span class="cs">${suit}</span></div>`;
 }
 
-let dragInfo = null;
+var dragInfo = null;
 function initCardInteractions(container) {
-    container.onmousedown = (e) => {
+    function getXY(e) {
+        if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        return { x: e.clientX, y: e.clientY };
+    }
+    function onStart(e) {
         if (game.phase !== Phase.PLAY || game.currentSeat !== Seat.HUMAN) return;
-        const card = e.target.closest('.card');
+        var card = e.target.closest('.card');
         if (card) {
             e.preventDefault();
-            dragInfo = { startX: e.clientX, startY: e.clientY, cardId: parseInt(card.dataset.cardId), isDragging: false };
-        } else {
+            var p = getXY(e);
+            dragInfo = { sx: p.x, sy: p.y, cid: parseInt(card.dataset.cardId), drag: false };
+        } else if (!e.target.closest('.action-btn') && !e.target.closest('#settings-panel') && !e.target.closest('#result-banner')) {
             game.selectedCards = [];
             Sound.deselect();
             refreshUI();
         }
-    };
-    container.onmousemove = (e) => {
+    }
+    function onMove(e) {
         if (!dragInfo) return;
-        const dx = Math.abs(e.clientX - dragInfo.startX);
-        const dy = Math.abs(e.clientY - dragInfo.startY);
-        if (!dragInfo.isDragging && (dx > 5 || dy > 5)) {
-            dragInfo.isDragging = true;
-            if (!game.selectedCards.includes(dragInfo.cardId)) {
-                game.selectedCards.push(dragInfo.cardId);
+        e.preventDefault();
+        var p = getXY(e);
+        if (!dragInfo.drag && (Math.abs(p.x - dragInfo.sx) > 8 || Math.abs(p.y - dragInfo.sy) > 8)) {
+            dragInfo.drag = true;
+            if (game.selectedCards.indexOf(dragInfo.cid) === -1) game.selectedCards.push(dragInfo.cid);
+        }
+        if (dragInfo.drag) {
+            var cards = container.querySelectorAll('.card');
+            var sl = Math.min(dragInfo.sx, p.x), sr = Math.max(dragInfo.sx, p.x);
+            var st = Math.min(dragInfo.sy, p.y), sb = Math.max(dragInfo.sy, p.y);
+            for (var i = 0; i < cards.length; i++) {
+                var c = cards[i], r = c.getBoundingClientRect();
+                var hit = !(r.right < sl || r.left > sr || r.bottom < st || r.top > sb);
+                var cid = parseInt(c.dataset.cardId);
+                var idx = game.selectedCards.indexOf(cid);
+                if (hit && idx === -1) game.selectedCards.push(cid);
+                else if (!hit && idx !== -1) game.selectedCards.splice(idx, 1);
+                c.classList.toggle('selected', game.selectedCards.indexOf(cid) !== -1);
             }
         }
-        if (dragInfo.isDragging) {
-            const cards = container.querySelectorAll('.card');
-            const selRect = { left: Math.min(dragInfo.startX, e.clientX), right: Math.max(dragInfo.startX, e.clientX), top: Math.min(dragInfo.startY, e.clientY), bottom: Math.max(dragInfo.startY, e.clientY) };
-            cards.forEach(c => {
-                const r = c.getBoundingClientRect();
-                const overlap = !(r.right < selRect.left || r.left > selRect.right || r.bottom < selRect.top || r.top > selRect.bottom);
-                const cid = parseInt(c.dataset.cardId);
-                if (overlap && !game.selectedCards.includes(cid)) game.selectedCards.push(cid);
-                else if (!overlap && game.selectedCards.includes(cid)) game.selectedCards.splice(game.selectedCards.indexOf(cid), 1);
-                c.classList.toggle('selected', game.selectedCards.includes(cid));
-            });
-        }
-    };
-    container.onmouseup = (e) => {
+    }
+    function onEnd() {
         if (!dragInfo) return;
-        if (!dragInfo.isDragging) {
-            game.toggleSelection(dragInfo.cardId);
-            const wasSelected = game.selectedCards.includes(dragInfo.cardId);
-            wasSelected ? Sound.deselect() : Sound.select();
+        if (!dragInfo.drag) {
+            game.toggleSelection(dragInfo.cid);
+            var was = game.selectedCards.indexOf(dragInfo.cid) !== -1;
+            was ? Sound.deselect() : Sound.select();
             refreshUI();
         } else {
             refreshUI();
         }
         dragInfo = null;
-    };
-    container.onmouseleave = () => { dragInfo = null; };
+    }
+    container.addEventListener('mousedown', onStart);
+    container.addEventListener('mousemove', onMove);
+    container.addEventListener('mouseup', onEnd);
+    container.addEventListener('mouseleave', function() { dragInfo = null; });
+    container.addEventListener('touchstart', onStart, { passive: false });
+    container.addEventListener('touchmove', onMove, { passive: false });
+    container.addEventListener('touchend', onEnd);
+    container.addEventListener('touchcancel', function() { dragInfo = null; });
 }
 
 function renderBottomCards() {
