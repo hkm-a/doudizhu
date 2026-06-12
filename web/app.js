@@ -229,9 +229,8 @@ function renderPlayerHand() {
 function makeCardHTML(rank, suit, isJoker, isRed) {
     if (isJoker) {
         const isBig = rank === '大';
-        const cls = isBig ? 'joker-big' : 'joker-small';
         const color = isBig ? 'red' : 'black';
-        return `<div class="card-corner ${color} tl"><span class="cr">J</span><span class="cs">K</span></div><div class="joker-art"><div class="joker-crown">${isBig ? '👑' : '🎭'}</div></div><div class="card-corner ${color} br"><span class="cr">J</span><span class="cs">K</span></div>`;
+        return `<div class="joker-corner ${color} tl"><span>J</span><span>O</span><span>K</span><span>E</span><span>R</span></div><div class="joker-art"><div class="joker-crown">${isBig ? '👑' : '🎭'}</div></div><div class="joker-corner ${color} br"><span>R</span><span>E</span><span>K</span><span>O</span><span>J</span></div>`;
     }
     const cornerClass = isRed ? 'card-corner red' : 'card-corner black';
     return `<div class="${cornerClass} tl"><span class="cr">${rank}</span><span class="cs">${suit}</span></div><div class="card-center">${suit}</div><div class="${cornerClass} br"><span class="cr">${rank}</span><span class="cs">${suit}</span></div>`;
