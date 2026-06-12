@@ -106,15 +106,15 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
 .joker-art { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
 .joker-crown { font-size: 28px; line-height: 1; }
 
-.joker-corner { position: absolute; display: flex; flex-direction: column; align-items: center; line-height: 1.1; font-size: 9px; font-weight: 900; letter-spacing: 0; }
-.joker-corner.tl { top: 4px; left: 5px; }
-.joker-corner.br { bottom: 4px; right: 5px; transform: rotate(180deg); }
+.joker-corner { position: absolute; display: flex; flex-direction: column; align-items: center; line-height: 1.2; font-size: 10px; font-weight: 900; letter-spacing: 0; }
+.joker-corner.tl { top: 3px; left: 4px; }
+.joker-corner.br { bottom: 3px; right: 4px; transform: rotate(180deg); }
 .joker-corner span { display: block; }
 
 .joker-big { border-color: #e88; background: linear-gradient(170deg, #fff8f8, #fff0f0); }
 .joker-big .joker-corner { color: #cc0000; }
-.joker-small { border-color: #88a; background: linear-gradient(170deg, #f8f8ff, #f0f0f8); }
-.joker-small .joker-corner { color: #333; }
+.joker-small { border-color: #aaa; background: linear-gradient(170deg, #f8f8f8, #eee); }
+.joker-small .joker-corner { color: #666; }
 
 .card.small { width: 36px; height: 52px; }
 .card.small .card-corner .cr { font-size: 10px; }
@@ -168,7 +168,7 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
     .card .card-corner .cs { font-size: 10px; }
     .card .card-center { font-size: 22px; }
     .joker-crown { font-size: 22px; }
-    .joker-corner { font-size: 7px; }
+    .joker-corner { font-size: 8px; }
 }
 
 @media (max-width: 480px) {
@@ -182,7 +182,8 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
     .card .card-corner .cr { font-size: 11px; }
     .card .card-corner .cs { font-size: 8px; }
     .card .card-center { font-size: 16px; }
-    .card.selected { margin-top: -12px; }
+    .joker-crown { font-size: 18px; }
+    .joker-corner { font-size: 7px; }
     .card.small { width: 28px; height: 40px; }
     .card.mini { width: 40px; height: 56px; }
 }
