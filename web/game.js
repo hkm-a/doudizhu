@@ -897,7 +897,7 @@ class DoudizhuGame {
                             if (card1.rank != rank) {
                                 for (const card2 of hand) {
                                     if (card2.rank != rank && card2.rank === card1.rank) {
-                                        results.push({ cards: [...triple, card1, card2], pattern: "Triple+2", primary_rank: parseInt(rank), pattern_name: "三带对", structural_length: 1 });
+                                        results.push({ cards: [...triple, card1, card2], pattern: "Triple+2", primary_rank: parseInt(rank), count: 5, pattern_name: "三带对", structural_length: 1 });
                                         break;
                                     }
                                 }
