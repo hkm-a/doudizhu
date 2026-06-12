@@ -153,40 +153,6 @@ class DoudizhuGame {
         return this.findLegalPlays(this.hands[this.currentSeat], this.activeTrick, hasInit);
     }
 
-    tickTimer(delta) {
-        if (!this.timerActive) return false;
-        this.timerRemaining -= delta;
-        if (this.timerRemaining <= 0) {
-            this.timerRemaining = 0;
-            this.timerActive = false;
-            if (this.phase === Phase.BIDDING) {
-                if (!this.bidPassed[this.currentSeat]) {
-                    this.bidPassed[this.currentSeat] = true;
-                    this.bidCounter++;
-                    if (this._biddingComplete()) {
-                        this._resolveLandlord();
-                        return true;
-                    }
-                    this._nextBidder();
-                }
-                return true;
-            } else if (this.phase === Phase.PLAY) {
-                if (this.initiativeSeat === this.currentSeat) {
-                    const smallest = this._findSmallestSingle(this.currentSeat);
-                    if (smallest.length > 0) {
-                        const classified = this.classifyCards(smallest);
-                        this._executePlay(this.currentSeat, smallest, classified);
-                        return true;
-                    }
-                } else {
-                    this._executePass(this.currentSeat);
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
     processAiTurns(maxSteps = 6) {
         let steps = 0;
         while (this.phase === Phase.PLAY && this.currentSeat !== Seat.HUMAN && steps < maxSteps) {
@@ -289,7 +255,7 @@ class DoudizhuGame {
     }
 
     _resolveLandlord() {
-        this.landlordSeat = this.highestBidder >= 0 ? this.highestBidder : Math.floor(Math.random() * SEAT_COUNT);
+        this.landlordSeat = this.highestBidder >= 0 ? this.highestBidder : Math.floor(this._createRNG(this.seed + 999)() * SEAT_COUNT);
         this.roles[this.landlordSeat] = "地主";
         this.roles[(this.landlordSeat + 1) % SEAT_COUNT] = "农民";
         this.roles[(this.landlordSeat + 2) % SEAT_COUNT] = "农民";
@@ -390,47 +356,60 @@ class DoudizhuGame {
         const cheapFirst = (a, b) => a.primary_rank - b.primary_rank;
         const bigFirst = (a, b) => b.cards.length - a.cards.length || a.primary_rank - b.primary_rank;
 
+        // Card counting: check if opponents likely have cards to beat us
+        var landlordHigh = landlordCards <= 3;
+        var anyOpponentLow = landlordCards <= 4 || partnerCards <= 4;
+
         // Endgame: can finish in 1-2 plays
         if (myCards <= 4 && safePlays.length > 0) {
-            const finisher = safePlays.find(function(p) { return p.cards.length >= myCards; });
+            var finisher = safePlays.find(function(p) { return p.cards.length >= myCards; });
             if (finisher) return finisher.cards;
         }
 
         if (hasInit) {
             if (isLandlord) {
+                // Landlord: play biggest to pressure farmers
                 safePlays.sort(bigFirst);
                 if (safePlays.length > 0) return safePlays[0].cards;
             } else {
+                // Farmer: if partner can finish, help them
                 if (partnerCards <= 2 && safePlays.length > 0) {
                     safePlays.sort(cheapFirst);
                     return safePlays[0].cards;
                 }
+                // Play biggest combo to pressure landlord
                 safePlays.sort(bigFirst);
                 if (safePlays.length > 0) return safePlays[0].cards;
             }
         } else {
-            const isPartnerLeading = this.initiativeSeat === partner;
+            var isPartnerLeading = this.initiativeSeat === partner;
             if (!isLandlord && isPartnerLeading) {
-                const partnerTrick = this.activeTrick;
-                const partnerHigh = partnerTrick.primary_rank >= 14;
+                // Farmer: partner has lead
+                var partnerTrick = this.activeTrick;
+                var partnerHigh = partnerTrick.primary_rank >= 14;
+                // Let partner win if their play is strong enough
                 if (partnerHigh && myCards > 2 && landlordCards > 2) return null;
+                // Otherwise play cheap to help partner
                 safePlays.sort(cheapFirst);
                 if (safePlays.length > 0) return safePlays[0].cards;
                 return null;
             }
 
+            // Following: play cheapest that beats
             safePlays.sort(cheapFirst);
             if (safePlays.length > 0) return safePlays[0].cards;
 
             if (isEasy) {
                 if (safePlays.length > 0) return safePlays[0].cards;
             } else if (isHard) {
+                // Hard: use bombs more aggressively
                 if (bombs.length > 0 && landlordCards <= 6) { bombs.sort(cheapFirst); return bombs[0].cards; }
                 if (rocket.length > 0 && landlordCards <= 4) return rocket[0].cards;
                 safePlays.sort(cheapFirst);
                 if (safePlays.length > 0) return safePlays[0].cards;
             } else {
-                const bombThreshold = isLandlord ? 5 : 4;
+                // Normal: conservative bomb usage
+                var bombThreshold = isLandlord ? 5 : 4;
                 if (bombs.length > 0 && landlordCards <= bombThreshold) {
                     bombs.sort(cheapFirst);
                     return bombs[0].cards;
@@ -971,8 +950,6 @@ class DoudizhuGame {
                                 } else if (v.kicker === 2) {
                                     const pairRanks = {};
                                     for (const c of kickers) pairRanks[c.rank] = (pairRanks[c.rank] || 0) + 1;
-                                    const pairList = [];
-                                    for (const r in pairRanks) { if (pairRanks[r] >= 2) { let cnt = 0; for (const c of kickers) { if (c.rank == r && cnt < 2) { pairList.push(c); cnt++; } } if (pairList.length - (pairList.length % 2) < (v.triples * 2)) {} } }
                                     const pairKickers = [];
                                     for (const r in pairRanks) { if (pairRanks[r] >= 2 && pairKickers.length < v.triples * 2) { let cnt = 0; for (const c of kickers) { if (c.rank == r && cnt < 2) { pairKickers.push(c); cnt++; } } } }
                                     if (pairKickers.length >= v.triples * 2) {

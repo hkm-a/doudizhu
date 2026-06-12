@@ -147,6 +147,8 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
 @keyframes playSlam { 0% { transform: scale(0.7) translateY(20px); opacity: 0; } 60% { transform: scale(1.08) translateY(-4px); opacity: 1; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
 .card.bounce-anim { animation: cardBounce 0.2s ease; }
 @keyframes cardBounce { 0% { transform: translateY(0); } 50% { transform: translateY(-6px); } 100% { transform: translateY(0); } }
+.card.flip-anim { animation: flipCard 0.6s ease; transform-style: preserve-3d; }
+@keyframes flipCard { 0% { transform: rotateY(0deg); } 50% { transform: rotateY(90deg); } 100% { transform: rotateY(0deg); } }
 .card.selected { box-shadow: 0 0 0 2px #e8b830, 0 4px 16px rgba(232,184,48,0.5); transform: translateY(-6px); }
 #player-hand .card:hover { transform: translateY(-3px); }
 
@@ -216,4 +218,24 @@ body { background: #0d2a18; font-family: 'Microsoft YaHei', sans-serif; color: #
     .joker-corner { font-size: 7px; }
     .card.small { width: 28px; height: 40px; }
     .card.mini { width: 40px; height: 56px; }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+    #header { padding: 4px 10px; flex-direction: row; }
+    .seat-panel { min-width: 100px; padding: 4px 8px; }
+    #table-area { flex: 1; }
+    #player-hand { min-height: 80px; padding: 0 10px 4px; }
+    .card { width: 50px; height: 72px; }
+    #player-hand .card { margin-left: -18px; }
+    #action-bar { padding: 4px 8px; gap: 4px; }
+    .action-btn { padding: 6px 12px; font-size: 12px; min-height: 32px; }
+    #play-zone { width: 160px; height: 90px; }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+    #header { flex-direction: row; gap: 12px; }
+    #table-area { flex: 1; }
+    #player-hand { min-height: 90px; }
+    .card { width: 54px; height: 76px; }
+    #player-hand .card { margin-left: -20px; }
 }

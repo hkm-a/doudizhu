@@ -175,6 +175,7 @@ var Sound = {
         playTone(70, 0.4, 'triangle', 0.08, 0.08);
         playNoise(0.15, 0.08, 0.2);
         playTone(30, 0.3, 'sawtooth', 0.06, 0.15);
+        playFilteredNoise(0.3, 600, 0.04, 0.4);
     },
 
     rocket: function() {
@@ -183,6 +184,7 @@ var Sound = {
         playFilteredNoise(0.2, 1500, 0.06, 0.3);
         playTone(3200, 0.15, 'sine', 0.07, 0.6);
         playFilteredNoise(0.12, 2000, 0.07, 0.6);
+        playFilteredNoise(0.4, 400, 0.03, 0.7);
     },
 
     turn: function() {
@@ -244,7 +246,42 @@ var Sound = {
     },
 
     toggleMute: function() { muted = !muted; return muted; },
-    isMuted: function() { return muted; }
+    isMuted: function() { return muted; },
+    bgMusic: null,
+    startBgMusic: function() {
+        if (muted || this.bgMusic) return;
+        try {
+            var ctx = getAudioCtx();
+            var osc1 = ctx.createOscillator();
+            var osc2 = ctx.createOscillator();
+            var gain = ctx.createGain();
+            gain.gain.value = 0.02;
+            osc1.type = 'sine';
+            osc2.type = 'sine';
+            var notes = [262, 294, 330, 349, 392, 440, 494, 523];
+            var noteIdx = 0;
+            function playNote() {
+                if (muted) { osc1.stop(); osc2.stop(); return; }
+                osc1.frequency.setValueAtTime(notes[noteIdx], ctx.currentTime);
+                osc2.frequency.setValueAtTime(notes[noteIdx] * 0.5, ctx.currentTime);
+                noteIdx = (noteIdx + 1) % notes.length;
+                setTimeout(playNote, 800);
+            }
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(masterGain);
+            osc1.start();
+            osc2.start();
+            this.bgMusic = { osc1: osc1, osc2: osc2, gain: gain };
+            playNote();
+        } catch (e) {}
+    },
+    stopBgMusic: function() {
+        if (this.bgMusic) {
+            try { this.bgMusic.osc1.stop(); this.bgMusic.osc2.stop(); } catch (e) {}
+            this.bgMusic = null;
+        }
+    }
 };
 
 if (typeof module !== 'undefined') module.exports = Sound;

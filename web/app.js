@@ -2,6 +2,7 @@
 
 const game = new DoudizhuGame();
 let aiTimer = null;
+let dragInfo = null;
 
 function newRound() {
     if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
@@ -305,7 +306,7 @@ function initCardInteractionsOnce() {
         if (!dragInfo.drag) {
             game.toggleSelection(dragInfo.cid);
             var was = game.selectedCards.indexOf(dragInfo.cid) !== -1;
-            was ? Sound.deselect() : Sound.select();
+            was ? Sound.select() : Sound.deselect();
             refreshUI();
         } else {
             refreshUI();
@@ -369,12 +370,14 @@ function getPipPositions(count) {
 
 function renderBottomCards() {
     const container = document.getElementById('bottom-cards-display');
+    const wasFaceDown = container.querySelector('.face-down') !== null;
     container.innerHTML = '';
-    game.bottomCards.forEach(card => {
+    game.bottomCards.forEach((card, i) => {
         const div = document.createElement('div');
         div.className = 'card small';
         if (game.phase === Phase.PLAY || game.phase === Phase.RESULT) {
             div.classList.add('face-up');
+            if (wasFaceDown) { div.classList.add('flip-anim'); div.style.animationDelay = (i * 150) + 'ms'; }
             const isRed = card.suit === Suit.HEARTS || card.suit === Suit.DIAMONDS;
             const isJoker = card.is_joker;
             if (isJoker) div.classList.add(card.rank === Rank.JOKER_BIG ? 'joker-red' : 'joker-black');
