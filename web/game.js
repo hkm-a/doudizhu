@@ -61,6 +61,10 @@ class DoudizhuGame {
     }
 
     /** 开始新一局：洗牌、发牌、进入叫分阶段 */
+    /**
+     * 开始新一局：洗牌、发牌、进入叫分阶段
+     * @param {number} roundSeed - 随机种子
+     */
     newRound(roundSeed = 7) {
         this.seed = roundSeed;
         this.handNumber++;
@@ -96,6 +100,12 @@ class DoudizhuGame {
     }
 
     /** 叫分：玩家出价，返回是否成功 */
+    /**
+     * 叫分：玩家出价
+     * @param {number} playerSeat - 座位号 (0-2)
+     * @param {number} points - 叫分 (1-3)
+     * @returns {boolean} 是否成功
+     */
     callBid(playerSeat, points) {
         if (this.phase !== Phase.BIDDING || this.currentSeat !== playerSeat) return false;
         if (this.bidPassed[playerSeat]) return false;
@@ -126,17 +136,26 @@ class DoudizhuGame {
     }
 
     /** 出牌：打出选中的牌，返回是否成功 */
+    /**
+     * 出牌：打出选中的牌
+     * @returns {boolean} 是否成功
+     */
     playSelected() {
         if (this.phase !== Phase.PLAY || this.currentSeat !== Seat.HUMAN) return false;
-        const playCards = this._getSelectedCardDicts();
-        if (playCards.length === 0) return false;
-        const classified = this.classifyCards(playCards);
-        if (classified.pattern === "INVALID") return false;
-        if (Object.keys(this.activeTrick).length > 0 && this.initiativeSeat !== Seat.HUMAN) {
-            if (!this.canBeat(classified, this.activeTrick)) return false;
+        try {
+            const playCards = this._getSelectedCardDicts();
+            if (playCards.length === 0) return false;
+            const classified = this.classifyCards(playCards);
+            if (classified.pattern === "INVALID") return false;
+            if (Object.keys(this.activeTrick).length > 0 && this.initiativeSeat !== Seat.HUMAN) {
+                if (!this.canBeat(classified, this.activeTrick)) return false;
+            }
+            this._executePlay(Seat.HUMAN, playCards, classified);
+            return true;
+        } catch (e) {
+            console.error('playSelected error:', e);
+            return false;
         }
-        this._executePlay(Seat.HUMAN, playCards, classified);
-        return true;
     }
 
     passTurn() {
@@ -147,6 +166,10 @@ class DoudizhuGame {
     }
 
     /** 获取当前玩家的合法出牌列表 */
+    /**
+     * 获取当前玩家的合法出牌列表
+     * @returns {Array} 合法出牌数组
+     */
     getLegalPlays() {
         if (this.phase !== Phase.PLAY) return [];
         const hasInit = this.initiativeSeat === this.currentSeat;
@@ -356,11 +379,7 @@ class DoudizhuGame {
         const cheapFirst = (a, b) => a.primary_rank - b.primary_rank;
         const bigFirst = (a, b) => b.cards.length - a.cards.length || a.primary_rank - b.primary_rank;
 
-        // Card counting: check if opponents likely have cards to beat us
-        var landlordHigh = landlordCards <= 3;
-        var anyOpponentLow = landlordCards <= 4 || partnerCards <= 4;
-
-        // Endgame: can finish in 1-2 plays
+        // Endgame detection: can finish in 1-2 plays
         if (myCards <= 4 && safePlays.length > 0) {
             var finisher = safePlays.find(function(p) { return p.cards.length >= myCards; });
             if (finisher) return finisher.cards;
@@ -368,47 +387,38 @@ class DoudizhuGame {
 
         if (hasInit) {
             if (isLandlord) {
-                // Landlord: play biggest to pressure farmers
                 safePlays.sort(bigFirst);
                 if (safePlays.length > 0) return safePlays[0].cards;
             } else {
-                // Farmer: if partner can finish, help them
                 if (partnerCards <= 2 && safePlays.length > 0) {
                     safePlays.sort(cheapFirst);
                     return safePlays[0].cards;
                 }
-                // Play biggest combo to pressure landlord
                 safePlays.sort(bigFirst);
                 if (safePlays.length > 0) return safePlays[0].cards;
             }
         } else {
             var isPartnerLeading = this.initiativeSeat === partner;
             if (!isLandlord && isPartnerLeading) {
-                // Farmer: partner has lead
                 var partnerTrick = this.activeTrick;
                 var partnerHigh = partnerTrick.primary_rank >= 14;
-                // Let partner win if their play is strong enough
                 if (partnerHigh && myCards > 2 && landlordCards > 2) return null;
-                // Otherwise play cheap to help partner
                 safePlays.sort(cheapFirst);
                 if (safePlays.length > 0) return safePlays[0].cards;
                 return null;
             }
 
-            // Following: play cheapest that beats
             safePlays.sort(cheapFirst);
             if (safePlays.length > 0) return safePlays[0].cards;
 
             if (isEasy) {
                 if (safePlays.length > 0) return safePlays[0].cards;
             } else if (isHard) {
-                // Hard: use bombs more aggressively
                 if (bombs.length > 0 && landlordCards <= 6) { bombs.sort(cheapFirst); return bombs[0].cards; }
                 if (rocket.length > 0 && landlordCards <= 4) return rocket[0].cards;
                 safePlays.sort(cheapFirst);
                 if (safePlays.length > 0) return safePlays[0].cards;
             } else {
-                // Normal: conservative bomb usage
                 var bombThreshold = isLandlord ? 5 : 4;
                 if (bombs.length > 0 && landlordCards <= bombThreshold) {
                     bombs.sort(cheapFirst);
@@ -427,6 +437,11 @@ class DoudizhuGame {
     }
 
     /** 手牌评分：用于 AI 叫分决策 */
+    /**
+     * 手牌评分：用于 AI 叫分决策
+     * @param {number} seat - 座位号
+     * @returns {number} 评分 (0-20)
+     */
     evaluateHand(seat) {
         const hand = this.hands[seat];
         let score = 0;
@@ -499,6 +514,11 @@ class DoudizhuGame {
     // ==================== PATTERN RECOGNITION ====================
 
     /** 牌型识别：返回 { pattern, primary_rank, count, pattern_name, structural_length } */
+    /**
+     * 牌型识别：返回 { pattern, primary_rank, count, pattern_name, structural_length }
+     * @param {Array} cards - 牌数组
+     * @returns {Object} 牌型信息
+     */
     classifyCards(cards) {
         if (!cards || cards.length === 0) return { pattern: "INVALID", primary_rank: -1, count: 0, pattern_name: "无效牌" };
         const count = cards.length;
@@ -612,6 +632,12 @@ class DoudizhuGame {
     // ==================== COMPARISON ====================
 
     /** 牌型比较：判断 classified 能否压过 trick */
+    /**
+     * 牌型比较：判断 classified 能否压过 trick
+     * @param {Object} classified - 当前出牌的牌型信息
+     * @param {Object} trick - 当前桌面上的牌型
+     * @returns {boolean} 能否压过
+     */
     canBeat(classified, trick) {
         if (!trick || Object.keys(trick).length === 0) return true;
         const trickPattern = trick.pattern;
@@ -998,6 +1024,10 @@ class DoudizhuGame {
     }
 
     /** 获取提示：返回最优合法出牌 */
+    /**
+     * 获取提示：返回最优合法出牌
+     * @returns {Array|null} 提示牌数组，无合法出牌时返回 null
+     */
     getHint() {
         const plays = this.getLegalPlays();
         if (plays.length === 0) return null;

@@ -479,29 +479,30 @@ function showHint() {
 }
 
 function showResult() {
-    const banner = document.getElementById('result-banner');
-    const text = document.getElementById('result-text');
-    const humanWon = (game.winnerSide === 'landlord' && game.landlordSeat === Seat.HUMAN) ||
+    var banner = document.getElementById('result-banner');
+    var text = document.getElementById('result-text');
+    var humanWon = (game.winnerSide === 'landlord' && game.landlordSeat === Seat.HUMAN) ||
                      (game.winnerSide === 'farmers' && game.landlordSeat !== Seat.HUMAN);
     if (humanWon) Sound.win(); else Sound.lose();
 
-    const history = JSON.parse(localStorage.getItem('doudizhu_history') || '[]');
-    history.push({ seed: game.seed, winner: game.winnerSide, landlord: game.landlordSeat, multiplier: game.multiplier, spring: game.springBonus, humanWon, ts: Date.now() });
+    var history = JSON.parse(localStorage.getItem('doudizhu_history') || '[]');
+    history.push({ seed: game.seed, winner: game.winnerSide, landlord: game.landlordSeat, multiplier: game.multiplier, spring: game.springBonus, humanWon: humanWon, ts: Date.now() });
     if (history.length > 50) history.splice(0, history.length - 50);
     localStorage.setItem('doudizhu_history', JSON.stringify(history));
 
-    let resultText = `${game.winnerSide === 'landlord' ? '地主' : '农民'}胜! 倍数: x${game.multiplier}`;
+    var resultText = game.winnerSide === 'landlord' ? '地主' : '农民';
+    resultText += '胜! 倍数: x' + game.multiplier;
     if (game.springBonus) resultText += game.springType === 'spring' ? ' 🌸春天!' : ' ❄️反春天!';
     text.textContent = resultText;
     text.style.color = humanWon ? '#4ade80' : '#f87171';
-    if (humanWon) { setTimeout(spawnWinConfetti, 300); } else { setTimeout(spawnLoseParticles, 300); }
 
-    const stats = document.getElementById('result-stats');
-    const total = history.length;
-    const wins = history.filter(h => h.humanWon).length;
-    const losses = total - wins;
-    const springs = history.filter(h => h.spring).length;
-    stats.innerHTML = `<div class="stats-row"><span>总场次: ${total}</span><span>胜: ${wins}</span><span>负: ${losses}</span><span>春天: ${springs}</span></div><div class="stats-row"><span>胜率: ${total > 0 ? Math.round(wins / total * 100) : 0}%</span></div>`;
+    var stats = document.getElementById('result-stats');
+    var total = history.length;
+    var wins = history.filter(function(h) { return h.humanWon; }).length;
+    var losses = total - wins;
+    var springs = history.filter(function(h) { return h.spring; }).length;
+    var winRate = total > 0 ? Math.round(wins / total * 100) : 0;
+    stats.innerHTML = '<div class="stats-row"><span>总场次: ' + total + '</span><span>胜: ' + wins + '</span><span>负: ' + losses + '</span><span>春天: ' + springs + '</span></div><div class="stats-row"><span>胜率: ' + winRate + '%</span></div>';
 
     banner.style.display = 'block';
     banner.classList.remove('confetti');
@@ -511,6 +512,13 @@ function showResult() {
 
 function toggleHelp() { alert('斗地主规则:\n\n1. 三人游戏，一人为地主，两人为农民\n2. 地主获得底牌，先出完牌获胜\n3. 牌型：单张、对子、三条、炸弹、火箭等\n4. 炸弹可压制普通牌型，火箭最大\n5. 农民合作对抗地主'); }
 function toggleMute() { const m = Sound.toggleMute(); document.getElementById('btn-mute').textContent = m ? '🔇' : '🔊'; }
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(function() {});
+    } else {
+        document.exitFullscreen();
+    }
+}
 
 let playLogOpen = false;
 function togglePlayLog() {
@@ -552,8 +560,19 @@ function toggleSort() {
 function clearLog() { document.getElementById('play-log').innerHTML = ''; }
 function toggleSettings() { alert('设置功能开发中...'); }
 
+function closeTutorial() {
+    document.getElementById('tutorial-overlay').style.display = 'none';
+    localStorage.setItem('doudizhu_tutorial_done', '1');
+}
+function checkTutorial() {
+    if (!localStorage.getItem('doudizhu_tutorial_done')) {
+        document.getElementById('tutorial-overlay').style.display = 'flex';
+    }
+}
+
 // Start game
 newRound();
+checkTutorial();
 initCardInteractionsOnce();
 loadSettings();
 

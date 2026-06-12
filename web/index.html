@@ -62,6 +62,7 @@
             <button id="btn-counter" class="action-btn" onclick="toggleCounter()">记牌器</button>
             <button id="btn-help" class="action-btn" onclick="toggleHelp()">?</button>
             <button id="btn-mute" class="action-btn" onclick="toggleMute()">🔊</button>
+            <button id="btn-fullscreen" class="action-btn" onclick="toggleFullscreen()">⛶</button>
             <button id="btn-settings" class="action-btn" onclick="openSettings()">设置</button>
         </div>
 
@@ -76,6 +77,16 @@
         <div id="counter-panel" style="display:none">
             <div id="counter-title">记牌器</div>
             <div id="counter-grid"></div>
+        </div>
+
+        <div id="tutorial-overlay" style="display:none">
+            <div id="tutorial-content">
+                <div id="tutorial-title">欢迎来到斗地主！</div>
+                <div class="tutorial-step">1. 叫分成为地主或农民</div>
+                <div class="tutorial-step">2. 点击手牌选中，点击「出牌」打出</div>
+                <div class="tutorial-step">3. AI 对手自动出牌</div>
+                <button class="result-btn" onclick="closeTutorial()">开始游戏</button>
+            </div>
         </div>
 
         <div id="settings-panel" style="display:none">
