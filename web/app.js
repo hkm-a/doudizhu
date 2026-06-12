@@ -350,13 +350,27 @@ function renderBottomCards() {
         const div = document.createElement('div');
         div.className = 'card small';
         if (game.phase === Phase.PLAY || game.phase === Phase.RESULT) {
-            div.classList.add('face-up');
-            if (wasFaceDown) { div.classList.add('flip-anim'); div.style.animationDelay = (i * 150) + 'ms'; }
-            const isRed = card.suit === Suit.HEARTS || card.suit === Suit.DIAMONDS;
-            const isJoker = card.is_joker;
-            if (isJoker) div.classList.add(card.rank === Rank.JOKER_BIG ? 'joker-red' : 'joker-black');
-            else div.classList.add(isRed ? 'red' : 'black');
-            div.innerHTML = makeCardHTML(card.rank, card.suit, isJoker, isRed);
+            if (wasFaceDown) {
+                div.classList.add('face-down');
+                setTimeout(function() {
+                    div.classList.remove('face-down');
+                    div.classList.add('face-up');
+                    div.classList.add('flip-anim');
+                    div.style.animationDelay = (i * 150) + 'ms';
+                    const isRed = card.suit === Suit.HEARTS || card.suit === Suit.DIAMONDS;
+                    const isJk = card.is_joker;
+                    if (isJk) div.classList.add(card.rank === Rank.JOKER_BIG ? 'joker-red' : 'joker-black');
+                    else div.classList.add(isRed ? 'red' : 'black');
+                    div.innerHTML = makeCardHTML(card.rank, card.suit, isJk, isRed);
+                }, 300 + i * 150);
+            } else {
+                div.classList.add('face-up');
+                const isRed = card.suit === Suit.HEARTS || card.suit === Suit.DIAMONDS;
+                const isJk = card.is_joker;
+                if (isJk) div.classList.add(card.rank === Rank.JOKER_BIG ? 'joker-red' : 'joker-black');
+                else div.classList.add(isRed ? 'red' : 'black');
+                div.innerHTML = makeCardHTML(card.rank, card.suit, isJk, isRed);
+            }
         } else {
             div.classList.add('face-down');
         }
