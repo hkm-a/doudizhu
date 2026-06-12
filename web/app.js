@@ -100,7 +100,7 @@ function humanPass() {
 function speakPlay(cards, pattern) {
     if (!cards || cards.length === 0) return;
     var RANK_CN = { 3:'三', 4:'四', 5:'五', 6:'六', 7:'七', 8:'八', 9:'九', 10:'十', 11:'J', 12:'Q', 13:'K', 14:'A', 15:'二' };
-    var simplePatterns = { 'Single': true, 'Pair': true, 'Triple': true, 'Bomb': true, 'Rocket': true };
+    var simplePatterns = { '单张': true, '对子': true, '三条': true, '炸弹': true, '火箭': true };
     if (cards.length === 1 && cards[0].is_joker) {
         Sound.speak(cards[0].rank === Rank.JOKER_BIG ? '大王' : '小王');
         return;
@@ -111,11 +111,11 @@ function speakPlay(cards, pattern) {
             if (c.is_joker) return c.rank === Rank.JOKER_BIG ? '大王' : '小王';
             return RANK_CN[c.rank];
         });
-        if (pattern === 'Single') Sound.speak(names.join(''));
-        else if (pattern === 'Pair') Sound.speak('对' + names[0]);
-        else if (pattern === 'Triple') Sound.speak('三条' + names[0]);
-        else if (pattern === 'Bomb') Sound.speak('炸弹' + names[0]);
-        else if (pattern === 'Rocket') Sound.speak('火箭');
+        if (pattern === '单张') Sound.speak(names.join(''));
+        else if (pattern === '对子') Sound.speak('对' + names[0]);
+        else if (pattern === '三条') Sound.speak('三条' + names[0]);
+        else if (pattern === '炸弹') Sound.speak('炸弹' + names[0]);
+        else if (pattern === '火箭') Sound.speak('火箭');
     } else {
         Sound.speak(pattern);
     }
