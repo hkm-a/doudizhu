@@ -248,3 +248,8 @@ var Sound = {
 };
 
 if (typeof module !== 'undefined') module.exports = Sound;
+
+if (window.speechSynthesis) {
+    speechSynthesis.onvoiceschanged = function() {};
+    speechSynthesis.getVoices();
+}

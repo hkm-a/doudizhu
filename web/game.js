@@ -104,7 +104,7 @@ class DoudizhuGame {
 
         this.bidAmount = points; this.highestBid = points; this.highestBidder = playerSeat;
         this.bidCounter++;
-        if (this._biddingComplete()) {
+        if (points === 3 || this._biddingComplete()) {
             this._resolveLandlord();
             return true;
         }
@@ -212,7 +212,7 @@ class DoudizhuGame {
             else if (count === 3) triples++;
             else if (count >= 4) bombs++;
         }
-        return `Hand: ${this.hands[Seat.HUMAN].length} cards | singles ${singles} | pairs ${pairs} | triples ${triples} | bombs ${bombs}`;
+        return `手牌: ${this.hands[Seat.HUMAN].length}张 | 单${singles} 对${pairs} 三${triples} 炸${bombs}`;
     }
 
     toggleSelection(cardId) {
@@ -289,7 +289,7 @@ class DoudizhuGame {
     }
 
     _resolveLandlord() {
-        this.landlordSeat = this.highestBidder >= 0 ? this.highestBidder : Seat.HUMAN;
+        this.landlordSeat = this.highestBidder >= 0 ? this.highestBidder : Math.floor(Math.random() * SEAT_COUNT);
         this.roles[this.landlordSeat] = "地主";
         this.roles[(this.landlordSeat + 1) % SEAT_COUNT] = "农民";
         this.roles[(this.landlordSeat + 2) % SEAT_COUNT] = "农民";

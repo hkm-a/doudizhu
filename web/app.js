@@ -52,13 +52,13 @@ function aiBid() {
     aiTimer = null;
     const seat = game.currentSeat;
     const score = game.evaluateHand(seat);
-    let ok;
-    if (score >= 8 && game.highestBid < 3) ok = game.callBid(seat, 3);
-    else if (score >= 5 && game.highestBid < 2) ok = game.callBid(seat, 2);
-    else if (score >= 3 && game.highestBid < 1) ok = game.callBid(seat, 1);
-    else ok = game.passBid(seat);
-    addLogEntry(seat, ok ? `${game.highestBid}分` : '不出', !ok);
-    Sound.speak(ok ? game.highestBid + '分' : '不叫');
+    let called = false;
+    if (score >= 8 && game.highestBid < 3) called = game.callBid(seat, 3);
+    else if (score >= 5 && game.highestBid < 2) called = game.callBid(seat, 2);
+    else if (score >= 3 && game.highestBid < 1) called = game.callBid(seat, 1);
+    else game.passBid(seat);
+    addLogEntry(seat, called ? game.highestBid + '分' : '不出', !called);
+    Sound.speak(called ? game.highestBid + '分' : '不叫');
     refreshUI();
 }
 
@@ -238,7 +238,73 @@ function renderPlayerHand() {
         div.innerHTML = makeCardHTML(card.rank, card.suit, isJoker, isRed);
         container.appendChild(div);
     });
-    initCardInteractions(container);
+}
+
+var cardInteractionBound = false;
+function initCardInteractionsOnce() {
+    if (cardInteractionBound) return;
+    cardInteractionBound = true;
+    var container = document.getElementById('player-hand');
+    function getXY(e) {
+        if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        return { x: e.clientX, y: e.clientY };
+    }
+    function onStart(e) {
+        if (game.phase !== Phase.PLAY || game.currentSeat !== Seat.HUMAN) return;
+        var card = e.target.closest('.card');
+        if (card) {
+            e.preventDefault();
+            var p = getXY(e);
+            dragInfo = { sx: p.x, sy: p.y, cid: parseInt(card.dataset.cardId), drag: false };
+        } else if (!e.target.closest('.action-btn') && !e.target.closest('#settings-panel') && !e.target.closest('#result-banner') && !e.target.closest('#counter-panel')) {
+            game.selectedCards = [];
+            Sound.deselect();
+            refreshUI();
+        }
+    }
+    function onMove(e) {
+        if (!dragInfo) return;
+        e.preventDefault();
+        var p = getXY(e);
+        if (!dragInfo.drag && (Math.abs(p.x - dragInfo.sx) > 8 || Math.abs(p.y - dragInfo.sy) > 8)) {
+            dragInfo.drag = true;
+            if (game.selectedCards.indexOf(dragInfo.cid) === -1) game.selectedCards.push(dragInfo.cid);
+        }
+        if (dragInfo.drag) {
+            var cards = container.querySelectorAll('.card');
+            var sl = Math.min(dragInfo.sx, p.x), sr = Math.max(dragInfo.sx, p.x);
+            var st = Math.min(dragInfo.sy, p.y), sb = Math.max(dragInfo.sy, p.y);
+            for (var i = 0; i < cards.length; i++) {
+                var c = cards[i], r = c.getBoundingClientRect();
+                var hit = !(r.right < sl || r.left > sr || r.bottom < st || r.top > sb);
+                var cid = parseInt(c.dataset.cardId);
+                var idx = game.selectedCards.indexOf(cid);
+                if (hit && idx === -1) game.selectedCards.push(cid);
+                else if (!hit && idx !== -1) game.selectedCards.splice(idx, 1);
+                c.classList.toggle('selected', game.selectedCards.indexOf(cid) !== -1);
+            }
+        }
+    }
+    function onEnd() {
+        if (!dragInfo) return;
+        if (!dragInfo.drag) {
+            game.toggleSelection(dragInfo.cid);
+            var was = game.selectedCards.indexOf(dragInfo.cid) !== -1;
+            was ? Sound.deselect() : Sound.select();
+            refreshUI();
+        } else {
+            refreshUI();
+        }
+        dragInfo = null;
+    }
+    container.addEventListener('mousedown', onStart);
+    container.addEventListener('mousemove', onMove);
+    container.addEventListener('mouseup', onEnd);
+    container.addEventListener('mouseleave', function() { dragInfo = null; });
+    container.addEventListener('touchstart', onStart, { passive: false });
+    container.addEventListener('touchmove', onMove, { passive: false });
+    container.addEventListener('touchend', onEnd);
+    container.addEventListener('touchcancel', function() { dragInfo = null; });
 }
 
 var SVG_SUIT = {
@@ -250,7 +316,7 @@ var SVG_SUIT = {
 
 function makeCardHTML(rank, suit, isJoker, isRed) {
     if (isJoker) {
-        const isBig = rank === '大';
+        const isBig = rank === Rank.JOKER_BIG;
         const color = isBig ? 'red' : 'black';
         return '<div class="joker-corner ' + color + ' tl"><span>J</span><span>O</span><span>K</span><span>E</span><span>R</span></div><div class="joker-center"><div class="joker-star">' + (isBig ? '★' : '☆') + '</div><div class="joker-word">' + (isBig ? 'JOKER' : 'joker') + '</div></div><div class="joker-corner ' + color + ' br"><span>R</span><span>E</span><span>K</span><span>O</span><span>J</span></div>';
     }
@@ -390,7 +456,8 @@ function renderPlayDisplay() {
             div.style.animationDelay = (i * 30) + 'ms';
             const isRed = card.suit === Suit.HEARTS || card.suit === Suit.DIAMONDS;
             const isJoker = card.is_joker;
-            div.classList.add(isRed ? 'red' : 'black');
+            if (isJoker) div.classList.add(card.rank === Rank.JOKER_BIG ? 'joker-red' : 'joker-black');
+            else div.classList.add(isRed ? 'red' : 'black');
             div.innerHTML = makeCardHTML(card.rank, card.suit, isJoker, isRed);
             display.appendChild(div);
         });
@@ -511,7 +578,7 @@ let aiDifficulty = 'normal';
 function loadSettings() {
     const saved = JSON.parse(localStorage.getItem('doudizhu_settings') || '{}');
     if (saved.speed) { aiSpeed = saved.speed; document.getElementById('setting-speed').value = saved.speed; }
-    if (saved.difficulty) { aiDifficulty = saved.difficulty; document.getElementById('setting-difficulty').value = saved.difficulty; }
+    if (saved.difficulty) { aiDifficulty = saved.difficulty; document.getElementById('setting-difficulty').value = saved.difficulty; game.aiDifficulty = aiDifficulty; }
 }
 function applySettings() {
     aiSpeed = parseInt(document.getElementById('setting-speed').value);
@@ -531,6 +598,7 @@ function toggleSettings() { alert('设置功能开发中...'); }
 
 // Start game
 newRound();
+initCardInteractionsOnce();
 loadSettings();
 
 document.addEventListener('click', () => { if (typeof Sound !== 'undefined') Sound.card(); }, { once: true });
@@ -554,13 +622,19 @@ function gameLoop(timestamp) {
                     if (smallest.length > 0) {
                         game.selectedCards = smallest.map(c => c.id);
                         game.playSelected();
+                        Sound.error();
+                        addLogEntry(0, '超时自动出牌', true);
                     }
                 } else {
                     game.passTurn();
+                    Sound.pass();
+                    addLogEntry(0, '不出', true);
                 }
                 refreshUI();
             } else if (game.phase === Phase.BIDDING && game.currentSeat === Seat.HUMAN) {
                 game.passBid(0);
+                Sound.pass();
+                addLogEntry(0, '不出', true);
                 refreshUI();
             }
         }
