@@ -381,52 +381,56 @@ class DoudizhuGame {
         const isLandlord = seat === this.landlordSeat;
         const partner = (seat + 2) % SEAT_COUNT;
         const landlord = this.landlordSeat;
-        const opponent = isLandlord ? partner : landlord;
         const landlordCards = this.hands[landlord].length;
         const partnerCards = this.hands[partner].length;
         const myCards = this.hands[seat].length;
+        const isHard = this.aiDifficulty === 'hard';
+        const isEasy = this.aiDifficulty === 'easy';
 
         const cheapFirst = (a, b) => a.primary_rank - b.primary_rank;
-        const biggestFirst = (a, b) => b.cards.length - a.cards.length || a.primary_rank - b.primary_rank;
+        const bigFirst = (a, b) => b.cards.length - a.cards.length || a.primary_rank - b.primary_rank;
+
+        // Endgame: can finish in 1-2 plays
+        if (myCards <= 4 && safePlays.length > 0) {
+            const finisher = safePlays.find(function(p) { return p.cards.length >= myCards; });
+            if (finisher) return finisher.cards;
+        }
 
         if (hasInit) {
             if (isLandlord) {
-                safePlays.sort(cheapFirst);
+                safePlays.sort(bigFirst);
                 if (safePlays.length > 0) return safePlays[0].cards;
             } else {
                 if (partnerCards <= 2 && safePlays.length > 0) {
                     safePlays.sort(cheapFirst);
                     return safePlays[0].cards;
                 }
-                safePlays.sort(biggestFirst);
+                safePlays.sort(bigFirst);
                 if (safePlays.length > 0) return safePlays[0].cards;
             }
         } else {
             const isPartnerLeading = this.initiativeSeat === partner;
             if (!isLandlord && isPartnerLeading) {
-                if (myCards <= 2 || landlordCards <= 2) {
-                    safePlays.sort(cheapFirst);
-                    if (safePlays.length > 0) return safePlays[0].cards;
-                }
                 const partnerTrick = this.activeTrick;
                 const partnerHigh = partnerTrick.primary_rank >= 14;
-                if (partnerHigh) return null;
+                if (partnerHigh && myCards > 2 && landlordCards > 2) return null;
                 safePlays.sort(cheapFirst);
                 if (safePlays.length > 0) return safePlays[0].cards;
+                return null;
             }
 
             safePlays.sort(cheapFirst);
             if (safePlays.length > 0) return safePlays[0].cards;
 
-            const bombThreshold = isLandlord ? 5 : 4;
-            if (this.aiDifficulty === 'easy') {
+            if (isEasy) {
                 if (safePlays.length > 0) return safePlays[0].cards;
-            } else if (this.aiDifficulty === 'hard') {
-                if (bombs.length > 0 && landlordCards <= 8) { bombs.sort(cheapFirst); return bombs[0].cards; }
-                if (rocket.length > 0 && landlordCards <= 5) return rocket[0].cards;
+            } else if (isHard) {
+                if (bombs.length > 0 && landlordCards <= 6) { bombs.sort(cheapFirst); return bombs[0].cards; }
+                if (rocket.length > 0 && landlordCards <= 4) return rocket[0].cards;
                 safePlays.sort(cheapFirst);
                 if (safePlays.length > 0) return safePlays[0].cards;
             } else {
+                const bombThreshold = isLandlord ? 5 : 4;
                 if (bombs.length > 0 && landlordCards <= bombThreshold) {
                     bombs.sort(cheapFirst);
                     return bombs[0].cards;

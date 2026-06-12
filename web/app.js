@@ -27,6 +27,10 @@ function refreshUI() {
     renderPlayDisplay();
     renderAiPanels();
     updateTimerBar();
+    var playZone = document.getElementById('play-zone');
+    if (playZone) {
+        playZone.classList.toggle('active', game.phase === Phase.PLAY && game.currentSeat === Seat.HUMAN);
+    }
     if (lastPhase !== game.phase) {
         if (game.phase === Phase.PLAY && lastPhase === Phase.BIDDING) Sound.landlord();
         lastPhase = game.phase;
@@ -187,9 +191,18 @@ function updateHandSummary() {
     document.getElementById('hand-summary').textContent = game.getHandSummary();
 }
 
+let lastMultiplier = 1;
 function updateScoreBar() {
-    document.getElementById('score-text').textContent = `Score: ${game.multiplier}`;
-    document.getElementById('hand-number').textContent = `Hand #${game.handNumber}`;
+    const scoreEl = document.getElementById('score-text');
+    const newMult = game.multiplier;
+    scoreEl.textContent = 'Score: ' + newMult;
+    if (newMult > lastMultiplier) {
+        scoreEl.classList.remove('mult-bounce');
+        void scoreEl.offsetWidth;
+        scoreEl.classList.add('mult-bounce');
+    }
+    lastMultiplier = newMult;
+    document.getElementById('hand-number').textContent = 'Hand #' + game.handNumber;
 }
 
 function updateTimerBar() {
@@ -205,13 +218,15 @@ function updateActionButtons() {
     const inBidding = game.phase === Phase.BIDDING;
     const inPlay = game.phase === Phase.PLAY;
     const humanTurn = game.currentSeat === Seat.HUMAN;
-    document.getElementById('btn-call1').disabled = !(inBidding && humanTurn);
-    document.getElementById('btn-call2').disabled = !(inBidding && humanTurn);
-    document.getElementById('btn-call3').disabled = !(inBidding && humanTurn);
-    document.getElementById('btn-decline').disabled = !(inBidding && humanTurn);
+    document.getElementById('btn-call1').style.display = inBidding ? '' : 'none';
+    document.getElementById('btn-call2').style.display = inBidding ? '' : 'none';
+    document.getElementById('btn-call3').style.display = inBidding ? '' : 'none';
+    document.getElementById('btn-decline').style.display = inBidding ? '' : 'none';
     document.getElementById('btn-play').disabled = !(inPlay && humanTurn);
     document.getElementById('btn-pass').disabled = !(inPlay && humanTurn && game.initiativeSeat !== Seat.HUMAN);
     document.getElementById('btn-hint').disabled = !(inPlay && humanTurn);
+    document.getElementById('btn-pass').style.display = inPlay ? '' : 'none';
+    document.getElementById('btn-hint').style.display = inPlay ? '' : 'none';
 }
 
 function renderPlayerHand() {
@@ -352,70 +367,6 @@ function getPipPositions(count) {
     return positions[count] || [];
 }
 
-var dragInfo = null;
-function initCardInteractions(container) {
-    function getXY(e) {
-        if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        return { x: e.clientX, y: e.clientY };
-    }
-    function onStart(e) {
-        if (game.phase !== Phase.PLAY || game.currentSeat !== Seat.HUMAN) return;
-        var card = e.target.closest('.card');
-        if (card) {
-            e.preventDefault();
-            var p = getXY(e);
-            dragInfo = { sx: p.x, sy: p.y, cid: parseInt(card.dataset.cardId), drag: false };
-        } else if (!e.target.closest('.action-btn') && !e.target.closest('#settings-panel') && !e.target.closest('#result-banner')) {
-            game.selectedCards = [];
-            Sound.deselect();
-            refreshUI();
-        }
-    }
-    function onMove(e) {
-        if (!dragInfo) return;
-        e.preventDefault();
-        var p = getXY(e);
-        if (!dragInfo.drag && (Math.abs(p.x - dragInfo.sx) > 8 || Math.abs(p.y - dragInfo.sy) > 8)) {
-            dragInfo.drag = true;
-            if (game.selectedCards.indexOf(dragInfo.cid) === -1) game.selectedCards.push(dragInfo.cid);
-        }
-        if (dragInfo.drag) {
-            var cards = container.querySelectorAll('.card');
-            var sl = Math.min(dragInfo.sx, p.x), sr = Math.max(dragInfo.sx, p.x);
-            var st = Math.min(dragInfo.sy, p.y), sb = Math.max(dragInfo.sy, p.y);
-            for (var i = 0; i < cards.length; i++) {
-                var c = cards[i], r = c.getBoundingClientRect();
-                var hit = !(r.right < sl || r.left > sr || r.bottom < st || r.top > sb);
-                var cid = parseInt(c.dataset.cardId);
-                var idx = game.selectedCards.indexOf(cid);
-                if (hit && idx === -1) game.selectedCards.push(cid);
-                else if (!hit && idx !== -1) game.selectedCards.splice(idx, 1);
-                c.classList.toggle('selected', game.selectedCards.indexOf(cid) !== -1);
-            }
-        }
-    }
-    function onEnd() {
-        if (!dragInfo) return;
-        if (!dragInfo.drag) {
-            game.toggleSelection(dragInfo.cid);
-            var was = game.selectedCards.indexOf(dragInfo.cid) !== -1;
-            was ? Sound.deselect() : Sound.select();
-            refreshUI();
-        } else {
-            refreshUI();
-        }
-        dragInfo = null;
-    }
-    container.addEventListener('mousedown', onStart);
-    container.addEventListener('mousemove', onMove);
-    container.addEventListener('mouseup', onEnd);
-    container.addEventListener('mouseleave', function() { dragInfo = null; });
-    container.addEventListener('touchstart', onStart, { passive: false });
-    container.addEventListener('touchmove', onMove, { passive: false });
-    container.addEventListener('touchend', onEnd);
-    container.addEventListener('touchcancel', function() { dragInfo = null; });
-}
-
 function renderBottomCards() {
     const container = document.getElementById('bottom-cards-display');
     container.innerHTML = '';
@@ -507,9 +458,11 @@ function renderAiPanels() {
     ['ai-left', 'ai-right'].forEach((name, i) => {
         const seat = i + 1;
         const isLandlord = game.landlordSeat === seat;
+        const isActive = game.currentSeat === seat && game.phase === Phase.PLAY;
         document.getElementById(`${name}-role`).textContent = isLandlord ? '👑 地主' : (game.roles[seat] || '待定');
         document.getElementById(`${name}-count`).textContent = `${game.hands[seat].length}张`;
         document.getElementById(`${name}-panel`).classList.toggle('landlord-panel', isLandlord);
+        document.getElementById(`${name}-panel`).classList.toggle('active-turn', isActive);
     });
 }
 
